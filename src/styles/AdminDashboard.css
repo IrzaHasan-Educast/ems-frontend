@@ -1,0 +1,33 @@
+.sidebar {
+  transition: width 0.3s ease;
+  width: 250px;
+  overflow-y: auto;
+}
+
+.sidebar-closed {
+  width: 80px;
+}
+
+.sidebar a {
+  text-decoration: none;
+  padding: 8px 12px;
+  border-radius: 5px;
+}
+
+.sidebar a:hover {
+  background-color: #f69b49;
+}
+
+.navbar {
+  height: 70px;
+}
+
+.btn-outline-warning {
+  border-color: #f58a29;
+  color: #f58a29;
+}
+
+.btn-outline-warning:hover {
+  background-color: #f58a29;
+  color: white;
+}
