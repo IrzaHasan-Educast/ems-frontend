@@ -2,7 +2,10 @@
 import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import LoginForm from "./components/LoginForm";
-import AdminDashboard from "./pages/AdminDashboard";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AllEmployees from "./pages/admin/AllEmployees";
+import AddEmployee from "./pages/admin/AddEmployee";
+import EditEmployee from "./pages/admin/EditEmployee";
 import HrDashboard from "./pages/HrDashboard";
 import EmployeeDashboard from "./pages/EmployeeDashboard";
 
@@ -18,11 +21,11 @@ function App() {
     }
   }, []);
 
-  // 🔁 Logout handler (shared)
+  // 🔁 Logout handler
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("role");
-    setUserRole(null); // reset state
+    setUserRole(null);
   };
 
   return (
@@ -40,7 +43,7 @@ function App() {
           }
         />
 
-        {/* 🧭 Admin Dashboard */}
+        {/* 🧭 Admin Routes */}
         <Route
           path="/admin"
           element={
@@ -49,6 +52,26 @@ function App() {
             ) : (
               <Navigate to="/login" />
             )
+          }
+        />
+
+        {/* Admin - Employee CRUD routes */}
+        <Route
+          path="/admin/employees"
+          element={
+            userRole === "ADMIN" ? <AllEmployees /> : <Navigate to="/login" />
+          }
+        />
+        <Route
+          path="/admin/employees/add"
+          element={
+            userRole === "ADMIN" ? <AddEmployee /> : <Navigate to="/login" />
+          }
+        />
+        <Route
+          path="/admin/employees/edit/:id"
+          element={
+            userRole === "ADMIN" ? <EditEmployee /> : <Navigate to="/login" />
           }
         />
 
@@ -78,6 +101,12 @@ function App() {
 
         {/* Default redirect */}
         <Route path="*" element={<Navigate to="/login" />} />
+
+
+        <Route path="/admin/employees" element={<AllEmployees />} />
+        <Route path="/admin/employees/add" element={<AddEmployee />} />
+        <Route path="/admin/employees/edit/:id" element={<EditEmployee />} />
+
       </Routes>
     </Router>
   );

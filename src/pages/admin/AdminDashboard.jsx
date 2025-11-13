@@ -1,7 +1,7 @@
 // src/pages/AdminDashboard.jsx
 import React, { useState } from "react";
-import Sidebar from "../components/Sidebar";
-import TopNavbar from "../components/Navbar";
+import Sidebar from "../../components/Sidebar";
+import TopNavbar from "../../components/Navbar";
 
 // The component now correctly receives 'onLogout' as a prop
 const AdminDashboard = ({ onLogout }) => {

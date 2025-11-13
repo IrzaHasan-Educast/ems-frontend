@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Nav } from "react-bootstrap";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, NavLink } from "react-router-dom"; // ✅ add NavLink
+
 import Logo from "../assets/images/Educast-Logo.png";
 
 const Sidebar = ({ isOpen, onLogout }) => {
@@ -55,17 +56,24 @@ const Sidebar = ({ isOpen, onLogout }) => {
 
             {showEmployees && (
               <div className="ms-4 mt-2">
-                <Nav.Link href="#" className="text-white">
+                <NavLink
+                  to="/admin/employees"
+                  className="text-white d-block mb-1"
+                  style={{ textDecoration: "none" }}
+                >
                   <i className="bi bi-person-lines-fill me-2"></i> All Employees
-                </Nav.Link>
-                <Nav.Link href="#" className="text-white">
-                  <i className="bi bi-camera me-2"></i> Screenshots
-                </Nav.Link>
-                <Nav.Link href="#" className="text-white">
+                </NavLink>
+
+                <NavLink
+                  to="/admin/employees/add"
+                  className="text-white d-block mb-1"
+                  style={{ textDecoration: "none" }}
+                >
                   <i className="bi bi-person-plus me-2"></i> Add Employee
-                </Nav.Link>
+                </NavLink>
               </div>
             )}
+
           </div>
 
           <Nav.Link href="#" className="text-white mt-3">
