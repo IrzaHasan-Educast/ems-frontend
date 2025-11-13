@@ -1,10 +1,18 @@
-// src/components/Sidebar.jsx
 import React, { useState } from "react";
 import { Nav } from "react-bootstrap";
-import Logo from '../assets/images/Educast-Logo.png';
+import { useNavigate } from "react-router-dom";
+import Logo from "../assets/images/Educast-Logo.png";
 
-const Sidebar = ({ isOpen }) => {
+const Sidebar = ({ isOpen, onLogout }) => {
   const [showEmployees, setShowEmployees] = useState(false);
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    onLogout(); // 🔁 update App.js state
+    navigate("/login");
+  };
 
   return (
     <div
@@ -16,10 +24,10 @@ const Sidebar = ({ isOpen }) => {
       {/* Logo Section */}
       <div>
         <div className="text-center">
-            <div className="bg-white border rounded-4"><img src={Logo} alt="Educast" width={isOpen ? "100" : "40"} /></div>
-            <div>{isOpen && <h5 className="mt-2 fw-bold">Educast</h5>}</div>
-          
-          
+          <div className="bg-white border rounded-4 p-2">
+            <img src={Logo} alt="Educast" width={isOpen ? "100" : "40"} />
+          </div>
+          {isOpen && <h5 className="mt-2 fw-bold">Educast</h5>}
         </div>
 
         <Nav className="flex-column">
@@ -29,8 +37,8 @@ const Sidebar = ({ isOpen }) => {
 
           {/* Employees Dropdown */}
           <div className="mt-3">
-            <button
-              className="btn btn-link text-white text-start w-100 p-0"
+            <Nav.Link
+              className="text-white"
               onClick={() => setShowEmployees(!showEmployees)}
               style={{ textDecoration: "none" }}
             >
@@ -43,7 +51,7 @@ const Sidebar = ({ isOpen }) => {
                   }`}
                 ></i>
               )}
-            </button>
+            </Nav.Link>
 
             {showEmployees && (
               <div className="ms-4 mt-2">
@@ -75,11 +83,15 @@ const Sidebar = ({ isOpen }) => {
         </Nav>
       </div>
 
-      {/* Logout */}
+      {/* ✅ Logout Button */}
       <div>
-        <Nav.Link href="#" className="text-white mt-auto">
+        <button
+          className="btn btn-link text-white text-start w-100 p-0"
+          onClick={handleLogout}
+          style={{ textDecoration: "none" }}
+        >
           <i className="bi bi-box-arrow-right me-2"></i> {isOpen && "Logout"}
-        </Nav.Link>
+        </button>
       </div>
     </div>
   );

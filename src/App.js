@@ -14,13 +14,21 @@ function App() {
     const role = localStorage.getItem("role");
 
     if (token && role) {
-      setUserRole(role.toUpperCase()); // Normalize role to uppercase
+      setUserRole(role.toUpperCase());
     }
   }, []);
+
+  // 🔁 Logout handler (shared)
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    setUserRole(null); // reset state
+  };
 
   return (
     <Router>
       <Routes>
+        {/* 🔐 Login Route */}
         <Route
           path="/login"
           element={
@@ -32,23 +40,43 @@ function App() {
           }
         />
 
+        {/* 🧭 Admin Dashboard */}
         <Route
           path="/admin"
           element={
-            userRole === "ADMIN" ? <AdminDashboard /> : <Navigate to="/login" />
-          }
-        />
-        <Route
-          path="/hr"
-          element={userRole === "HR" ? <HrDashboard /> : <Navigate to="/login" />}
-        />
-        <Route
-          path="/employee"
-          element={
-            userRole === "EMPLOYEE" ? <EmployeeDashboard /> : <Navigate to="/login" />
+            userRole === "ADMIN" ? (
+              <AdminDashboard onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/login" />
+            )
           }
         />
 
+        {/* 👩‍💼 HR Dashboard */}
+        <Route
+          path="/hr"
+          element={
+            userRole === "HR" ? (
+              <HrDashboard onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
+
+        {/* 👨‍🔧 Employee Dashboard */}
+        <Route
+          path="/employee"
+          element={
+            userRole === "EMPLOYEE" ? (
+              <EmployeeDashboard onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
+
+        {/* Default redirect */}
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
     </Router>
