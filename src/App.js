@@ -7,7 +7,7 @@ import AllEmployees from "./pages/admin/AllEmployees";
 import AddEmployee from "./pages/admin/AddEmployee";
 import EditEmployee from "./pages/admin/EditEmployee";
 import HrDashboard from "./pages/HrDashboard";
-import EmployeeDashboard from "./pages/EmployeeDashboard";
+import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
 
 function App() {
   const [userRole, setUserRole] = useState(null);
