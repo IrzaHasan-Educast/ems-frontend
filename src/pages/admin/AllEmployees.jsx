@@ -39,15 +39,22 @@ const AllEmployees = ({ onLogout }) => {
   const handleEdit = (id) => navigate(`/admin/employees/edit/${id}`);
 
   const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this employee?")) {
-      try {
-        await axios.delete(`/api/v1/employees/${id}`);
-        setEmployees(employees.filter((emp) => emp.id !== id));
-      } catch (error) {
-        console.error(error);
-      }
+  if (window.confirm("Are you sure you want to delete this employee?")) {
+    try {
+      const token = localStorage.getItem("token"); // JWT token
+      await axios.delete(`/api/v1/employees/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setEmployees(employees.filter((emp) => emp.id !== id));
+    } catch (error) {
+      console.error(error);
+      alert(error.response?.data || "Failed to delete employee");
     }
-  };
+  }
+};
+
 
   // Modal-based view
   const handleView = async (id) => {

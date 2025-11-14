@@ -11,6 +11,7 @@ import AppButton from "../../components/AppButton";
 const EditEmployee = ({ onLogout }) => {
   const { id } = useParams();
   const [employee, setEmployee] = useState(null);
+  const [user, setUser] = useState({ id: null, username: "", password: "" });
   const [roles, setRoles] = useState([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const navigate = useNavigate();
@@ -24,15 +25,15 @@ const EditEmployee = ({ onLogout }) => {
 
   const fetchEmployee = async () => {
     try {
+      // Get employee data
       const res = await axios.get(`/api/v1/employees/${id}`);
-      // include username if API provides it
-      setEmployee({
-        ...res.data,
-        username: res.data.user?.username || "", // optional if backend returns user info
-        password: "", // leave blank
-      });
+      setEmployee(res.data);
+
+      // Get linked user data
+      const userRes = await axios.get(`/api/v1/users/employee/${id}`);
+      setUser({ id: userRes.data.id, username: userRes.data.username, password: "" });
     } catch (error) {
-      console.error("Error fetching employee:", error);
+      console.error("Error fetching employee/user:", error);
     }
   };
 
@@ -45,7 +46,7 @@ const EditEmployee = ({ onLogout }) => {
     }
   };
 
-  const handleChange = (e) => {
+  const handleEmployeeChange = (e) => {
     const { name, value, type, checked } = e.target;
     setEmployee({
       ...employee,
@@ -53,18 +54,32 @@ const EditEmployee = ({ onLogout }) => {
     });
   };
 
+  const handleUserChange = (e) => {
+    const { name, value } = e.target;
+    setUser({
+      ...user,
+      [name]: value,
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // send updated employee + optional user info
-      await axios.put(`/api/v1/employees/${id}`, {
-        ...employee,
-        password: employee.password, // backend should only update if password is provided
-      });
+      // Update employee
+      await axios.put(`/api/v1/employees/${id}`, employee);
+
+      // Update user if username/password provided
+      if (user.username || user.password) {
+        await axios.put(`/api/v1/users/${user.id}`, {
+          username: user.username,
+          password: user.password || undefined, // send undefined if blank
+        });
+      }
+
       navigate("/admin/employees");
     } catch (error) {
-      console.error("Error updating employee:", error);
-      alert(error.response?.data || "Failed to update employee");
+      console.error("Error updating employee/user:", error);
+      alert(error.response?.data || "Failed to update employee/user");
     }
   };
 
@@ -87,7 +102,7 @@ const EditEmployee = ({ onLogout }) => {
           <div className="w-75">
             <CardContainer title="Edit Employee">
               <Form onSubmit={handleSubmit}>
-                {/* Row 1 */}
+                {/* Employee Info */}
                 <Row className="mb-3">
                   <Col md={6}>
                     <Form.Group>
@@ -96,7 +111,7 @@ const EditEmployee = ({ onLogout }) => {
                         type="text"
                         name="fullName"
                         value={employee.fullName}
-                        onChange={handleChange}
+                        onChange={handleEmployeeChange}
                         required
                       />
                     </Form.Group>
@@ -108,14 +123,13 @@ const EditEmployee = ({ onLogout }) => {
                         type="email"
                         name="email"
                         value={employee.email}
-                        onChange={handleChange}
+                        onChange={handleEmployeeChange}
                         required
                       />
                     </Form.Group>
                   </Col>
                 </Row>
 
-                {/* Row 2 */}
                 <Row className="mb-3">
                   <Col md={6}>
                     <Form.Group>
@@ -124,7 +138,7 @@ const EditEmployee = ({ onLogout }) => {
                         type="text"
                         name="phone"
                         value={employee.phone || ""}
-                        onChange={handleChange}
+                        onChange={handleEmployeeChange}
                       />
                     </Form.Group>
                   </Col>
@@ -134,7 +148,7 @@ const EditEmployee = ({ onLogout }) => {
                       <Form.Select
                         name="gender"
                         value={employee.gender}
-                        onChange={handleChange}
+                        onChange={handleEmployeeChange}
                       >
                         <option value="">Select Gender</option>
                         <option value="Male">Male</option>
@@ -145,7 +159,6 @@ const EditEmployee = ({ onLogout }) => {
                   </Col>
                 </Row>
 
-                {/* Row 3 */}
                 <Row className="mb-3">
                   <Col md={6}>
                     <Form.Group>
@@ -154,7 +167,7 @@ const EditEmployee = ({ onLogout }) => {
                         type="text"
                         name="department"
                         value={employee.department || ""}
-                        onChange={handleChange}
+                        onChange={handleEmployeeChange}
                       />
                     </Form.Group>
                   </Col>
@@ -165,14 +178,13 @@ const EditEmployee = ({ onLogout }) => {
                         type="text"
                         name="designation"
                         value={employee.designation || ""}
-                        onChange={handleChange}
+                        onChange={handleEmployeeChange}
                         placeholder="e.g. Developer, Director"
                       />
                     </Form.Group>
                   </Col>
                 </Row>
 
-                {/* Row 4 */}
                 <Row className="mb-3">
                   <Col md={6}>
                     <Form.Group>
@@ -180,7 +192,7 @@ const EditEmployee = ({ onLogout }) => {
                       <Form.Select
                         name="role"
                         value={employee.role}
-                        onChange={handleChange}
+                        onChange={handleEmployeeChange}
                         required
                       >
                         <option value="">Select Role</option>
@@ -199,13 +211,13 @@ const EditEmployee = ({ onLogout }) => {
                         type="date"
                         name="joiningDate"
                         value={employee.joiningDate || ""}
-                        onChange={handleChange}
+                        onChange={handleEmployeeChange}
                       />
                     </Form.Group>
                   </Col>
                 </Row>
 
-                {/* Row 5 - Account info */}
+                {/* User Info */}
                 <Row className="mb-3">
                   <Col md={6}>
                     <Form.Group>
@@ -213,8 +225,8 @@ const EditEmployee = ({ onLogout }) => {
                       <Form.Control
                         type="text"
                         name="username"
-                        value={employee.username || ""}
-                        onChange={handleChange}
+                        value={user.username || ""}
+                        onChange={handleUserChange}
                         required
                       />
                     </Form.Group>
@@ -225,28 +237,26 @@ const EditEmployee = ({ onLogout }) => {
                       <Form.Control
                         type="password"
                         name="password"
-                        value={employee.password || ""}
-                        onChange={handleChange}
+                        value={user.password || ""}
+                        onChange={handleUserChange}
                         placeholder="Leave blank to keep current password"
                       />
                     </Form.Group>
                   </Col>
                 </Row>
 
-                {/* Row 6 */}
                 <Row className="mb-3">
                   <Col md={6} className="d-flex align-items-center">
                     <Form.Check
                       type="checkbox"
                       name="active"
                       checked={employee.active}
-                      onChange={handleChange}
+                      onChange={handleEmployeeChange}
                       label="Active"
                     />
                   </Col>
                 </Row>
 
-                {/* Buttons */}
                 <div className="d-flex gap-2">
                   <AppButton text="Update Employee" variant="primary" type="submit" />
                   <AppButton

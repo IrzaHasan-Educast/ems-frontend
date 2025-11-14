@@ -11,8 +11,9 @@ const Sidebar = ({ isOpen, onLogout }) => {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("role");
-    onLogout(); // 🔁 update App.js state
-    navigate("/login");
+    window.location.href = "/"; // redirect to login
+    // onLogout(); // 🔁 update App.js state
+    // navigate("/login");
   };
 
   return (
@@ -20,7 +21,13 @@ const Sidebar = ({ isOpen, onLogout }) => {
       className={`sidebar d-flex flex-column justify-content-between p-3 ${
         isOpen ? "sidebar-open" : "sidebar-closed"
       }`}
-      style={{ backgroundColor: "#f58a29", color: "white", height: "100vh" }}
+      style={{backgroundColor: "#f58a29",
+    color: "white",
+    minHeight: "100vh", // ensures at least full viewport height
+    position: "sticky",
+    top: 0,
+    alignSelf: "flex-start", // important for flex container
+     }}
     >
       {/* Logo Section */}
       <div>
