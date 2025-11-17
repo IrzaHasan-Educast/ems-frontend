@@ -16,27 +16,37 @@ const EmployeeDashboard = ({ onLogout }) => {
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   useEffect(() => {
-    // Hardcoded employee data
     setEmployee({ fullName: "Irza Hasan", role: "Employee" });
 
-    // Load session from localStorage
-    const savedSession = localStorage.getItem("currentSession");
-    if (savedSession) {
-      const parsed = JSON.parse(savedSession);
-      setCurrentSession({
-        ...parsed,
-        clockIn: parsed.clockIn ? new Date(parsed.clockIn) : null,
-        clockOut: parsed.clockOut ? new Date(parsed.clockOut) : null,
-      });
-    }
-
-    // Optional: fetch history from API
-    // fetchHistory();
+    // Load active session from backend on page load
+    fetchActiveSession();
   }, []);
 
-  const saveSession = (session) => {
-    setCurrentSession(session);
-    localStorage.setItem("currentSession", JSON.stringify(session));
+  const fetchActiveSession = async () => {
+    try {
+      const res = await axios.get(
+        "http://localhost:8080/api/v1/work-sessions/active",
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      if (res.data) {
+        setCurrentSession({
+          clockIn: new Date(res.data.clockInTime),
+          clockOut: res.data.clockOutTime ? new Date(res.data.clockOutTime) : null,
+          totalHours: res.data.totalWorkingHours || 0,
+          onBreak: false,
+          sessionId: res.data.id,
+        });
+      } else {
+        setCurrentSession(null);
+      }
+    } catch (err) {
+      console.error("Failed fetching active session", err);
+    }
   };
 
   const handleClockIn = async () => {
@@ -51,23 +61,24 @@ const EmployeeDashboard = ({ onLogout }) => {
           },
         }
       );
-      const session = {
+
+      setCurrentSession({
         clockIn: new Date(res.data.clockInTime),
-        clockOut: res.data.clockOutTime ? new Date(res.data.clockOutTime) : null,
-        totalHours: res.data.totalWorkingHours ? parseFloat(res.data.totalWorkingHours) : 0,
+        clockOut: null,
+        totalHours: 0,
         onBreak: false,
         sessionId: res.data.id,
-      };
-      saveSession(session);
+      });
     } catch (err) {
       console.error(err);
-      alert("Clock in failed. Make sure you are logged in as Employee.");
+      alert("Clock in failed.");
     }
     setLoading(false);
   };
 
   const handleClockOut = async () => {
     if (!currentSession?.sessionId) return;
+
     setLoading(true);
     try {
       await axios.put(
@@ -79,20 +90,28 @@ const EmployeeDashboard = ({ onLogout }) => {
           },
         }
       );
+
       const now = new Date();
-      const hours = ((now - new Date(currentSession.clockIn)) / 1000 / 3600).toFixed(2);
-      const updated = { ...currentSession, clockOut: now, totalHours: parseFloat(hours) };
-      saveSession(updated);
+      const hours = (
+        (now - new Date(currentSession.clockIn)) /
+        1000 /
+        3600
+      ).toFixed(2);
+
+      setCurrentSession({
+        ...currentSession,
+        clockOut: now,
+        totalHours: parseFloat(hours),
+      });
     } catch (err) {
       console.error(err);
-      alert("Clock out failed");
+      alert("Clock out failed.");
     }
     setLoading(false);
   };
 
   const handleTakeBreak = () => {
-    const updated = { ...currentSession, onBreak: !currentSession.onBreak };
-    saveSession(updated);
+    setCurrentSession({ ...currentSession, onBreak: !currentSession.onBreak });
   };
 
   if (!employee) return <div>Loading...</div>;
@@ -105,25 +124,16 @@ const EmployeeDashboard = ({ onLogout }) => {
         <div className="p-4">
           <h3 className="text-primary mb-4">Welcome, {employee.fullName}</h3>
 
-          {/* Current Session Card */}
+          {/* Current Session */}
           <CardContainer title="Current Session">
             <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap">
               <div>
-                <p>
-                  Clock In:{" "}
-                  {currentSession?.clockIn
-                    ? currentSession.clockIn.toLocaleTimeString()
-                    : "--"}
-                </p>
-                <p>
-                  Clock Out:{" "}
-                  {currentSession?.clockOut
-                    ? currentSession.clockOut.toLocaleTimeString()
-                    : "--"}
-                </p>
+                <p>Clock In: {currentSession?.clockIn ? currentSession.clockIn.toLocaleTimeString() : "--"}</p>
+                <p>Clock Out: {currentSession?.clockOut ? currentSession.clockOut.toLocaleTimeString() : "--"}</p>
                 <p>Total Hours: {currentSession?.totalHours || 0}</p>
                 <p>Status: {currentSession?.onBreak ? "On Break" : "Working"}</p>
               </div>
+
               <div className="d-flex gap-2 flex-wrap mt-2">
                 {!currentSession?.clockIn || currentSession.clockOut ? (
                   <Button
@@ -142,6 +152,7 @@ const EmployeeDashboard = ({ onLogout }) => {
                     {loading ? "Processing..." : "Clock Out"}
                   </Button>
                 )}
+
                 <Button
                   variant={currentSession?.onBreak ? "warning" : "info"}
                   onClick={handleTakeBreak}
@@ -153,7 +164,7 @@ const EmployeeDashboard = ({ onLogout }) => {
             </div>
           </CardContainer>
 
-          {/* History Card */}
+          {/* Work History */}
           <CardContainer title="Work History">
             <Table striped bordered hover responsive>
               <thead>
