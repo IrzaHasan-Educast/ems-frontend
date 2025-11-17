@@ -145,6 +145,61 @@ const EmployeeDashboard = ({ onLogout }) => {
     }
     setLoading(false);
   };
+const calculateSessionTimes = (session) => {
+  if (!session?.clockInTime) return { netHours: 0, idleTime: 0 };
+
+  const clockIn = new Date(session.clockInTime);
+  const clockOut = session.clockOutTime ? new Date(session.clockOutTime) : new Date();
+
+  const totalMillis = clockOut - clockIn;
+
+  // Total break millis
+  const totalBreakMillis = session.breaks.reduce((sum, b) => {
+    const start = new Date(b.startTime);
+    const end = b.endTime ? new Date(b.endTime) : new Date(); // ongoing break
+    return sum + (end - start);
+  }, 0);
+
+  const netMillis = totalMillis - totalBreakMillis;
+  const netHours = netMillis / 1000 / 3600;
+  const idleHours = totalBreakMillis / 1000 / 3600;
+
+  return {
+    netHours: formatDuration(netHours),
+    idleHours: formatDuration(idleHours)
+  };
+};
+
+
+const calculateNetWorkingHours = (session) => {
+  if (!session?.clockInTime) return 0;
+
+  const clockIn = new Date(session.clockInTime);
+  const clockOut = session.clockOutTime ? new Date(session.clockOutTime) : new Date();
+
+  const totalMillis = clockOut - clockIn;
+
+  // Total break millis
+  const totalBreakMillis = session.breaks.reduce((sum, b) => {
+    const start = new Date(b.startTime);
+    const end = b.endTime ? new Date(b.endTime) : new Date();
+    return sum + (end - start);
+  }, 0);
+
+  const netMillis = totalMillis - totalBreakMillis;
+  const netHours = netMillis / 1000 / 3600; // convert ms → hours
+
+  return formatDuration(netHours);;
+};
+
+const formatDuration = (hoursDecimal) => {
+  if (!hoursDecimal) return "0h 0m";
+  const totalMinutes = Math.round(hoursDecimal * 60);
+  const hrs = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+  return `${hrs}h ${mins}m`;
+};
+
 
   const calculateNetHours = () => {
     if (!currentSession?.clockIn) return 0;
@@ -155,6 +210,7 @@ const EmployeeDashboard = ({ onLogout }) => {
   };
 
   if (!employee) return <div>Loading...</div>;
+const { netHours, idleHours } = calculateSessionTimes(currentSession);
 
   return (
     <div className="d-flex">
@@ -171,6 +227,8 @@ const EmployeeDashboard = ({ onLogout }) => {
                 <p>Clock In: {currentSession?.clockIn ? currentSession.clockIn.toLocaleTimeString() : "--"}</p>
                 <p>Clock Out: {currentSession?.clockOut ? currentSession.clockOut.toLocaleTimeString() : "--"}</p>
                 <p>Total Hours: {calculateNetHours()}</p>
+                <p>Total Working Hours: {calculateNetWorkingHours(currentSession)}</p>
+                <p>Break Duration: {calculateSessionTimes(currentSession).idleHours}</p>
                 <p>Status: {currentSession?.onBreak ? "On Break" : "Working"}</p>
               </div>
 
