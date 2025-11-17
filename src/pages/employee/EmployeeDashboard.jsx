@@ -17,30 +17,28 @@ const EmployeeDashboard = ({ onLogout }) => {
 
   useEffect(() => {
     setEmployee({ fullName: "Irza Hasan", role: "Employee" });
-
-    // Load active session from backend on page load
     fetchActiveSession();
   }, []);
 
+  // Fetch active session from backend
   const fetchActiveSession = async () => {
     try {
       const res = await axios.get(
         "http://localhost:8080/api/v1/work-sessions/active",
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
+        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
       );
 
       if (res.data) {
-        setCurrentSession({
+        const session = {
+          ...res.data,
           clockIn: new Date(res.data.clockInTime),
           clockOut: res.data.clockOutTime ? new Date(res.data.clockOutTime) : null,
-          totalHours: res.data.totalWorkingHours || 0,
-          onBreak: false,
+          breaks: res.data.breaks || [],
+          onBreak: res.data.breaks?.some(b => !b.endTime) || false,
+          currentBreakId: res.data.breaks?.find(b => !b.endTime)?.id || null,
           sessionId: res.data.id,
-        });
+        };
+        setCurrentSession(session);
       } else {
         setCurrentSession(null);
       }
@@ -55,18 +53,15 @@ const EmployeeDashboard = ({ onLogout }) => {
       const res = await axios.post(
         "http://localhost:8080/api/v1/work-sessions/clock-in",
         {},
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
+        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
       );
 
       setCurrentSession({
         clockIn: new Date(res.data.clockInTime),
         clockOut: null,
-        totalHours: 0,
+        breaks: [],
         onBreak: false,
+        currentBreakId: null,
         sessionId: res.data.id,
       });
     } catch (err) {
@@ -78,30 +73,29 @@ const EmployeeDashboard = ({ onLogout }) => {
 
   const handleClockOut = async () => {
     if (!currentSession?.sessionId) return;
-
     setLoading(true);
+
     try {
       await axios.put(
         `http://localhost:8080/api/v1/work-sessions/clock-out/${currentSession.sessionId}`,
         {},
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
+        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
       );
 
       const now = new Date();
-      const hours = (
-        (now - new Date(currentSession.clockIn)) /
-        1000 /
-        3600
-      ).toFixed(2);
+      const workedHours = (now - new Date(currentSession.clockIn)) / 1000 / 3600;
+      const totalBreakHours = currentSession.breaks.reduce(
+        (sum, b) => sum + (b.durationHours || 0),
+        0
+      );
+      const netHours = workedHours - totalBreakHours;
 
       setCurrentSession({
         ...currentSession,
         clockOut: now,
-        totalHours: parseFloat(hours),
+        totalHours: netHours,
+        onBreak: false,
+        currentBreakId: null,
       });
     } catch (err) {
       console.error(err);
@@ -110,8 +104,54 @@ const EmployeeDashboard = ({ onLogout }) => {
     setLoading(false);
   };
 
-  const handleTakeBreak = () => {
-    setCurrentSession({ ...currentSession, onBreak: !currentSession.onBreak });
+  const handleTakeBreak = async () => {
+    if (!currentSession?.sessionId) return;
+    setLoading(true);
+
+    try {
+      if (!currentSession.onBreak) {
+        // Start break
+        const res = await axios.post(
+          "http://localhost:8080/api/v1/breaks",
+          { workSessionId: currentSession.sessionId, startTime: new Date() },
+          { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+        );
+
+        setCurrentSession({
+          ...currentSession,
+          onBreak: true,
+          currentBreakId: res.data.id,
+        });
+      } else {
+        // End break
+        const breakId = currentSession.currentBreakId;
+        const res = await axios.put(
+          `http://localhost:8080/api/v1/breaks/${breakId}`,
+          { endTime: new Date() },
+          { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+        );
+
+        const updatedBreaks = [...currentSession.breaks.filter(b => b.id !== breakId), res.data];
+        setCurrentSession({
+          ...currentSession,
+          onBreak: false,
+          currentBreakId: null,
+          breaks: updatedBreaks,
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Break operation failed.");
+    }
+    setLoading(false);
+  };
+
+  const calculateNetHours = () => {
+    if (!currentSession?.clockIn) return 0;
+    const clockOutTime = currentSession.clockOut || new Date();
+    const workedHours = (clockOutTime - new Date(currentSession.clockIn)) / 1000 / 3600;
+    const totalBreakHours = currentSession.breaks.reduce((sum, b) => sum + (b.durationHours || 0), 0);
+    return (workedHours - totalBreakHours).toFixed(2);
   };
 
   if (!employee) return <div>Loading...</div>;
@@ -130,25 +170,17 @@ const EmployeeDashboard = ({ onLogout }) => {
               <div>
                 <p>Clock In: {currentSession?.clockIn ? currentSession.clockIn.toLocaleTimeString() : "--"}</p>
                 <p>Clock Out: {currentSession?.clockOut ? currentSession.clockOut.toLocaleTimeString() : "--"}</p>
-                <p>Total Hours: {currentSession?.totalHours || 0}</p>
+                <p>Total Hours: {calculateNetHours()}</p>
                 <p>Status: {currentSession?.onBreak ? "On Break" : "Working"}</p>
               </div>
 
               <div className="d-flex gap-2 flex-wrap mt-2">
                 {!currentSession?.clockIn || currentSession.clockOut ? (
-                  <Button
-                    variant="success"
-                    onClick={handleClockIn}
-                    disabled={loading}
-                  >
+                  <Button variant="success" onClick={handleClockIn} disabled={loading}>
                     {loading ? "Processing..." : "Clock In"}
                   </Button>
                 ) : (
-                  <Button
-                    variant="danger"
-                    onClick={handleClockOut}
-                    disabled={loading}
-                  >
+                  <Button variant="danger" onClick={handleClockOut} disabled={loading}>
                     {loading ? "Processing..." : "Clock Out"}
                   </Button>
                 )}
