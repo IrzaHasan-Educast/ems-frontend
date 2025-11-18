@@ -1,5 +1,5 @@
 // src/pages/EmployeeDashboard.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Sidebar from "../../components/EmployeeSidebar";
 import TopNavbar from "../../components/EmployeeNavbar";
 import CardContainer from "../../components/CardContainer";
@@ -15,13 +15,79 @@ const EmployeeDashboard = ({ onLogout }) => {
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-  useEffect(() => {
-    setEmployee({ fullName: "Irza Hasan", role: "Employee" });
-    fetchActiveSession();
+  // Format time to AM/PM
+  const formatTimeAMPM = (date) => {
+    if (!date) return "--";
+    const d = new Date(date);
+    let hours = d.getHours();
+    const minutes = String(d.getMinutes()).padStart(2, "0");
+    const seconds = String(d.getSeconds()).padStart(2, "0");
+    const ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12;
+    hours = hours ? hours : 12; // 0 ko 12 banao
+    return `${hours}:${minutes}:${seconds} ${ampm}`;
+  };
+
+  const formatDuration = (hoursDecimal) => {
+    if (!hoursDecimal) return "0h 0m";
+    const totalMinutes = Math.round(hoursDecimal * 60);
+    const hrs = Math.floor(totalMinutes / 60);
+    const mins = totalMinutes % 60;
+    return `${hrs}h ${mins}m`;
+  };
+
+  const fetchHistory = useCallback(async (employeeId) => {
+    try {
+      const res = await axios.get(
+        `http://localhost:8080/api/v1/work-sessions/employee/${employeeId}`,
+        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+      );
+
+      if (res.data && Array.isArray(res.data)) {
+        const formatted = res.data.map(s => {
+          const clockIn = new Date(s.clockInTime);
+          const clockOut = s.clockOutTime ? new Date(s.clockOutTime) : null;
+
+          const totalBreakMillis = s.breaks?.reduce((sum, b) => {
+            const start = new Date(b.startTime);
+            const end = b.endTime ? new Date(b.endTime) : new Date();
+            return sum + (end - start);
+          }, 0) || 0;
+
+          const totalMillis = (clockOut || new Date()) - clockIn;
+          const netMillis = totalMillis - totalBreakMillis;
+
+          return {
+            id: s.id,
+            date: clockIn.toLocaleDateString(),
+            clockIn: formatTimeAMPM(clockIn),
+            clockOut: clockOut ? formatTimeAMPM(clockOut) : "--",
+            totalHours: formatDuration(totalMillis / 1000 / 3600),
+            workingHours: formatDuration(netMillis / 1000 / 3600),
+            breakHours: formatDuration(totalBreakMillis / 1000 / 3600),
+            status: s.status
+          };
+        });
+        setHistory(formatted);
+      }
+    } catch (err) {
+      console.error("Failed to fetch history", err);
+    }
   }, []);
 
-  // Fetch active session from backend
-  const fetchActiveSession = async () => {
+  const fetchCurrentUser = useCallback(async () => {
+    try {
+      const res = await axios.get("http://localhost:8080/api/v1/work-sessions/me", {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+      });
+      setEmployee({ fullName: res.data.fullName, id: res.data.employeeId });
+      fetchHistory(res.data.employeeId);
+    } catch (err) {
+      console.error("Failed fetching user", err);
+    }
+  }, [fetchHistory]);
+
+  const fetchActiveSession = useCallback(async () => {
     try {
       const res = await axios.get(
         "http://localhost:8080/api/v1/work-sessions/active",
@@ -45,7 +111,12 @@ const EmployeeDashboard = ({ onLogout }) => {
     } catch (err) {
       console.error("Failed fetching active session", err);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchCurrentUser();
+    fetchActiveSession();
+  }, [fetchCurrentUser, fetchActiveSession]);
 
   const handleClockIn = async () => {
     setLoading(true);
@@ -74,7 +145,6 @@ const EmployeeDashboard = ({ onLogout }) => {
   const handleClockOut = async () => {
     if (!currentSession?.sessionId) return;
     setLoading(true);
-
     try {
       await axios.put(
         `http://localhost:8080/api/v1/work-sessions/clock-out/${currentSession.sessionId}`,
@@ -145,61 +215,6 @@ const EmployeeDashboard = ({ onLogout }) => {
     }
     setLoading(false);
   };
-const calculateSessionTimes = (session) => {
-  if (!session?.clockInTime) return { netHours: 0, idleTime: 0 };
-
-  const clockIn = new Date(session.clockInTime);
-  const clockOut = session.clockOutTime ? new Date(session.clockOutTime) : new Date();
-
-  const totalMillis = clockOut - clockIn;
-
-  // Total break millis
-  const totalBreakMillis = session.breaks.reduce((sum, b) => {
-    const start = new Date(b.startTime);
-    const end = b.endTime ? new Date(b.endTime) : new Date(); // ongoing break
-    return sum + (end - start);
-  }, 0);
-
-  const netMillis = totalMillis - totalBreakMillis;
-  const netHours = netMillis / 1000 / 3600;
-  const idleHours = totalBreakMillis / 1000 / 3600;
-
-  return {
-    netHours: formatDuration(netHours),
-    idleHours: formatDuration(idleHours)
-  };
-};
-
-
-const calculateNetWorkingHours = (session) => {
-  if (!session?.clockInTime) return 0;
-
-  const clockIn = new Date(session.clockInTime);
-  const clockOut = session.clockOutTime ? new Date(session.clockOutTime) : new Date();
-
-  const totalMillis = clockOut - clockIn;
-
-  // Total break millis
-  const totalBreakMillis = session.breaks.reduce((sum, b) => {
-    const start = new Date(b.startTime);
-    const end = b.endTime ? new Date(b.endTime) : new Date();
-    return sum + (end - start);
-  }, 0);
-
-  const netMillis = totalMillis - totalBreakMillis;
-  const netHours = netMillis / 1000 / 3600; // convert ms → hours
-
-  return formatDuration(netHours);;
-};
-
-const formatDuration = (hoursDecimal) => {
-  if (!hoursDecimal) return "0h 0m";
-  const totalMinutes = Math.round(hoursDecimal * 60);
-  const hrs = Math.floor(totalMinutes / 60);
-  const mins = totalMinutes % 60;
-  return `${hrs}h ${mins}m`;
-};
-
 
   const calculateNetHours = () => {
     if (!currentSession?.clockIn) return 0;
@@ -209,8 +224,48 @@ const formatDuration = (hoursDecimal) => {
     return (workedHours - totalBreakHours).toFixed(2);
   };
 
+  const calculateSessionTimes = (session) => {
+    if (!session?.clockInTime) return { netHours: 0, idleHours: 0 };
+    const clockIn = new Date(session.clockInTime);
+    const clockOut = session.clockOutTime ? new Date(session.clockOutTime) : new Date();
+    const totalMillis = clockOut - clockIn;
+
+    const totalBreakMillis = session.breaks.reduce((sum, b) => {
+      const start = new Date(b.startTime);
+      const end = b.endTime ? new Date(b.endTime) : new Date();
+      return sum + (end - start);
+    }, 0);
+
+    const netMillis = totalMillis - totalBreakMillis;
+    const netHours = netMillis / 1000 / 3600;
+    const idleHours = totalBreakMillis / 1000 / 3600;
+
+    return {
+      netHours: formatDuration(netHours),
+      idleHours: formatDuration(idleHours)
+    };
+  };
+
+  const calculateNetWorkingHours = (session) => {
+    if (!session?.clockInTime) return 0;
+    const clockIn = new Date(session.clockInTime);
+    const clockOut = session.clockOutTime ? new Date(session.clockOutTime) : new Date();
+    const totalMillis = clockOut - clockIn;
+
+    const totalBreakMillis = session.breaks.reduce((sum, b) => {
+      const start = new Date(b.startTime);
+      const end = b.endTime ? new Date(b.endTime) : new Date();
+      return sum + (end - start);
+    }, 0);
+
+    const netMillis = totalMillis - totalBreakMillis;
+    const netHours = netMillis / 1000 / 3600;
+
+    return formatDuration(netHours);
+  };
+
   if (!employee) return <div>Loading...</div>;
-const { netHours, idleHours } = calculateSessionTimes(currentSession);
+  const { idleHours } = calculateSessionTimes(currentSession);
 
   return (
     <div className="d-flex">
@@ -224,11 +279,11 @@ const { netHours, idleHours } = calculateSessionTimes(currentSession);
           <CardContainer title="Current Session">
             <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap">
               <div>
-                <p>Clock In: {currentSession?.clockIn ? currentSession.clockIn.toLocaleTimeString() : "--"}</p>
-                <p>Clock Out: {currentSession?.clockOut ? currentSession.clockOut.toLocaleTimeString() : "--"}</p>
-                <p>Total Hours: {calculateNetHours()}</p>
+                <p>Clock In: {formatTimeAMPM(currentSession?.clockIn)}</p>
+                <p>Clock Out: {formatTimeAMPM(currentSession?.clockOut)}</p>
+                <p>Total Hours: {calculateNetHours()} h</p>
                 <p>Total Working Hours: {calculateNetWorkingHours(currentSession)}</p>
-                <p>Break Duration: {calculateSessionTimes(currentSession).idleHours}</p>
+                <p>Break Duration: {idleHours}</p>
                 <p>Status: {currentSession?.onBreak ? "On Break" : "Working"}</p>
               </div>
 
@@ -263,7 +318,9 @@ const { netHours, idleHours } = calculateSessionTimes(currentSession);
                   <th>Clock In</th>
                   <th>Clock Out</th>
                   <th>Total Hours</th>
-                  <th>Breaks</th>
+                  <th>Working Hours</th>
+                  <th>Break Hours</th>
+                  <th>Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -273,7 +330,9 @@ const { netHours, idleHours } = calculateSessionTimes(currentSession);
                     <td>{h.clockIn}</td>
                     <td>{h.clockOut}</td>
                     <td>{h.totalHours}</td>
-                    <td>{h.breaks}</td>
+                    <td>{h.workingHours}</td>
+                    <td>{h.breakHours}</td>
+                    <td>{h.status}</td>
                   </tr>
                 ))}
               </tbody>
