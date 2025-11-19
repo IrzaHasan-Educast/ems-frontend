@@ -3,7 +3,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import Sidebar from "../../components/EmployeeSidebar";
 import TopNavbar from "../../components/EmployeeNavbar";
 import CardContainer from "../../components/CardContainer";
-import { Button, Table } from "react-bootstrap";
+import CurrentSessionCard from "../../components/CurrentSessionCard";
+import { Button } from "react-bootstrap";
 import axios from "axios";
 
 const EmployeeDashboard = ({ onLogout }) => {
@@ -15,7 +16,6 @@ const EmployeeDashboard = ({ onLogout }) => {
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-  // Format time to AM/PM
   const formatTimeAMPM = (date) => {
     if (!date) return "--";
     const d = new Date(date);
@@ -23,8 +23,7 @@ const EmployeeDashboard = ({ onLogout }) => {
     const minutes = String(d.getMinutes()).padStart(2, "0");
     const seconds = String(d.getSeconds()).padStart(2, "0");
     const ampm = hours >= 12 ? "PM" : "AM";
-    hours = hours % 12;
-    hours = hours ? hours : 12; // 0 ko 12 banao
+    hours = hours % 12 || 12;
     return `${hours}:${minutes}:${seconds} ${ampm}`;
   };
 
@@ -44,30 +43,43 @@ const EmployeeDashboard = ({ onLogout }) => {
       );
 
       if (res.data && Array.isArray(res.data)) {
-        const formatted = res.data.map(s => {
+        // Sort by clockIn descending
+        const sorted = res.data.sort(
+          (a, b) => new Date(b.clockInTime) - new Date(a.clockInTime)
+        );
+
+        const formatted = sorted.map((s) => {
           const clockIn = new Date(s.clockInTime);
           const clockOut = s.clockOutTime ? new Date(s.clockOutTime) : null;
-
-          const totalBreakMillis = s.breaks?.reduce((sum, b) => {
-            const start = new Date(b.startTime);
-            const end = b.endTime ? new Date(b.endTime) : new Date();
-            return sum + (end - start);
-          }, 0) || 0;
+          const totalBreakMillis =
+            s.breaks?.reduce((sum, b) => {
+              const start = new Date(b.startTime);
+              const end = b.endTime ? new Date(b.endTime) : new Date();
+              return sum + (end - start);
+            }, 0) || 0;
 
           const totalMillis = (clockOut || new Date()) - clockIn;
           const netMillis = totalMillis - totalBreakMillis;
 
           return {
             id: s.id,
-            date: clockIn.toLocaleDateString(),
-            clockIn: formatTimeAMPM(clockIn),
-            clockOut: clockOut ? formatTimeAMPM(clockOut) : "--",
+            // date: clockIn.toLocaleDateString(),
+            clockIn: clockIn,          // keep as Date object
+            clockOut: clockOut,        // keep as Date object or null
+            clockInFormatted: formatTimeAMPM(clockIn),
+            clockOutFormatted: clockOut ? formatTimeAMPM(clockOut) : "--",
+
             totalHours: formatDuration(totalMillis / 1000 / 3600),
             workingHours: formatDuration(netMillis / 1000 / 3600),
             breakHours: formatDuration(totalBreakMillis / 1000 / 3600),
-            status: s.status
+            status: clockOut
+              ? "Completed"
+              : s.breaks?.some((b) => !b.endTime)
+              ? "On Break"
+              : "Working",
           };
         });
+
         setHistory(formatted);
       }
     } catch (err) {
@@ -78,7 +90,7 @@ const EmployeeDashboard = ({ onLogout }) => {
   const fetchCurrentUser = useCallback(async () => {
     try {
       const res = await axios.get("http://localhost:8080/api/v1/work-sessions/me", {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       setEmployee({ fullName: res.data.fullName, id: res.data.employeeId });
       fetchHistory(res.data.employeeId);
@@ -89,10 +101,9 @@ const EmployeeDashboard = ({ onLogout }) => {
 
   const fetchActiveSession = useCallback(async () => {
     try {
-      const res = await axios.get(
-        "http://localhost:8080/api/v1/work-sessions/active",
-        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
-      );
+      const res = await axios.get("http://localhost:8080/api/v1/work-sessions/active", {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
 
       if (res.data) {
         const session = {
@@ -100,16 +111,15 @@ const EmployeeDashboard = ({ onLogout }) => {
           clockIn: new Date(res.data.clockInTime),
           clockOut: res.data.clockOutTime ? new Date(res.data.clockOutTime) : null,
           breaks: res.data.breaks || [],
-          onBreak: res.data.breaks?.some(b => !b.endTime) || false,
-          currentBreakId: res.data.breaks?.find(b => !b.endTime)?.id || null,
+          onBreak: res.data.breaks?.some((b) => !b.endTime) || false,
+          currentBreakId: res.data.breaks?.find((b) => !b.endTime)?.id || null,
           sessionId: res.data.id,
         };
         setCurrentSession(session);
-      } else {
-        setCurrentSession(null);
-      }
+      } else setCurrentSession(null);
     } catch (err) {
       console.error("Failed fetching active session", err);
+      setCurrentSession(null);
     }
   }, []);
 
@@ -126,7 +136,6 @@ const EmployeeDashboard = ({ onLogout }) => {
         {},
         { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
       );
-
       setCurrentSession({
         clockIn: new Date(res.data.clockInTime),
         clockOut: null,
@@ -135,6 +144,7 @@ const EmployeeDashboard = ({ onLogout }) => {
         currentBreakId: null,
         sessionId: res.data.id,
       });
+      fetchHistory(employee.id);
     } catch (err) {
       console.error(err);
       alert("Clock in failed.");
@@ -151,22 +161,13 @@ const EmployeeDashboard = ({ onLogout }) => {
         {},
         { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
       );
-
-      const now = new Date();
-      const workedHours = (now - new Date(currentSession.clockIn)) / 1000 / 3600;
-      const totalBreakHours = currentSession.breaks.reduce(
-        (sum, b) => sum + (b.durationHours || 0),
-        0
-      );
-      const netHours = workedHours - totalBreakHours;
-
-      setCurrentSession({
-        ...currentSession,
-        clockOut: now,
-        totalHours: netHours,
+      setCurrentSession((prev) => ({
+        ...prev,
+        clockOut: new Date(),
         onBreak: false,
         currentBreakId: null,
-      });
+      }));
+      fetchHistory(employee.id);
     } catch (err) {
       console.error(err);
       alert("Clock out failed.");
@@ -180,35 +181,27 @@ const EmployeeDashboard = ({ onLogout }) => {
 
     try {
       if (!currentSession.onBreak) {
-        // Start break
         const res = await axios.post(
           "http://localhost:8080/api/v1/breaks",
           { workSessionId: currentSession.sessionId, startTime: new Date() },
           { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
         );
-
-        setCurrentSession({
-          ...currentSession,
-          onBreak: true,
-          currentBreakId: res.data.id,
-        });
+        setCurrentSession((prev) => ({ ...prev, onBreak: true, currentBreakId: res.data.id }));
       } else {
-        // End break
         const breakId = currentSession.currentBreakId;
         const res = await axios.put(
           `http://localhost:8080/api/v1/breaks/${breakId}`,
           { endTime: new Date() },
           { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
         );
-
-        const updatedBreaks = [...currentSession.breaks.filter(b => b.id !== breakId), res.data];
-        setCurrentSession({
-          ...currentSession,
+        setCurrentSession((prev) => ({
+          ...prev,
           onBreak: false,
           currentBreakId: null,
-          breaks: updatedBreaks,
-        });
+          breaks: [...prev.breaks.filter((b) => b.id !== breakId), res.data],
+        }));
       }
+      fetchHistory(employee.id);
     } catch (err) {
       console.error(err);
       alert("Break operation failed.");
@@ -216,56 +209,19 @@ const EmployeeDashboard = ({ onLogout }) => {
     setLoading(false);
   };
 
-  const calculateNetHours = () => {
-    if (!currentSession?.clockIn) return 0;
-    const clockOutTime = currentSession.clockOut || new Date();
-    const workedHours = (clockOutTime - new Date(currentSession.clockIn)) / 1000 / 3600;
-    const totalBreakHours = currentSession.breaks.reduce((sum, b) => sum + (b.durationHours || 0), 0);
-    return (workedHours - totalBreakHours).toFixed(2);
-  };
+const formatPrettyDate = (dateObj) => {
+  if (!dateObj) return "--";
+  return dateObj.toLocaleDateString("en-US", {
+    weekday: "short",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+};
 
-  const calculateSessionTimes = (session) => {
-    if (!session?.clockInTime) return { netHours: 0, idleHours: 0 };
-    const clockIn = new Date(session.clockInTime);
-    const clockOut = session.clockOutTime ? new Date(session.clockOutTime) : new Date();
-    const totalMillis = clockOut - clockIn;
 
-    const totalBreakMillis = session.breaks.reduce((sum, b) => {
-      const start = new Date(b.startTime);
-      const end = b.endTime ? new Date(b.endTime) : new Date();
-      return sum + (end - start);
-    }, 0);
-
-    const netMillis = totalMillis - totalBreakMillis;
-    const netHours = netMillis / 1000 / 3600;
-    const idleHours = totalBreakMillis / 1000 / 3600;
-
-    return {
-      netHours: formatDuration(netHours),
-      idleHours: formatDuration(idleHours)
-    };
-  };
-
-  const calculateNetWorkingHours = (session) => {
-    if (!session?.clockInTime) return 0;
-    const clockIn = new Date(session.clockInTime);
-    const clockOut = session.clockOutTime ? new Date(session.clockOutTime) : new Date();
-    const totalMillis = clockOut - clockIn;
-
-    const totalBreakMillis = session.breaks.reduce((sum, b) => {
-      const start = new Date(b.startTime);
-      const end = b.endTime ? new Date(b.endTime) : new Date();
-      return sum + (end - start);
-    }, 0);
-
-    const netMillis = totalMillis - totalBreakMillis;
-    const netHours = netMillis / 1000 / 3600;
-
-    return formatDuration(netHours);
-  };
 
   if (!employee) return <div>Loading...</div>;
-  const { idleHours } = calculateSessionTimes(currentSession);
 
   return (
     <div className="d-flex">
@@ -273,70 +229,57 @@ const EmployeeDashboard = ({ onLogout }) => {
       <div className="flex-grow-1">
         <TopNavbar toggleSidebar={toggleSidebar} />
         <div className="p-4">
-          <h3 className="text-primary mb-4">Welcome, {employee.fullName}</h3>
+          <h3 className="text mb-4">Welcome, {employee.fullName}</h3>
 
           {/* Current Session */}
           <CardContainer title="Current Session">
-            <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap">
-              <div>
-                <p>Clock In: {formatTimeAMPM(currentSession?.clockIn)}</p>
-                <p>Clock Out: {formatTimeAMPM(currentSession?.clockOut)}</p>
-                <p>Total Hours: {calculateNetHours()} h</p>
-                <p>Total Working Hours: {calculateNetWorkingHours(currentSession)}</p>
-                <p>Break Duration: {idleHours}</p>
-                <p>Status: {currentSession?.onBreak ? "On Break" : "Working"}</p>
-              </div>
+            <CurrentSessionCard
+              currentSession={currentSession}
+              formatTimeAMPM={formatTimeAMPM}
+              handleClockIn={handleClockIn}
+              handleClockOut={handleClockOut}
+              handleTakeBreak={handleTakeBreak}
+              loading={loading}
+            />
+          </CardContainer>
 
-              <div className="d-flex gap-2 flex-wrap mt-2">
-                {!currentSession?.clockIn || currentSession.clockOut ? (
-                  <Button variant="success" onClick={handleClockIn} disabled={loading}>
-                    {loading ? "Processing..." : "Clock In"}
-                  </Button>
-                ) : (
-                  <Button variant="danger" onClick={handleClockOut} disabled={loading}>
-                    {loading ? "Processing..." : "Clock Out"}
-                  </Button>
-                )}
-
+          {/* Recent 3 Days Attendance */}
+          <CardContainer title="Recent Work Sessions">
+            <div className="d-flex flex-column gap-3">
+              {history.slice(0, 3).map((h, idx) => (
+                <div key={idx} className="p-3 border rounded shadow-sm bg-light">
+                  <h5 className="mb-2" style={{ color: "#055993" }}>
+                    {formatPrettyDate(new Date(h.clockIn))}
+                  </h5>
+                  <div className="d-flex justify-content-between flex-wrap gap-3">
+                    <div>
+                      <p className="m-0 text-muted">Clock In</p>
+                      <h6>{h.clockInFormatted}</h6>
+                    </div>
+                    <div>
+                      <p className="m-0 text-muted">Clock Out</p>
+                      <h6>{h.clockOutFormatted}</h6>
+                    </div>
+                    <div>
+                      <p className="m-0 text-muted">Working Hours</p>
+                      <h6>{h.workingHours}</h6>
+                    </div>
+                    <div>
+                      <p className="m-0 text-muted">Break Hours</p>
+                      <h6>{h.breakHours}</h6>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <div className="text-end">
                 <Button
-                  variant={currentSession?.onBreak ? "warning" : "info"}
-                  onClick={handleTakeBreak}
-                  disabled={!currentSession?.clockIn || currentSession.clockOut}
+                  variant="primary"
+                  onClick={() => (window.location.href = "/employee/attendancehistory")}
                 >
-                  {currentSession?.onBreak ? "End Break" : "Take Break"}
+                  View Full History →
                 </Button>
               </div>
             </div>
-          </CardContainer>
-
-          {/* Work History */}
-          <CardContainer title="Work History">
-            <Table striped bordered hover responsive>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Clock In</th>
-                  <th>Clock Out</th>
-                  <th>Total Hours</th>
-                  <th>Working Hours</th>
-                  <th>Break Hours</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {history.map((h, idx) => (
-                  <tr key={idx}>
-                    <td>{h.date}</td>
-                    <td>{h.clockIn}</td>
-                    <td>{h.clockOut}</td>
-                    <td>{h.totalHours}</td>
-                    <td>{h.workingHours}</td>
-                    <td>{h.breakHours}</td>
-                    <td>{h.status}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
           </CardContainer>
         </div>
       </div>

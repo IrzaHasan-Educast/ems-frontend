@@ -8,6 +8,7 @@ import AddEmployee from "./pages/admin/AddEmployee";
 import EditEmployee from "./pages/admin/EditEmployee";
 import HrDashboard from "./pages/HrDashboard";
 import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
+import AttendanceHistory from "./pages/employee/AttendanceHistory";
 
 function App() {
   const [userRole, setUserRole] = useState(null);
@@ -93,11 +94,24 @@ function App() {
           element={
             userRole === "EMPLOYEE" ? (
               <EmployeeDashboard onLogout={handleLogout} />
+              
             ) : (
               <Navigate to="/login" />
             )
           }
         />
+        {/* 👨‍🔧 Employee - Attendance History */}
+        <Route
+          path="/employee/attendance-history"
+          element={
+            userRole === "EMPLOYEE" ? (
+              <AttendanceHistory />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
+
 
         {/* Default redirect */}
         <Route path="*" element={<Navigate to="/login" />} />
@@ -106,6 +120,7 @@ function App() {
         <Route path="/admin/employees" element={<AllEmployees />} />
         <Route path="/admin/employees/add" element={<AddEmployee />} />
         <Route path="/admin/employees/edit/:id" element={<EditEmployee />} />
+
 
       </Routes>
     </Router>

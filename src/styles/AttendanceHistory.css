@@ -1,0 +1,5 @@
+/* src/styles/AttendanceHistory.css */
+.scrollable-dropdown {
+  max-height: 100px; /* max height for dropdown */
+  overflow-y: auto;  /* enable vertical scroll */
+}
