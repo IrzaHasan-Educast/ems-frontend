@@ -2,13 +2,15 @@
 import React, { useEffect, useState } from "react";
 import { Table, Spinner, Button, Badge, Form, Row, Col } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
-import axios from "../../api/axios";
 import Sidebar from "../../components/Sidebar";
 import TopNavbar from "../../components/Navbar";
 import { PencilSquare, Trash, Eye } from "react-bootstrap-icons";
 import PageHeading from "../../components/PageHeading";
 import CardContainer from "../../components/CardContainer";
 import ViewEmployeeModal from "../../components/ViewEmployeeModal";
+
+// ✅ Import service functions only
+import { getAllEmployees, getEmployeeById, deleteEmployee } from "../../api/employeeApi";
 
 const AllEmployees = ({ onLogout }) => {
   const [employees, setEmployees] = useState([]);
@@ -21,53 +23,50 @@ const AllEmployees = ({ onLogout }) => {
   const navigate = useNavigate();
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
+  // Fetch all employees on component mount
   useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const res = await getAllEmployees(); // ✅ Using service function
+        setEmployees(res.data);
+      } catch (error) {
+        console.error("Failed to fetch employees:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchEmployees();
   }, []);
 
-  const fetchEmployees = async () => {
+  // Edit employee
+  const handleEdit = (id) => navigate(`/admin/employees/edit/${id}`);
+
+  // Delete employee
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this employee?")) return;
+
     try {
-      const res = await axios.get("/api/v1/employees");
-      setEmployees(res.data);
+      await deleteEmployee(id); // ✅ Using service function
+      setEmployees(employees.filter((emp) => emp.id !== id));
     } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
+      console.error("Failed to delete employee:", error);
+      alert(error.response?.data || "Failed to delete employee");
     }
   };
 
-  const handleEdit = (id) => navigate(`/admin/employees/edit/${id}`);
-
-  const handleDelete = async (id) => {
-  if (window.confirm("Are you sure you want to delete this employee?")) {
-    try {
-      const token = localStorage.getItem("token"); // JWT token
-      await axios.delete(`/api/v1/employees/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      setEmployees(employees.filter((emp) => emp.id !== id));
-    } catch (error) {
-      console.error(error);
-      alert(error.response?.data || "Failed to delete employee");
-    }
-  }
-};
-
-
-  // Modal-based view
+  // View employee in modal
   const handleView = async (id) => {
     try {
-      const res = await axios.get(`/api/v1/employees/${id}`);
+      const res = await getEmployeeById(id); // ✅ Using service function
       setSelectedEmployee(res.data);
       setShowModal(true);
     } catch (error) {
-      console.error("Failed to fetch employee", error);
+      console.error("Failed to fetch employee:", error);
     }
   };
 
-  // Filter employees based on search term
+  // Filter employees for search
   const filteredEmployees = employees.filter((emp) =>
     [emp.fullName, emp.email, emp.role, emp.designation]
       .join(" ")
@@ -81,41 +80,38 @@ const AllEmployees = ({ onLogout }) => {
       <div className="flex-grow-1">
         <TopNavbar toggleSidebar={toggleSidebar} />
         <div className="p-4 container">
-          {/* Heading and Add Employee Button */}
+          {/* Heading + Add Employee */}
+          
           <PageHeading
             title="All Employees"
             buttonText="Add Employee"
             onButtonClick={() => navigate("/admin/employees/add")}
           />
 
-        {/* Search Bar */}
-        <Row className="mb-3 d-flex justify-content-center">
-        <Col md={4}>
-            <Form.Group>
-            <div className="input-group border border-warning border-1 rounded-2 ">
-                <span className="input-group-text bg-white border-0" id="search-addon">
-                <i className="bi bi-search"></i> {/* Bootstrap Icons search */}
-                </span>
-                <Form.Control
-                type="text"
-                placeholder="Search by name, email, role, or designation..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="px-3 py-1 border-0" 
-                />
-            </div>
-            </Form.Group>
-        </Col>
-        </Row>
+          {/* Search Bar */}
+          <Row className="mb-3 justify-content-center">
+            <Col md={4}>
+              <Form.Group>
+                <div className="input-group border border-warning border-1 rounded-2">
+                  <span className="input-group-text bg-white border-0" id="search-addon">
+                    <i className="bi bi-search"></i>
+                  </span>
+                  <Form.Control
+                    type="text"
+                    placeholder="Search by name, email, role, or designation..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="px-3 py-1 border-0"
+                  />
+                </div>
+              </Form.Group>
+            </Col>
+          </Row>
 
-
-          {/* Card for Table */}
+          {/* Employees Table */}
           <CardContainer>
             {loading ? (
-              <div
-                className="d-flex justify-content-center align-items-center"
-                style={{ height: "50vh" }}
-              >
+              <div className="d-flex justify-content-center align-items-center" style={{ height: "50vh" }}>
                 <Spinner animation="border" variant="warning" />
               </div>
             ) : (
@@ -162,7 +158,7 @@ const AllEmployees = ({ onLogout }) => {
             )}
           </CardContainer>
 
-          {/* View Modal */}
+          {/* View Employee Modal */}
           {selectedEmployee && (
             <ViewEmployeeModal
               show={showModal}

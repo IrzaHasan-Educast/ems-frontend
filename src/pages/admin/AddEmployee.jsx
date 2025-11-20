@@ -1,12 +1,20 @@
-// src/pages/admin/AddEmployee.jsx
 import React, { useState, useEffect } from "react";
-import { Form, Row, Col } from "react-bootstrap";
+import { Form, Row, Col, InputGroup, Button } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
-import axios from "../../api/axios";
 import Sidebar from "../../components/Sidebar";
 import TopNavbar from "../../components/Navbar";
 import CardContainer from "../../components/CardContainer";
 import AppButton from "../../components/AppButton";
+
+import { getRoles, addEmployee } from "../../api/employeeApi";
+import {
+  validateFullName,
+  validatePhone,
+  validateUsername,
+  validatePassword,
+} from "../../utils/validators";
+
+import { Eye, EyeSlash } from "react-bootstrap-icons"; // icon
 
 const AddEmployee = ({ onLogout }) => {
   const [employee, setEmployee] = useState({
@@ -23,52 +31,46 @@ const AddEmployee = ({ onLogout }) => {
     password: "",
   });
 
+  const [errors, setErrors] = useState({});
   const [roles, setRoles] = useState([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [showPassword, setShowPassword] = useState(false); // toggle state
+
   const navigate = useNavigate();
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   useEffect(() => {
-    fetchRoles();
+    getRoles()
+      .then((res) => setRoles(res.data))
+      .catch((err) => console.error("Failed to fetch roles:", err));
   }, []);
-
-  const fetchRoles = async () => {
-    try {
-      const res = await axios.get("/api/v1/roles");
-      setRoles(res.data);
-    } catch (error) {
-      console.error("Error fetching roles:", error);
-    }
-  };
-
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setEmployee({
-      ...employee,
-      [name]: type === "checkbox" ? checked : value,
-    });
+    setEmployee((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
+  };
+
+  const validateForm = () => {
+    let tempErrors = {};
+    if (!validateFullName(employee.fullName))
+      tempErrors.fullName = "Full name may only contain letters & spaces.";
+    if (!validatePhone(employee.phone))
+      tempErrors.phone = "Phone must be a valid Pakistani number (03XX...).";
+    if (!validateUsername(employee.username))
+      tempErrors.username = "Username cannot have spaces. Only letters & numbers allowed.";
+    if (!validatePassword(employee.password))
+      tempErrors.password = "Password must be at least 6 characters.";
+
+    setErrors(tempErrors);
+    return Object.keys(tempErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validateForm()) return;
 
     try {
-      // POST employee + user together
-      await axios.post("/api/v1/employees", {
-        fullName: employee.fullName,
-        email: employee.email,
-        phone: employee.phone,
-        gender: employee.gender,
-        department: employee.department,
-        designation: employee.designation,
-        role: employee.role,
-        joiningDate: employee.joiningDate,
-        active: employee.active,
-        username: employee.username,
-        password: employee.password,
-      });
-
+      await addEmployee(employee);
       navigate("/admin/employees");
     } catch (error) {
       console.error(error);
@@ -85,20 +87,19 @@ const AddEmployee = ({ onLogout }) => {
           <div className="w-75">
             <CardContainer title="Add Employee">
               <Form onSubmit={handleSubmit}>
-                {/* Row 1 */}
+                {/* Full Name + Email */}
                 <Row className="mb-3">
                   <Col md={6}>
                     <Form.Group>
                       <Form.Label>Full Name</Form.Label>
                       <Form.Control
-                        size="sm"            // smaller input height
-                        type="text"
                         name="fullName"
                         value={employee.fullName}
                         onChange={handleChange}
+                        isInvalid={!!errors.fullName}
                         placeholder="Enter full name"
-                        required
                       />
+                      <Form.Control.Feedback type="invalid">{errors.fullName}</Form.Control.Feedback>
                     </Form.Group>
                   </Col>
                   <Col md={6}>
@@ -109,52 +110,47 @@ const AddEmployee = ({ onLogout }) => {
                         name="email"
                         value={employee.email}
                         onChange={handleChange}
-                        placeholder="Enter email"
                         required
+                        placeholder="Enter email"
                       />
                     </Form.Group>
                   </Col>
                 </Row>
 
-                {/* Row 2 */}
+                {/* Phone + Gender */}
                 <Row className="mb-3">
                   <Col md={6}>
                     <Form.Group>
                       <Form.Label>Phone</Form.Label>
                       <Form.Control
-                        type="text"
                         name="phone"
                         value={employee.phone}
                         onChange={handleChange}
-                        placeholder="Enter phone number"
+                        isInvalid={!!errors.phone}
+                        placeholder="03XX-XXXXXXX"
                       />
+                      <Form.Control.Feedback type="invalid">{errors.phone}</Form.Control.Feedback>
                     </Form.Group>
                   </Col>
                   <Col md={6}>
                     <Form.Group>
                       <Form.Label>Gender</Form.Label>
-                      <Form.Select
-                        name="gender"
-                        value={employee.gender}
-                        onChange={handleChange}
-                        required
-                      >
-                        <option value="">Select Gender</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
+                      <Form.Select name="gender" value={employee.gender} onChange={handleChange} required>
+                        <option value="" disabled>Select Gender</option>
+                        <option>Male</option>
+                        <option>Female</option>
+                        <option>Other</option>
                       </Form.Select>
                     </Form.Group>
                   </Col>
                 </Row>
 
-                {/* Row 3 */}
+                {/* Department + Designation */}
                 <Row className="mb-3">
                   <Col md={6}>
                     <Form.Group>
                       <Form.Label>Department</Form.Label>
                       <Form.Control
-                        type="text"
                         name="department"
                         value={employee.department}
                         onChange={handleChange}
@@ -166,7 +162,6 @@ const AddEmployee = ({ onLogout }) => {
                     <Form.Group>
                       <Form.Label>Designation</Form.Label>
                       <Form.Control
-                        type="text"
                         name="designation"
                         value={employee.designation}
                         onChange={handleChange}
@@ -176,22 +171,15 @@ const AddEmployee = ({ onLogout }) => {
                   </Col>
                 </Row>
 
-                {/* Row 4 */}
+                {/* Role + Joining Date */}
                 <Row className="mb-3">
                   <Col md={6}>
                     <Form.Group>
                       <Form.Label>Role</Form.Label>
-                      <Form.Select
-                        name="role"
-                        value={employee.role}
-                        onChange={handleChange}
-                        required
-                      >
-                        <option value="">Select Role</option>
+                      <Form.Select name="role" value={employee.role} onChange={handleChange} required>
+                        <option value="" disabled>Select Role</option>
                         {roles.map((role) => (
-                          <option key={role} value={role}>
-                            {role}
-                          </option>
+                          <option key={role}>{role}</option>
                         ))}
                       </Form.Select>
                     </Form.Group>
@@ -210,57 +198,59 @@ const AddEmployee = ({ onLogout }) => {
                   </Col>
                 </Row>
 
-                {/* Row 5 - Account details */}
+                {/* Username + Password with eye toggle */}
                 <Row className="mb-3">
                   <Col md={6}>
                     <Form.Group>
                       <Form.Label>Username</Form.Label>
                       <Form.Control
-                        type="text"
                         name="username"
                         value={employee.username}
                         onChange={handleChange}
-                        placeholder="Enter username"
-                        required
+                        isInvalid={!!errors.username}
+                        placeholder="Enter username (no spaces)"
                       />
+                      <Form.Control.Feedback type="invalid">{errors.username}</Form.Control.Feedback>
                     </Form.Group>
                   </Col>
+
                   <Col md={6}>
                     <Form.Group>
                       <Form.Label>Password</Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="password"
-                        value={employee.password}
-                        onChange={handleChange}
-                        placeholder="Enter password (min 6 chars)"
-                        required
-                      />
+                      <InputGroup>
+                        <Form.Control
+                          name="password"
+                          type={showPassword ? "text" : "password"}
+                          value={employee.password}
+                          onChange={handleChange}
+                          isInvalid={!!errors.password}
+                          placeholder="Enter password (min 6 chars)"
+                        />
+                        <Button
+                          variant="outline-secondary"
+                          onClick={() => setShowPassword((prev) => !prev)}
+                        >
+                          {showPassword ? <EyeSlash /> : <Eye />}
+                        </Button>
+                        <Form.Control.Feedback type="invalid">{errors.password}</Form.Control.Feedback>
+                      </InputGroup>
                     </Form.Group>
                   </Col>
                 </Row>
 
-                {/* Row 6 */}
-                <Row className="mb-3">
-                  <Col md={6} className="d-flex align-items-center">
-                    <Form.Check
-                      type="checkbox"
-                      name="active"
-                      checked={employee.active}
-                      onChange={handleChange}
-                      label="Active"
-                    />
-                  </Col>
-                </Row>
+                {/* Active checkbox */}
+                <Form.Check
+                  type="checkbox"
+                  label="Active"
+                  name="active"
+                  checked={employee.active}
+                  onChange={handleChange}
+                />
 
                 {/* Buttons */}
-                <div className="d-flex gap-2">
+                <div className="d-flex gap-2 mt-3">
                   <AppButton text="Save Employee" variant="primary" type="submit" />
-                  <AppButton
-                    text="Cancel"
-                    variant="secondary"
-                    onClick={() => navigate("/admin/employees")}
-                  />
+                  <AppButton text="Cancel" variant="secondary" onClick={() => navigate("/admin/employees")} />
                 </div>
               </Form>
             </CardContainer>
