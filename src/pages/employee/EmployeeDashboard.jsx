@@ -6,8 +6,11 @@ import CardContainer from "../../components/CardContainer";
 import CurrentSessionCard from "../../components/CurrentSessionCard";
 import { Button } from "react-bootstrap";
 import axios from "axios";
+import { useNavigate, NavLink } from "react-router-dom";
+
 
 const EmployeeDashboard = ({ onLogout }) => {
+    const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [employee, setEmployee] = useState(null);
   const [currentSession, setCurrentSession] = useState(null);
@@ -274,7 +277,7 @@ const formatPrettyDate = (dateObj) => {
               <div className="text-end">
                 <Button
                   variant="primary"
-                  onClick={() => (window.location.href = "/employee/attendancehistory")}
+      onClick={() => navigate("/employee/attendance-history")}
                 >
                   View Full History →
                 </Button>
