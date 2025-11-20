@@ -9,13 +9,14 @@ import EditEmployee from "./pages/admin/EditEmployee";
 import HrDashboard from "./pages/HrDashboard";
 import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
 import AttendanceHistory from "./pages/employee/AttendanceHistory";
+import jwtHelper from "./utils/jwtHelper";
 
 function App() {
   const [userRole, setUserRole] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    const role = localStorage.getItem("role");
+    const role = jwtHelper.getRoleFromToken(token); // decode here
 
     if (token && role) {
       setUserRole(role.toUpperCase());
@@ -25,7 +26,6 @@ function App() {
   // 🔁 Logout handler
   const handleLogout = () => {
     localStorage.removeItem("token");
-    localStorage.removeItem("role");
     setUserRole(null);
   };
 

@@ -1,19 +1,19 @@
+// src/components/Sidebar.jsx
 import React, { useState } from "react";
 import { Nav } from "react-bootstrap";
-import { useNavigate, NavLink } from "react-router-dom"; // ✅ add NavLink
+import { useNavigate, NavLink } from "react-router-dom";
 
 import Logo from "../assets/images/Educast-Logo.png";
 
-const Sidebar = ({ isOpen, onLogout }) => {
+const Sidebar = ({ isOpen, onLogout, user }) => {
   const [showEmployees, setShowEmployees] = useState(false);
   const navigate = useNavigate();
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("role");
-    window.location.href = "/"; // redirect to login
-    // onLogout(); // 🔁 update App.js state
-    // navigate("/login");
+    if (onLogout) onLogout(); // update App state
+    navigate("/login"); // SPA-friendly redirect
   };
 
   return (
@@ -21,13 +21,14 @@ const Sidebar = ({ isOpen, onLogout }) => {
       className={`sidebar d-flex flex-column justify-content-between p-3 ${
         isOpen ? "sidebar-open" : "sidebar-closed"
       }`}
-      style={{backgroundColor: "#f58a29",
-    color: "white",
-    minHeight: "100vh", // ensures at least full viewport height
-    position: "sticky",
-    top: 0,
-    alignSelf: "flex-start", // important for flex container
-     }}
+      style={{
+        backgroundColor: "#f58a29",
+        color: "white",
+        minHeight: "100vh",
+        position: "sticky",
+        top: 0,
+        alignSelf: "flex-start",
+      }}
     >
       {/* Logo Section */}
       <div>
@@ -38,12 +39,14 @@ const Sidebar = ({ isOpen, onLogout }) => {
           {isOpen && <h5 className="mt-2 fw-bold">Educast</h5>}
         </div>
 
-        <Nav className="flex-column">
-          <Nav.Link href="#" className="text-white">
-            <i className="bi bi-speedometer2 me-2"></i> {isOpen && "Dashboard"}
-          </Nav.Link>
+        <Nav className="flex-column mt-3">
+          <NavLink to="/admin/dashboard" className="text-white mb-2" style={{ textDecoration: "none" }}>
+            <i className="bi bi-speedometer2 me-2"></i>
+            {isOpen && "Dashboard"}
+          </NavLink>
 
-          {/* Employees Dropdown */}
+         {/* Employees Dropdown */}
+{/* Employees Dropdown */}
           <div className="mt-3">
             <Nav.Link
               className="text-white"
@@ -83,22 +86,22 @@ const Sidebar = ({ isOpen, onLogout }) => {
 
           </div>
 
-          <Nav.Link href="#" className="text-white mt-3">
+
+          <NavLink to="/admin/attendance" className="text-white mt-3" style={{ textDecoration: "none" }}>
             <i className="bi bi-calendar-check me-2"></i> {isOpen && "Attendance"}
-          </Nav.Link>
+          </NavLink>
 
-          <Nav.Link href="#" className="text-white mt-3">
-            <i className="bi bi-calendar2-event me-2"></i>{" "}
-            {isOpen && "Leave Management"}
-          </Nav.Link>
+          <NavLink to="/admin/leaves" className="text-white mt-3" style={{ textDecoration: "none" }}>
+            <i className="bi bi-calendar2-event me-2"></i> {isOpen && "Leave Management"}
+          </NavLink>
 
-          <Nav.Link href="#" className="text-white mt-3">
+          <NavLink to="/admin/settings" className="text-white mt-3" style={{ textDecoration: "none" }}>
             <i className="bi bi-gear me-2"></i> {isOpen && "Settings"}
-          </Nav.Link>
+          </NavLink>
         </Nav>
       </div>
 
-      {/* ✅ Logout Button */}
+      {/* Logout */}
       <div>
         <button
           className="btn btn-link text-white text-start w-100 p-0"
