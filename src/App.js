@@ -10,6 +10,7 @@ import HrDashboard from "./pages/HrDashboard";
 import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
 import AttendanceHistory from "./pages/employee/AttendanceHistory";
 import jwtHelper from "./utils/jwtHelper";
+import { isTokenExpired } from "./utils/checkToken";
 
 function App() {
   const [userRole, setUserRole] = useState(null);
@@ -20,6 +21,12 @@ function App() {
     const role = jwtHelper.getRoleFromToken(token);
     if (token && role) setUserRole(role.toUpperCase());
     setIsLoading(false); //role loaded
+
+     if (!token || isTokenExpired(token)) {
+      localStorage.clear();
+      window.location.href = "/login";
+  }
+
   }, []);
 
   const handleLogout = () => {

@@ -3,7 +3,7 @@ import axios from "axios";
 
 // ✅ Base Axios instance
 const instance = axios.create({
-  baseURL: "http://localhost:8080", // no /api here
+  baseURL: "http://localhost:8080",
   headers: {
     "Content-Type": "application/json",
   },
@@ -19,6 +19,22 @@ instance.interceptors.request.use(
     return config;
   },
   (error) => Promise.reject(error)
+);
+
+// ✅ Auto logout when token is expired OR backend sends 401
+instance.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token expired or invalid
+      localStorage.clear();
+
+      // Redirect user to login page
+      window.location.href = "/login";
+    }
+
+    return Promise.reject(error);
+  }
 );
 
 export default instance;
