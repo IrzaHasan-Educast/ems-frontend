@@ -13,115 +13,110 @@ import jwtHelper from "./utils/jwtHelper";
 
 function App() {
   const [userRole, setUserRole] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    const role = jwtHelper.getRoleFromToken(token); // decode here
-
-    if (token && role) {
-      setUserRole(role.toUpperCase());
-    }
+    const role = jwtHelper.getRoleFromToken(token);
+    if (token && role) setUserRole(role.toUpperCase());
+    setIsLoading(false); //role loaded
   }, []);
 
-  // 🔁 Logout handler
   const handleLogout = () => {
     localStorage.removeItem("token");
     setUserRole(null);
   };
 
+  if(isLoading){
+    return <div>Loading...</div>
+  }
+
+  // Protected Route wrapper
+  const ProtectedRoute = ({ children, allowedRoles }) => {
+    if (!userRole) return <Navigate to="/login" replace />;
+    if (!allowedRoles.includes(userRole)) return <Navigate to="/login" replace />;
+    return children;
+  };
+
   return (
     <Router>
       <Routes>
-        {/* 🔐 Login Route */}
+        {/* Login */}
         <Route
           path="/login"
           element={
             userRole ? (
-              <Navigate to={`/${userRole.toLowerCase()}`} />
+              <Navigate to={`/${userRole.toLowerCase()}`} replace />
             ) : (
               <LoginForm setUserRole={(role) => setUserRole(role.toUpperCase())} />
             )
           }
         />
 
-        {/* 🧭 Admin Routes */}
+        {/* Admin Routes */}
         <Route
           path="/admin"
           element={
-            userRole === "ADMIN" ? (
+            <ProtectedRoute allowedRoles={["ADMIN"]}>
               <AdminDashboard onLogout={handleLogout} />
-            ) : (
-              <Navigate to="/login" />
-            )
+            </ProtectedRoute>
           }
         />
-
-        {/* Admin - Employee CRUD routes */}
         <Route
           path="/admin/employees"
           element={
-            userRole === "ADMIN" ? <AllEmployees /> : <Navigate to="/login" />
+            <ProtectedRoute allowedRoles={["ADMIN"]}>
+              <AllEmployees />
+            </ProtectedRoute>
           }
         />
         <Route
           path="/admin/employees/add"
           element={
-            userRole === "ADMIN" ? <AddEmployee /> : <Navigate to="/login" />
+            <ProtectedRoute allowedRoles={["ADMIN"]}>
+              <AddEmployee />
+            </ProtectedRoute>
           }
         />
         <Route
           path="/admin/employees/edit/:id"
           element={
-            userRole === "ADMIN" ? <EditEmployee /> : <Navigate to="/login" />
+            <ProtectedRoute allowedRoles={["ADMIN"]}>
+              <EditEmployee />
+            </ProtectedRoute>
           }
         />
 
-        {/* 👩‍💼 HR Dashboard */}
+        {/* HR Routes */}
         <Route
           path="/hr"
           element={
-            userRole === "HR" ? (
+            <ProtectedRoute allowedRoles={["HR"]}>
               <HrDashboard onLogout={handleLogout} />
-            ) : (
-              <Navigate to="/login" />
-            )
+            </ProtectedRoute>
           }
         />
 
-        {/* 👨‍🔧 Employee Dashboard */}
+        {/* Employee Routes */}
         <Route
           path="/employee"
           element={
-            userRole === "EMPLOYEE" ? (
+            <ProtectedRoute allowedRoles={["EMPLOYEE"]}>
               <EmployeeDashboard onLogout={handleLogout} />
-              
-            ) : (
-              <Navigate to="/login" />
-            )
+            </ProtectedRoute>
           }
         />
-        {/* 👨‍🔧 Employee - Attendance History */}
         <Route
           path="/employee/attendance-history"
           element={
-            userRole === "EMPLOYEE" ? (
+            <ProtectedRoute allowedRoles={["EMPLOYEE"]}>
               <AttendanceHistory />
-            ) : (
-              <Navigate to="/login" />
-            )
+            </ProtectedRoute>
           }
         />
 
-
-        {/* Default redirect */}
-        <Route path="*" element={<Navigate to="/login" />} />
-
-
-        <Route path="/admin/employees" element={<AllEmployees />} />
-        <Route path="/admin/employees/add" element={<AddEmployee />} />
-        <Route path="/admin/employees/edit/:id" element={<EditEmployee />} />
-
-
+        {/* Catch all */}
+        <Route path="*" element={<Navigate to={userRole ? `/${userRole.toLowerCase()}` : "/login"} replace />} />
       </Routes>
     </Router>
   );
