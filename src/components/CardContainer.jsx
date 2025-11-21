@@ -10,7 +10,7 @@ const CardContainer = ({ title, children }) => {
         borderRadius: "25px",
         backgroundColor: "rgba(255, 255, 255, 0.95)", // thodi opacity
         padding: "15px",
-        marginBottom: "20px",
+        margin: "20px",
         boxShadow: "15px 22px 23px -14px #ffa50026"
 
       }}

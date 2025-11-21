@@ -8,9 +8,11 @@ export const updateEmployee = (id, data) => axios.put(`/api/v1/employees/${id}`,
 export const deleteEmployee = (id) => axios.delete(`/api/v1/employees/${id}`);
 export const getRoles = () => axios.get("/api/v1/roles");
 
+
 // ✅ User APIs for edit page
 export const getUserByEmployeeId = (employeeId) =>
   axios.get(`/api/v1/users/employee/${employeeId}`);
 
 export const updateUser = (userId, data) =>
   axios.put(`/api/v1/users/${userId}`, data);
+

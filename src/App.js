@@ -1,54 +1,74 @@
 // src/App.js
 import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+
 import LoginForm from "./components/LoginForm";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AllEmployees from "./pages/admin/AllEmployees";
 import AddEmployee from "./pages/admin/AddEmployee";
 import EditEmployee from "./pages/admin/EditEmployee";
+
 import HrDashboard from "./pages/HrDashboard";
+
 import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
 import AttendanceHistory from "./pages/employee/AttendanceHistory";
+
 import jwtHelper from "./utils/jwtHelper";
 import { isTokenExpired } from "./utils/checkToken";
 
 function App() {
+
   const [userRole, setUserRole] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // ------------------------------------------------
+  // 🔥 FIXED useEffect — no redirects here
+  // ------------------------------------------------
   useEffect(() => {
     const token = localStorage.getItem("token");
-    const role = jwtHelper.getRoleFromToken(token);
-    if (token && role) setUserRole(role.toUpperCase());
-    setIsLoading(false); //role loaded
 
-     if (!token || isTokenExpired(token)) {
+    if (token && !isTokenExpired(token)) {
+      const role = jwtHelper.getRoleFromToken(token);
+      if (role) setUserRole(role.toUpperCase());
+    } else {
       localStorage.clear();
-      window.location.href = "/login";
-  }
+      setUserRole(null);
+    }
 
+    setIsLoading(false);
   }, []);
 
+  // ------------------------------------------------
+  // 🔐 Logout
+  // ------------------------------------------------
   const handleLogout = () => {
-    localStorage.removeItem("token");
+    localStorage.clear();
     setUserRole(null);
   };
 
-  if(isLoading){
-    return <div>Loading...</div>
-  }
-
-  // Protected Route wrapper
+  // ------------------------------------------------
+  // 🔐 Protected Route
+  // ------------------------------------------------
   const ProtectedRoute = ({ children, allowedRoles }) => {
-    if (!userRole) return <Navigate to="/login" replace />;
-    if (!allowedRoles.includes(userRole)) return <Navigate to="/login" replace />;
+    if (!userRole) {
+      return <Navigate to="/login" replace />;
+    }
+    if (!allowedRoles.includes(userRole)) {
+      return <Navigate to="/login" replace />;
+    }
     return children;
   };
 
+  if (isLoading) return <div>Loading...</div>;
+
+  // ------------------------------------------------
+  // 🔥 ROUTES
+  // ------------------------------------------------
   return (
     <Router>
       <Routes>
-        {/* Login */}
+
+        {/* LOGIN */}
         <Route
           path="/login"
           element={
@@ -60,7 +80,7 @@ function App() {
           }
         />
 
-        {/* Admin Routes */}
+        {/* ADMIN ROUTES */}
         <Route
           path="/admin"
           element={
@@ -69,6 +89,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/admin/employees"
           element={
@@ -77,6 +98,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/admin/employees/add"
           element={
@@ -85,6 +107,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/admin/employees/edit/:id"
           element={
@@ -94,7 +117,7 @@ function App() {
           }
         />
 
-        {/* HR Routes */}
+        {/* HR ROUTES */}
         <Route
           path="/hr"
           element={
@@ -104,7 +127,7 @@ function App() {
           }
         />
 
-        {/* Employee Routes */}
+        {/* EMPLOYEE ROUTES */}
         <Route
           path="/employee"
           element={
@@ -113,6 +136,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/employee/attendance-history"
           element={
@@ -122,8 +146,18 @@ function App() {
           }
         />
 
-        {/* Catch all */}
-        <Route path="*" element={<Navigate to={userRole ? `/${userRole.toLowerCase()}` : "/login"} replace />} />
+        {/* DEFAULT */}
+        <Route
+          path="*"
+          element={
+            userRole ? (
+              <Navigate to={`/${userRole.toLowerCase()}`} replace />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+
       </Routes>
     </Router>
   );
