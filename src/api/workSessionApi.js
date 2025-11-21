@@ -9,3 +9,7 @@ export const clockOut = (sessionId) =>
   axios.put(`/api/v1/work-sessions/clock-out/${sessionId}`);
 // fetch current user
 export const getMe = () => axios.get("/api/v1/work-sessions/me");
+export const getAllWorkSessions = () => axios.get("/api/v1/work-sessions/admin/all");
+
+export const getAllWorkSessionsAdmin = () =>
+  axios.get("/api/v1/admin/work-sessions/all");

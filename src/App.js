@@ -7,6 +7,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AllEmployees from "./pages/admin/AllEmployees";
 import AddEmployee from "./pages/admin/AddEmployee";
 import EditEmployee from "./pages/admin/EditEmployee";
+import WorkSessions from "./pages/admin/WorkSessions";
 
 import HrDashboard from "./pages/HrDashboard";
 
@@ -113,6 +114,14 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["ADMIN"]}>
               <EditEmployee />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/work-sessions"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN"]}>
+              <WorkSessions onLogout={handleLogout} />
             </ProtectedRoute>
           }
         />

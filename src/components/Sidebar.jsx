@@ -46,7 +46,6 @@ const Sidebar = ({ isOpen, onLogout, user }) => {
           </NavLink>
 
          {/* Employees Dropdown */}
-{/* Employees Dropdown */}
           <div className="mt-3">
             <Nav.Link
               className="text-white"
@@ -86,6 +85,14 @@ const Sidebar = ({ isOpen, onLogout, user }) => {
 
           </div>
 
+          {/* Work Sessions Link */}
+          <NavLink
+            to="/admin/work-sessions"
+            className="text-white mt-3"
+            style={{ textDecoration: "none" }}
+          >
+            <i className="bi bi-clock-history me-2"></i> {isOpen && "Work Sessions"}
+          </NavLink>
 
           <NavLink to="/admin/attendance" className="text-white mt-3" style={{ textDecoration: "none" }}>
             <i className="bi bi-calendar-check me-2"></i> {isOpen && "Attendance"}
