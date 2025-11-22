@@ -50,16 +50,16 @@ const EmployeeSidebar = ({ isOpen, onLogout }) => {
             className="text-white mb-2"
             style={{ textDecoration: "none" }}
           >
-            <i className="bi bi-speedometer2 me-2"></i> {isOpen && "Attendance History"}
+            <i className="bi bi-clock-history me-2"></i> {isOpen && "Work Sessions"}
           </NavLink>
 
-          <NavLink
+          {/* <NavLink
             to="/employee/apply-leave"
             className="text-white mt-2"
             style={{ textDecoration: "none" }}
           >
             <i className="bi bi-calendar2-plus me-2"></i> {isOpen && "Apply Leave"}
-          </NavLink>
+          </NavLink> */}
         </Nav>
       </div>
 
