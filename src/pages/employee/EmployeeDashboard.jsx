@@ -6,7 +6,7 @@ import TopNavbar from "../../components/EmployeeNavbar";
 import CardContainer from "../../components/CardContainer";
 import CurrentSessionCard from "../../components/CurrentSessionCard";
 import { Button } from "react-bootstrap";
-// import * as employeeApi from "../../api/employeeApi";
+import * as attendanceApi from "../../api/attendanceApi"; // <- import attendance API
 import * as workSessionApi from "../../api/workSessionApi";
 import * as breakApi from "../../api/breakApi";
 import PageHeading from "../../components/PageHeading";
@@ -126,17 +126,33 @@ const EmployeeDashboard = ({ onLogout }) => {
 
   // Handle Clock In/Out/Break
   const handleClockIn = async () => {
-    setLoading(true);
+  setLoading(true);
+  try {
+    // 1. Clock in for work session
+    await workSessionApi.clockIn();
+
+    // 2. Try marking attendance (once per day)
     try {
-      const res = await workSessionApi.clockIn();
-      fetchActiveSession();
-      fetchHistory(employee.id);
+      await attendanceApi.markAttendance();
     } catch (err) {
-      console.error(err);
-      alert("Clock in failed.");
+      // If attendance already exists, ignore error
+      if (err.response?.status === 400 || err.response?.data?.includes("already marked")) {
+        console.log("Attendance already marked for today.");
+      } else {
+        console.error("Attendance API error:", err);
+      }
     }
-    setLoading(false);
-  };
+
+    // 3. Refresh active session and history
+    fetchActiveSession();
+    fetchHistory(employee.id);
+
+  } catch (err) {
+    console.error(err);
+    alert("Clock in failed.");
+  }
+  setLoading(false);
+};
 
   const handleClockOut = async () => {
     if (!currentSession?.sessionId) return;
