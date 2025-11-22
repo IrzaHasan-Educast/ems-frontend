@@ -37,7 +37,15 @@ const WorkSessions = ({ onLogout }) => {
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-  const formatTime = (d) => (d ? new Date(d).toLocaleString() : "--");
+  const formatTime = (d) => {
+    if (!d) return "--";
+    return new Date(d).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    });
+  };
 
   const formatDuration = (hoursDecimal) => {
     if (!hoursDecimal || isNaN(hoursDecimal)) return "0h 0m";
@@ -167,6 +175,29 @@ const WorkSessions = ({ onLogout }) => {
     }
   };
 
+  const renderCell = (col, s, index) => {
+    switch (col) {
+      case "sno": {
+        const base = rowsPerPage === "All" ? 0 : (currentPage - 1) * Number(rowsPerPage);
+        return base + index + 1;
+      }
+      case "employeeName": return s.employeeName;
+      case "date": return s.date;
+      case "clockIn": return s.clockIn;
+      case "clockOut": return s.clockOut;
+      case "totalHours": return s.totalHours;
+      case "workingHours": return s.workingHours;
+      case "breakHours": return s.breakHours;
+      case "status": return (
+        <Badge bg={s.status === "Completed" ? "success" : "warning"}>
+          {s.status}
+        </Badge>
+      );
+      default: return "--";
+    }
+  };
+
+
   return (
     <div className="d-flex">
       <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} />
@@ -234,23 +265,15 @@ const WorkSessions = ({ onLogout }) => {
                   <tbody>
                     {displayed.map((s, idx) => (
                       <tr key={s.id} style={{ textAlign: "center" }}>
-                        {selectedColumns.map(col => {
-                          switch(col) {
-                            case "sno": return <td key={col}>{(currentPage-1)*rowsPerPage + idx + 1}</td>;
-                            case "employeeName": return <td key={col} className="text-start pl-5">{s.employeeName}</td>;
-                            case "date": return <td key={col}>{s.date}</td>;
-                            case "clockIn": return <td key={col}>{s.clockIn}</td>;
-                            case "clockOut": return <td key={col}>{s.clockOut}</td>;
-                            case "totalHours": return <td key={col}>{s.totalHours}</td>;
-                            case "workingHours": return <td key={col}>{s.workingHours}</td>;
-                            case "breakHours": return <td key={col}>{s.breakHours}</td>;
-                            case "status": return <td key={col}><Badge bg={s.status==="Completed"?"success":"warning"}>{s.status}</Badge></td>;
-                            default: return <td key={col}>--</td>;
-                          }
-                        })}
+                        {selectedColumns.map(col => (
+                          <td key={col}>
+                            {renderCell(col, s, idx)}
+                          </td>
+                        ))}
                       </tr>
                     ))}
                   </tbody>
+
                 </Table>
 
                 {/* Pagination */}
