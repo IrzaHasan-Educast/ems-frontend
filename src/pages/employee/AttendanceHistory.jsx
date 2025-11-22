@@ -6,7 +6,7 @@ import CardContainer from "../../components/CardContainer";
 import PageHeading from "../../components/PageHeading";
 import "../../styles/AttendanceHistory.css";
 
-import { Row,Col, Table, Form, Button, InputGroup, FormControl } from "react-bootstrap";
+import { Table, Form, Button, InputGroup, FormControl } from "react-bootstrap";
 import axios from "axios";
 
 const AttendanceHistory = ({ onLogout }) => {
