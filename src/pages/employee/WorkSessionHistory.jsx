@@ -191,7 +191,7 @@ const AttendanceHistory = ({ onLogout }) => {
             </div>
           </CardContainer>
 
-          <CardContainer title="Attendance Records">
+          <CardContainer title="Work Session Records">
             <Table bordered hover responsive className="table-theme">
               <thead style={{ backgroundColor: "#055993", color: "white"}}>
                 <tr>

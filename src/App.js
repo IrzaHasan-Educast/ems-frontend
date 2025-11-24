@@ -12,7 +12,7 @@ import Attendance from "./pages/admin/Attendance";
 import HrDashboard from "./pages/HrDashboard";
 
 import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
-import AttendanceHistory from "./pages/employee/AttendanceHistory";
+import WorkSessionHistory from "./pages/employee/WorkSessionHistory";
 
 import jwtHelper from "./utils/jwtHelper";
 import { isTokenExpired } from "./utils/checkToken";
@@ -157,10 +157,10 @@ function App() {
         />
 
         <Route
-          path="/employee/attendance-history"
+          path="/employee/work-history"
           element={
             <ProtectedRoute allowedRoles={["EMPLOYEE"]}>
-              <AttendanceHistory />
+              <WorkSessionHistory />
             </ProtectedRoute>
           }
         />
