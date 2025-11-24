@@ -11,6 +11,8 @@ import * as workSessionApi from "../../api/workSessionApi";
 import * as breakApi from "../../api/breakApi";
 import PageHeading from "../../components/PageHeading";
 import axios from "../../api/axios";
+import Swal from "sweetalert2";
+import ClockButton from "../../components/ClockButton";
 
 
 const EmployeeDashboard = ({ onLogout }) => {
@@ -154,19 +156,57 @@ const EmployeeDashboard = ({ onLogout }) => {
   setLoading(false);
 };
 
-  const handleClockOut = async () => {
-    if (!currentSession?.sessionId) return;
-    setLoading(true);
-    try {
-      await workSessionApi.clockOut(currentSession.sessionId);
-      fetchActiveSession();
-      fetchHistory(employee.id);
-    } catch (err) {
-      console.error(err);
-      alert("Clock out failed.");
-    }
-    setLoading(false);
-  };
+const handleClockOut = async () => {
+  if (!currentSession?.sessionId) return;
+
+  // Single confirmation using SweetAlert2
+  const result = await Swal.fire({
+    title: 'Clock Out',
+    text: "Do you want to clock out now?",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#3085d6',
+    cancelButtonColor: '#d33',
+    confirmButtonText: 'Yes, clock out!',
+    cancelButtonText: 'Cancel',
+    showClass: { popup: 'animate__animated animate__fadeInDown' },
+    hideClass: { popup: 'animate__animated animate__fadeOutUp' }
+  });
+
+  if (!result.isConfirmed) return;
+
+  setLoading(true);
+  try {
+    await workSessionApi.clockOut(currentSession.sessionId);
+    fetchActiveSession();
+    fetchHistory(employee.id);
+
+    // Success message as toast or inline alert instead of another modal
+    Swal.fire({
+      icon: 'success',
+      title: 'Clocked Out!',
+      toast: true,
+      position: 'top-end',
+      showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true
+    });
+  } catch (err) {
+    console.error(err);
+
+    Swal.fire({
+      icon: 'error',
+      title: 'Clock out failed.',
+      toast: true,
+      position: 'top-end',
+      showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true
+    });
+  }
+  setLoading(false);
+};
+
 
   const handleTakeBreak = async () => {
     if (!currentSession?.sessionId) return;
@@ -207,16 +247,43 @@ const EmployeeDashboard = ({ onLogout }) => {
           />
 
         <h4 className="mb-4" style={{ color: "#055993" }}>Welcome, {employee?.fullName}</h4>
-        {/* Current Session Card */}
+        {/* Current Session Card or Clock In Button */}
         <CardContainer title="Current Session">
-          <CurrentSessionCard
-            currentSession={currentSession}
-            formatTimeAMPM={formatTimeAMPM}
-            handleClockIn={handleClockIn}
-            handleClockOut={handleClockOut}
-            handleTakeBreak={handleTakeBreak}
-            loading={loading}
-          />
+          {currentSession ? (
+            <CurrentSessionCard
+              currentSession={currentSession}
+              formatTimeAMPM={formatTimeAMPM}
+              handleClockIn={handleClockIn}
+              handleClockOut={handleClockOut}
+              handleTakeBreak={handleTakeBreak}
+              loading={loading}
+            />
+          ) : (
+            <div className="text-center p-4">
+              <p>No active session. Start your work now!</p>
+              <div 
+                className="clock-in-circle mx-auto"
+                onClick={handleClockIn}
+                style={{
+                  width: "120px",
+                  height: "120px",
+                  borderRadius: "50%",
+                  backgroundColor: "#28a745",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "white",
+                  fontSize: "1.2rem",
+                  cursor: "pointer",
+                  userSelect: "none",
+                  boxShadow: "0 4px 8px rgba(0,0,0,0.2)"
+                }}
+              >
+                {loading ? "Loading..." : "Clock In"}
+              </div>
+            </div>
+
+          )}
         </CardContainer>
 
         {/* Recent 3 Days Attendance */}
