@@ -6,6 +6,7 @@ import CardContainer from "../../components/CardContainer";
 import PageHeading from "../../components/PageHeading";
 import { useNavigate } from "react-router-dom";
 import { getAllEmployees } from "../../api/employeeApi";
+import { getAllAttendance } from "../../api/attendanceApi";
 
 // Recharts imports
 import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, Legend, ResponsiveContainer } from "recharts";
@@ -16,6 +17,10 @@ const AdminDashboard = ({ onLogout }) => {
 
   const [employees, setEmployees] = useState([]);
   const [deptStats, setDeptStats] = useState([]);
+  const [admin, setAdmin] = useState({ name: "Admin", role: "Admin" });
+
+  const [attendanceStats, setAttendanceStats] = useState({ totalEmployees: 0, presentToday: 0 });
+
   const [leaves, setLeaves] = useState([
     { name: "On Leave", value: 3 },
     { name: "Present", value: 7 },
@@ -23,34 +28,55 @@ const AdminDashboard = ({ onLogout }) => {
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-  // Dummy attendance for now
-  const attendance = { todayPercent: 95 };
-
   useEffect(() => {
-    fetchEmployees();
+    const fetchData = async () => {
+      try {
+        // Employees
+        const empRes = await getAllEmployees();
+        const allEmployees = empRes.data;
+        setEmployees(allEmployees);
+
+        // Find admin info
+        const adminEmployee = allEmployees.find(emp => emp.role?.toLowerCase() === "admin");
+        if (adminEmployee) {
+          setAdmin({ name: adminEmployee.fullName, role: adminEmployee.role });
+        }
+
+        // Department stats
+        const depts = {};
+        allEmployees.forEach(emp => {
+          const dep = emp.department || "Others";
+          depts[dep] = (depts[dep] || 0) + 1;
+        });
+        const deptArray = Object.keys(depts).map(key => ({ name: key, value: depts[key] }));
+        setDeptStats(deptArray);
+
+        // Attendance stats for employees
+        const attendanceRes = await getAllAttendance();
+        const todayStr = new Date().toISOString().split("T")[0];
+
+        const employeeList = allEmployees.filter(emp => emp.role.toLowerCase() === "employee");
+        const totalEmployees = employeeList.length;
+
+        const presentToday = attendanceRes.data.filter(a => 
+          employeeList.some(emp => emp.id === a.employeeId) &&
+          a.attendanceDate === todayStr &&
+          a.present
+        ).length;
+
+        setAttendanceStats({ totalEmployees, presentToday });
+
+      } catch (err) {
+        console.error("Error fetching data:", err);
+      }
+    };
+
+    fetchData();
   }, []);
 
-  const fetchEmployees = async () => {
-    try {
-      const res = await getAllEmployees();
-      setEmployees(res.data);
-
-      // Department-wise count
-      const depts = {};
-      res.data.forEach(emp => {
-        const dep = emp.department || "Others";
-        depts[dep] = (depts[dep] || 0) + 1;
-      });
-      const deptArray = Object.keys(depts).map(key => ({ name: key, value: depts[key] }));
-      setDeptStats(deptArray);
-    } catch (err) {
-      console.error("Error fetching employees:", err);
-    }
-  };
-
   const stats = [
-    { title: "Total Employees", value: employees.length, description: "Active Employees", color: "#055993", icon: "bi-people-fill" },
-    { title: "Attendance Today", value: `${attendance.todayPercent}%`, description: "Present today", color: "#FFA500", icon: "bi-calendar-check" },
+    { title: "Total Employees", value: attendanceStats.totalEmployees, description: "Active Employees", color: "#055993", icon: "bi-people-fill" },
+    { title: "Attendance Today", value: attendanceStats.presentToday, description: "Present today", color: "#FFA500", icon: "bi-calendar-check" },
     { title: "New Joinees", value: 5, description: "Joined this month", color: "#28A745", icon: "bi-person-plus" },
     { title: "Departments", value: deptStats.length, description: "Total Departments", color: "#6F42C1", icon: "bi-building" },
   ];
@@ -61,12 +87,10 @@ const AdminDashboard = ({ onLogout }) => {
     <div className="d-flex">
       <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} />
       <div className="flex-grow-1">
-        <TopNavbar toggleSidebar={toggleSidebar} />
+        <TopNavbar toggleSidebar={toggleSidebar} username={admin.name} role={admin.role} />
 
         <div className="p-4">
-          <PageHeading
-            title="Admin Dashboard"
-          />
+          <PageHeading title="Admin Dashboard" />
 
           {/* Stats Cards */}
           <div className="d-flex flex-wrap gap-3 mb-4">
@@ -90,7 +114,6 @@ const AdminDashboard = ({ onLogout }) => {
 
           {/* Charts */}
           <div className="d-flex flex-wrap gap-3">
-            {/* Department-wise Bar Chart */}
             <CardContainer title="Employees by Department">
               <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={deptStats} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
@@ -106,7 +129,6 @@ const AdminDashboard = ({ onLogout }) => {
               </ResponsiveContainer>
             </CardContainer>
 
-            {/* Leaves Pie Chart */}
             <CardContainer title="Leaves Overview Today">
               <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
@@ -128,16 +150,15 @@ const AdminDashboard = ({ onLogout }) => {
               <button className="btn btn-primary" onClick={() => navigate("/admin/employees")}>
                 <i className="bi bi-people-fill me-2"></i> Manage Employees
               </button>
-              <button className="btn btn-warning text-white">
+              <button className="btn btn-warning text-white"onClick={() => navigate("/admin/attendance")}>
                 <i className="bi bi-calendar-check me-2"></i> Attendance
               </button>
-              <button 
-                className="btn btn-success" 
+              <button
+                className="btn btn-success"
                 onClick={() => navigate("/admin/employees/add")}
               >
                 <i className="bi bi-person-plus me-2"></i> Add Employee
               </button>
-
             </div>
           </CardContainer>
         </div>

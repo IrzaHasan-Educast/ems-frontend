@@ -200,7 +200,7 @@ const EmployeeDashboard = ({ onLogout }) => {
     <div className="d-flex">
       <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} />
       <div className="flex-grow-1">
-        <TopNavbar toggleSidebar={toggleSidebar} />
+        <TopNavbar toggleSidebar={toggleSidebar} username={employee?.fullName}/>
         <div className="p-4">
           <PageHeading
             title="Employee Dashboard"

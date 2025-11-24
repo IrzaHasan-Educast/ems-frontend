@@ -2,9 +2,9 @@
 import React from "react";
 import { Navbar, Nav } from "react-bootstrap";
 
-const EmployeeNavbar = ({ toggleSidebar }) => {
-  const username = localStorage.getItem("username") || "User";
+const EmployeeNavbar = ({ toggleSidebar, username }) => {
   const role = localStorage.getItem("role") || "Employee";
+  const displayName = username || "User"; // fallback
 
   return (
     <Navbar
@@ -35,15 +35,16 @@ const EmployeeNavbar = ({ toggleSidebar }) => {
             <small className="text-muted">{role}</small>
           </div>
           <div
-            className="profile-icon d-flex align-items-center justify-content-center rounded-circle text-white fw-bold ms-2"
+            className="profile-icon d-flex align-items-center justify-content-center rounded-circle text-white fw-bold me-2 mx-2"
             style={{
               width: "40px",
               height: "40px",
               backgroundColor: "#f69b49",
             }}
           >
-            {username.charAt(0).toUpperCase()}
-          </div>
+  {displayName.split(" ").map(n => n[0]).join("").toUpperCase()}
+</div>
+
         </Nav>
       </Navbar.Collapse>
     </Navbar>

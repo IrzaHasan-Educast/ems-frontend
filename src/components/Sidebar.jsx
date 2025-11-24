@@ -39,8 +39,8 @@ const Sidebar = ({ isOpen, onLogout, user }) => {
           {isOpen && <h5 className="mt-2 fw-bold">Educast</h5>}
         </div>
 
-        <Nav className="flex-column mt-3">
-          <NavLink to="/admin/dashboard" className="text-white mb-2" style={{ textDecoration: "none" }}>
+        <Nav className="flex-column">
+          <NavLink to="/admin/dashboard" className="text-white mt-3" style={{ textDecoration: "none" }}>
             <i className="bi bi-speedometer2 me-2"></i>
             {isOpen && "Dashboard"}
           </NavLink>
@@ -111,7 +111,7 @@ const Sidebar = ({ isOpen, onLogout, user }) => {
       {/* Logout */}
       <div>
         <button
-          className="btn btn-link text-white text-start w-100 p-0"
+          className="btn btn-link text-start text-white w-100 p-3"
           onClick={handleLogout}
           style={{ textDecoration: "none" }}
         >
