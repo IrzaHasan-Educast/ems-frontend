@@ -77,7 +77,7 @@ const AdminDashboard = ({ onLogout }) => {
   const stats = [
     { title: "Total Employees", value: attendanceStats.totalEmployees, description: "Active Employees", color: "#055993", icon: "bi-people-fill" },
     { title: "Attendance Today", value: attendanceStats.presentToday, description: "Present today", color: "#FFA500", icon: "bi-calendar-check" },
-    { title: "New Joinees", value: 5, description: "Joined this month", color: "#28A745", icon: "bi-person-plus" },
+    // { title: "New Joinees", value: 5, description: "Joined this month", color: "#28A745", icon: "bi-person-plus" },
     { title: "Departments", value: deptStats.length, description: "Total Departments", color: "#6F42C1", icon: "bi-building" },
   ];
 

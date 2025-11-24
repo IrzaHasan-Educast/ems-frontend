@@ -101,7 +101,7 @@ const AttendanceHistory = ({ onLogout }) => {
           <PageHeading title="My Attendance History" />
 
           {/* Filters */}
-          <CardContainer>
+          <CardContainer title="Search & Filter">
             <Row className="g-2 justify-content-center align-items-center mb-2">
               <Col md={4}>
                 <Form.Control
@@ -132,13 +132,13 @@ const AttendanceHistory = ({ onLogout }) => {
           </CardContainer>
 
           {/* Table */}
-          <CardContainer>
+          <CardContainer  title="Attendance Records">
             {loading ? (
               <div className="d-flex justify-content-center align-items-center" style={{ height: "50vh" }}>
                 <Spinner animation="border" />
               </div>
             ) : (
-              <Table bordered hover responsive>
+              <Table bordered hover responsive className="table-theme">
                 <thead style={{ backgroundColor: "#194D33", color: "white", textAlign: "center" }}>
                   <tr>
                     <th>S.No</th>
