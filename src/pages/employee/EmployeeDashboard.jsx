@@ -127,7 +127,7 @@ const EmployeeDashboard = ({ onLogout }) => {
   }, [fetchCurrentUser, fetchActiveSession]);
 
   // Handle Clock In/Out/Break
-  const handleClockIn = async () => {
+const handleClockIn = async () => {
   setLoading(true);
   try {
     // 1. Clock in for work session
@@ -136,8 +136,14 @@ const EmployeeDashboard = ({ onLogout }) => {
     // 2. Try marking attendance (once per day)
     try {
       await attendanceApi.markAttendance();
+      Swal.fire({
+        icon: 'success',
+        title: 'Attendance Marked',
+        text: 'You are present today!',
+        timer: 2000,
+        showConfirmButton: false,
+      });
     } catch (err) {
-      // If attendance already exists, ignore error
       if (err.response?.status === 400 || err.response?.data?.includes("already marked")) {
         console.log("Attendance already marked for today.");
       } else {
@@ -151,10 +157,11 @@ const EmployeeDashboard = ({ onLogout }) => {
 
   } catch (err) {
     console.error(err);
-    alert("Clock in failed.");
+    Swal.fire('Error', 'Clock in failed.', 'error');
   }
   setLoading(false);
 };
+
 
 const handleClockOut = async () => {
   if (!currentSession?.sessionId) return;
