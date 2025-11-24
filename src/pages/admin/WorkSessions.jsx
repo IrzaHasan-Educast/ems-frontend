@@ -189,9 +189,20 @@ const WorkSessions = ({ onLogout }) => {
       case "workingHours": return s.workingHours;
       case "breakHours": return s.breakHours;
       case "status": return (
-        <Badge bg={s.status === "Completed" ? "success" : "warning"}>
-          {s.status}
-        </Badge>
+        <Badge 
+  bg={
+    s.status === "Completed"
+      ? "success"
+      : s.status === "Working"
+      ? "primary"
+      : s.status === "Invalid Clocked Out"
+      ? "danger"
+      : "secondary"
+  }
+>
+  {s.status}
+</Badge>
+
       );
       default: return "--";
     }

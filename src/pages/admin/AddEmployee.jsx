@@ -127,7 +127,7 @@ const AddEmployee = ({ onLogout }) => {
                         value={employee.phone}
                         onChange={handleChange}
                         isInvalid={!!errors.phone}
-                        placeholder="03XX-XXXXXXX"
+                        placeholder="03XXXXXXXXX"
                       />
                       <Form.Control.Feedback type="invalid">{errors.phone}</Form.Control.Feedback>
                     </Form.Group>
