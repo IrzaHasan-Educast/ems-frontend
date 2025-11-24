@@ -53,7 +53,7 @@ const EmployeeSidebar = ({ isOpen, onLogout }) => {
             <i className="bi bi-clock-history me-2"></i> {isOpen && "Work Sessions"}
           </NavLink>
 
-          <NavLink to="/employee/attendance-history" className="text-white mt-3" style={{ textDecoration: "none" }}>
+          <NavLink to="/employee/attendance-history" className="text-white" style={{ textDecoration: "none" }}>
             <i className="bi bi-calendar-check me-2"></i> {isOpen && "Attendance History"}
           </NavLink>
 

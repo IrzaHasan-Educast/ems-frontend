@@ -1,0 +1,168 @@
+// src/pages/employee/AttendanceHistory.jsx
+
+import React, { useEffect, useState } from "react";
+import { Table, Spinner, Form, Row, Col, Button, Badge } from "react-bootstrap";
+import Sidebar from "../../components/EmployeeSidebar";
+import TopNavbar from "../../components/EmployeeNavbar";
+import PageHeading from "../../components/PageHeading";
+import CardContainer from "../../components/CardContainer";
+import { getMyAttendance } from "../../api/attendanceApi";
+
+const AttendanceHistory = ({ onLogout }) => {
+  const [records, setRecords] = useState([]);
+  const [filtered, setFiltered] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState("");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
+  useEffect(() => {
+    const fetchAttendance = async () => {
+      try {
+        const res = await getMyAttendance();
+
+        const formatted = res.data.map((a, index) => {
+          const dateObj = new Date(a.attendanceDate);
+          const dayOfWeek = dateObj.getDay(); // 0 = Sunday
+          const dateStr = `${String(dateObj.getDate()).padStart(2,'0')}-${String(dateObj.getMonth()+1).padStart(2,'0')}-${dateObj.getFullYear()}`;
+
+          const timeObj = new Date(`1970-01-01T${a.attendanceTime}`);
+          let hours = timeObj.getHours();
+          const minutes = String(timeObj.getMinutes()).padStart(2,'0');
+          const seconds = String(timeObj.getSeconds()).padStart(2,'0');
+          const ampm = hours >= 12 ? 'PM' : 'AM';
+          hours = hours % 12 || 12;
+          const timeStr = `${String(hours).padStart(2,'0')}:${minutes}:${seconds} ${ampm}`;
+
+          let status = a.present ? "Present" : "Absent";
+          if (dayOfWeek === 0) status = "Sunday";
+
+          return {
+            id: index + 1,
+            date: dateStr,
+            rawDate: a.attendanceDate,
+            time: timeStr,
+            status,
+            shift: a.shift,
+          };
+        });
+
+        // Sort latest first
+        formatted.sort((a, b) => new Date(b.rawDate) - new Date(a.rawDate));
+
+        setRecords(formatted);
+        setFiltered(formatted);
+      } catch (err) {
+        console.error(err);
+      }
+      setLoading(false);
+    };
+
+    fetchAttendance();
+  }, []);
+
+  // Filtering
+  useEffect(() => {
+    const term = searchTerm.toLowerCase();
+    const f = records.filter(r => {
+      const matchesSearch = [r.date, r.time, r.status, r.shift].join(" ").toLowerCase().includes(term);
+      const matchesMonth = selectedMonth ? new Date(r.rawDate).getMonth() + 1 === parseInt(selectedMonth) : true;
+      return matchesSearch && matchesMonth;
+    });
+    setFiltered(f);
+  }, [searchTerm, selectedMonth, records]);
+
+  // Reset filters
+  const handleReset = () => {
+    setSearchTerm("");
+    setSelectedMonth("");
+  };
+
+  return (
+    <div className="d-flex">
+      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} />
+
+      <div className="flex-grow-1">
+        <TopNavbar toggleSidebar={toggleSidebar} />
+
+        <div className="p-4 container">
+          <PageHeading title="My Attendance History" />
+
+          {/* Filters */}
+          <CardContainer>
+            <Row className="g-2 justify-content-center align-items-center mb-2">
+              <Col md={4}>
+                <Form.Control
+                  type="text"
+                  placeholder="Search by date, time, status, shift..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </Col>
+              <Col md={3}>
+                <Form.Select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                >
+                  <option value="">All Months</option>
+                  {[
+                    "January","February","March","April","May","June",
+                    "July","August","September","October","November","December"
+                  ].map((m,i) => (
+                    <option key={i} value={i+1}>{m}</option>
+                  ))}
+                </Form.Select>
+              </Col>
+              <Col md={2}>
+                <Button variant="secondary" onClick={handleReset}>Reset</Button>
+              </Col>
+            </Row>
+          </CardContainer>
+
+          {/* Table */}
+          <CardContainer>
+            {loading ? (
+              <div className="d-flex justify-content-center align-items-center" style={{ height: "50vh" }}>
+                <Spinner animation="border" />
+              </div>
+            ) : (
+              <Table bordered hover responsive>
+                <thead style={{ backgroundColor: "#194D33", color: "white", textAlign: "center" }}>
+                  <tr>
+                    <th>S.No</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Status</th>
+                    <th>Shift</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((r, idx) => (
+                    <tr key={idx} style={{ textAlign: "center" }}>
+                      <td>{idx + 1}</td>
+                      <td>{r.date}</td>
+                      <td>{r.time}</td>
+                      <td>
+                        <Badge bg={
+                          r.status === "Present" ? "success" :
+                          r.status === "Absent" ? "danger" : "primary"
+                        }>
+                          {r.status}
+                        </Badge>
+                      </td>
+                      <td>{r.shift}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            )}
+          </CardContainer>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AttendanceHistory;
