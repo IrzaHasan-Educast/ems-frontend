@@ -7,6 +7,8 @@ import PageHeading from "../../components/PageHeading";
 import CardContainer from "../../components/CardContainer";
 import { getAllAttendance } from "../../api/attendanceApi";
 import { FileEarmarkText, Gear } from "react-bootstrap-icons";
+import {getRoles, getAllEmployees } from "../../api/employeeApi";
+
 import * as XLSX from "xlsx";
 
 const allColumns = [
@@ -22,7 +24,9 @@ const Attendance = ({ onLogout }) => {
   const [records, setRecords] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(true);
-
+  const [roles, setRoles] = useState([]);
+  const [admin, setAdmin] = useState({name: "admin", role: "Admin"});
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedEmployee, setSelectedEmployee] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("");
@@ -39,6 +43,35 @@ const Attendance = ({ onLogout }) => {
     if (!t) return "--";
     return t;
   };
+
+  useEffect(() => {
+    const fetchRolesAndAdmin = async () => {
+      try {
+        // get roles
+        const res = await getRoles();
+        setRoles(res.data);
+  
+        // get all employees (admin info)
+        const empRes = await getAllEmployees();
+        const allEmployees = empRes.data;
+  
+        const adminEmployee = allEmployees.find(
+          (emp) => emp.role?.toLowerCase() === "admin"
+        );
+  
+        if (adminEmployee) {
+          setAdmin({
+            name: adminEmployee.fullName,
+            role: adminEmployee.role,
+          });
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+  
+    fetchRolesAndAdmin();
+  }, []);
 
   useEffect(() => {
     const fetchAttendance = async () => {
@@ -177,8 +210,10 @@ const Attendance = ({ onLogout }) => {
     <div className="d-flex">
       <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} />
       <div className="flex-grow-1">
-        <TopNavbar toggleSidebar={toggleSidebar} />
-
+        <TopNavbar toggleSidebar={toggleSidebar} 
+          username={admin.name}
+          role={admin.role}
+        />
         <div className="p-4 container">
           <PageHeading title="Attendance Records" />
 

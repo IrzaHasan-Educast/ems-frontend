@@ -7,6 +7,7 @@ import PageHeading from "../../components/PageHeading";
 import CardContainer from "../../components/CardContainer";
 import { getAllWorkSessionsAdmin } from "../../api/workSessionApi";
 import { FileEarmarkText, Gear } from "react-bootstrap-icons";
+import {getRoles, getAllEmployees } from "../../api/employeeApi";
 import * as XLSX from "xlsx";
 
 const allColumns = [
@@ -34,7 +35,8 @@ const WorkSessions = ({ onLogout }) => {
 
   const [showColumnsModal, setShowColumnsModal] = useState(false);
   const [selectedColumns, setSelectedColumns] = useState(allColumns.map(c => c.key));
-
+  const [roles, setRoles] = useState([]);
+  const [admin, setAdmin] = useState({name: "admin", role: "Admin"});
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   const formatTime = (d) => {
@@ -54,6 +56,34 @@ const WorkSessions = ({ onLogout }) => {
     const mins = totalMinutes % 60;
     return `${hrs}h ${mins}m`;
   };
+useEffect(() => {
+  const fetchRolesAndAdmin = async () => {
+    try {
+      // get roles
+      const res = await getRoles();
+      setRoles(res.data);
+
+      // get all employees (admin info)
+      const empRes = await getAllEmployees();
+      const allEmployees = empRes.data;
+
+      const adminEmployee = allEmployees.find(
+        (emp) => emp.role?.toLowerCase() === "admin"
+      );
+
+      if (adminEmployee) {
+        setAdmin({
+          name: adminEmployee.fullName,
+          role: adminEmployee.role,
+        });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  fetchRolesAndAdmin();
+}, []);
 
   useEffect(() => {
     const fetchSessions = async () => {
@@ -213,7 +243,10 @@ const WorkSessions = ({ onLogout }) => {
     <div className="d-flex">
       <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} />
       <div className="flex-grow-1">
-        <TopNavbar toggleSidebar={toggleSidebar} />
+        <TopNavbar toggleSidebar={toggleSidebar} 
+          username={admin.name}
+          role={admin.role}
+        />
         <div className="p-4 container">
           <PageHeading title="All Work Sessions" />
 

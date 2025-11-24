@@ -1,5 +1,4 @@
 // src/pages/employee/AttendanceHistory.jsx
-
 import React, { useEffect, useState } from "react";
 import { Table, Spinner, Form, Row, Col, Button, Badge } from "react-bootstrap";
 import Sidebar from "../../components/EmployeeSidebar";
@@ -7,20 +6,30 @@ import TopNavbar from "../../components/EmployeeNavbar";
 import PageHeading from "../../components/PageHeading";
 import CardContainer from "../../components/CardContainer";
 import { getMyAttendance } from "../../api/attendanceApi";
+import axios from "axios";
 
 const AttendanceHistory = ({ onLogout }) => {
   const [records, setRecords] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [employee, setEmployee] = useState(null); // added
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
+  // Fetch employee info + attendance
   useEffect(() => {
-    const fetchAttendance = async () => {
+    const fetchData = async () => {
       try {
+        // 1. Get employee info
+        const resEmp = await axios.get("http://localhost:8080/api/v1/work-sessions/me", {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        });
+        setEmployee({ fullName: resEmp.data.fullName, id: resEmp.data.employeeId });
+
+        // 2. Get attendance
         const res = await getMyAttendance();
 
         const formatted = res.data.map((a, index) => {
@@ -49,7 +58,6 @@ const AttendanceHistory = ({ onLogout }) => {
           };
         });
 
-        // Sort latest first
         formatted.sort((a, b) => new Date(b.rawDate) - new Date(a.rawDate));
 
         setRecords(formatted);
@@ -60,7 +68,7 @@ const AttendanceHistory = ({ onLogout }) => {
       setLoading(false);
     };
 
-    fetchAttendance();
+    fetchData();
   }, []);
 
   // Filtering
@@ -74,18 +82,20 @@ const AttendanceHistory = ({ onLogout }) => {
     setFiltered(f);
   }, [searchTerm, selectedMonth, records]);
 
-  // Reset filters
   const handleReset = () => {
     setSearchTerm("");
     setSelectedMonth("");
   };
+
+  if (!employee) return <div>Loading...</div>;
 
   return (
     <div className="d-flex">
       <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} />
 
       <div className="flex-grow-1">
-        <TopNavbar toggleSidebar={toggleSidebar} />
+        {/* Pass employee name to TopNavbar */}
+        <TopNavbar toggleSidebar={toggleSidebar} username={employee.fullName} />
 
         <div className="p-4 container">
           <PageHeading title="My Attendance History" />

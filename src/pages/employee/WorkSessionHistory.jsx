@@ -151,8 +151,7 @@ const AttendanceHistory = ({ onLogout }) => {
     <div className="d-flex">
       <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} />
       <div className="flex-grow-1">
-        <TopNavbar toggleSidebar={toggleSidebar} />
-        <div className="p-4">
+<TopNavbar toggleSidebar={toggleSidebar} username={employee?.fullName} />        <div className="p-4">
           <PageHeading
             title="Work Session History"
           />

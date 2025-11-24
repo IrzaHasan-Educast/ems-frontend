@@ -10,18 +10,47 @@ import CardContainer from "../../components/CardContainer";
 import ViewEmployeeModal from "../../components/ViewEmployeeModal";
 
 // ✅ Import service functions only
-import { getAllEmployees, getEmployeeById, deleteEmployee } from "../../api/employeeApi";
+import { getAllEmployees, getEmployeeById, deleteEmployee, getRoles } from "../../api/employeeApi";
 
 const AllEmployees = ({ onLogout }) => {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [roles, setRoles] = useState([]);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-
+  const [admin, setAdmin] = useState({name: "Admin", role: "Admin"});
   const navigate = useNavigate();
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
+  useEffect(()=>{
+    const fetchRolesAndAdmin = async()=>{
+      try{
+        //get roles
+        const res = await getRoles();
+        setRoles(res.data);
+
+        // get all employees (admin info)
+        const empRes = await getAllEmployees();
+        const allEmployees = empRes.data;
+
+        const adminEmployee = allEmployees.find(
+        (emp)=>emp.role?.toLowerCase() ==="admin"
+        );
+
+        if(adminEmployee) {
+          setAdmin({
+            name:adminEmployee.fullName,
+            role: adminEmployee.role,
+          });
+        }
+      } catch(err){
+        console.error(err);
+      }
+    };
+    fetchRolesAndAdmin();
+  },[]);
 
   // Fetch all employees on component mount
   useEffect(() => {
@@ -78,7 +107,9 @@ const AllEmployees = ({ onLogout }) => {
     <div className="d-flex">
       <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} />
       <div className="flex-grow-1">
-        <TopNavbar toggleSidebar={toggleSidebar} />
+        <TopNavbar toggleSidebar={toggleSidebar}
+        username={admin.name}
+        role={admin.role} />
         <div className="p-4 container">
           {/* Heading + Add Employee */}
           

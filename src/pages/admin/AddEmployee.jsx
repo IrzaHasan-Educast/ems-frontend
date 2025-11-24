@@ -6,7 +6,7 @@ import TopNavbar from "../../components/Navbar";
 import CardContainer from "../../components/CardContainer";
 import AppButton from "../../components/AppButton";
 
-import { getRoles, addEmployee } from "../../api/employeeApi";
+import { getRoles, addEmployee, getAllEmployees } from "../../api/employeeApi";
 import {
   validateFullName,
   validatePhone,
@@ -35,6 +35,7 @@ const AddEmployee = ({ onLogout }) => {
   const [roles, setRoles] = useState([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showPassword, setShowPassword] = useState(false); // toggle state
+  const [admin, setAdmin] = useState({ name: "Admin", role: "Admin" });
 
   const navigate = useNavigate();
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
@@ -77,12 +78,44 @@ const AddEmployee = ({ onLogout }) => {
       alert(error.response?.data || "Failed to create employee");
     }
   };
+useEffect(() => {
+  const fetchRolesAndAdmin = async () => {
+    try {
+      // get roles
+      const res = await getRoles();
+      setRoles(res.data);
+
+      // get all employees (admin info)
+      const empRes = await getAllEmployees();
+      const allEmployees = empRes.data;
+
+      const adminEmployee = allEmployees.find(
+        (emp) => emp.role?.toLowerCase() === "admin"
+      );
+
+      if (adminEmployee) {
+        setAdmin({
+          name: adminEmployee.fullName,
+          role: adminEmployee.role,
+        });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  fetchRolesAndAdmin();
+}, []);
 
   return (
     <div className="d-flex">
       <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} />
       <div className="flex-grow-1">
-        <TopNavbar toggleSidebar={toggleSidebar} />
+      <TopNavbar 
+        toggleSidebar={toggleSidebar}
+        username={admin.name}
+        role={admin.role}
+      />
         <div className="p-4 d-flex justify-content-center">
           <div className="w-75">
             <CardContainer title="Add Employee">
