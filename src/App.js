@@ -96,7 +96,7 @@ function App() {
           path="/admin/employees"
           element={
             <ProtectedRoute allowedRoles={["ADMIN"]}>
-              <AllEmployees />
+              <AllEmployees onLogout={handleLogout}/>
             </ProtectedRoute>
           }
         />
@@ -105,7 +105,7 @@ function App() {
           path="/admin/employees/add"
           element={
             <ProtectedRoute allowedRoles={["ADMIN"]}>
-              <AddEmployee />
+              <AddEmployee onLogout={handleLogout}/>
             </ProtectedRoute>
           }
         />
@@ -114,7 +114,7 @@ function App() {
           path="/admin/employees/edit/:id"
           element={
             <ProtectedRoute allowedRoles={["ADMIN"]}>
-              <EditEmployee />
+              <EditEmployee onLogout={handleLogout}/>
             </ProtectedRoute>
           }
         />
@@ -161,7 +161,7 @@ function App() {
           path="/employee/work-history"
           element={
             <ProtectedRoute allowedRoles={["EMPLOYEE"]}>
-              <WorkSessionHistory />
+              <WorkSessionHistory onLogout={handleLogout}/>
             </ProtectedRoute>
           }
         />
@@ -169,7 +169,7 @@ function App() {
           path="/employee/attendance-history"
           element={
             <ProtectedRoute allowedRoles={["EMPLOYEE"]}>
-              <AttendanceHistory />
+              <AttendanceHistory onLogout={handleLogout}/>
             </ProtectedRoute>
           }
         />
