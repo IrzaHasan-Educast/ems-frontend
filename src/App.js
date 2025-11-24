@@ -8,7 +8,7 @@ import AllEmployees from "./pages/admin/AllEmployees";
 import AddEmployee from "./pages/admin/AddEmployee";
 import EditEmployee from "./pages/admin/EditEmployee";
 import WorkSessions from "./pages/admin/WorkSessions";
-
+import Attendance from "./pages/admin/Attendance";
 import HrDashboard from "./pages/HrDashboard";
 
 import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
@@ -125,6 +125,16 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        <Route
+          path="/admin/attendance"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN"]}>
+              <Attendance onLogout={handleLogout} />
+            </ProtectedRoute>
+          }
+        />
+
 
         {/* HR ROUTES */}
         <Route
