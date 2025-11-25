@@ -9,7 +9,6 @@ import AddEmployee from "./pages/admin/AddEmployee";
 import EditEmployee from "./pages/admin/EditEmployee";
 import WorkSessions from "./pages/admin/WorkSessions";
 import Attendance from "./pages/admin/Attendance";
-import HrDashboard from "./pages/HrDashboard";
 
 import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
 import WorkSessionHistory from "./pages/employee/WorkSessionHistory";
@@ -137,7 +136,7 @@ function App() {
         />
 
 
-        {/* HR ROUTES */}
+        {/* HR ROUTES
         <Route
           path="/hr"
           element={
@@ -145,7 +144,7 @@ function App() {
               <HrDashboard onLogout={handleLogout} />
             </ProtectedRoute>
           }
-        />
+        /> */}
 
         {/* EMPLOYEE ROUTES */}
         <Route
