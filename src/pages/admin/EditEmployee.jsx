@@ -223,15 +223,11 @@ useEffect(() => {
                   <Col md={6}>
                     <Form.Group>
                       <Form.Label>Role</Form.Label>
-                      <Form.Select
+                      <Form.Control
                         name="role"
-                        value={employee.role}
-                        onChange={handleEmployeeChange}
-                        required
-                      >
-                        <option value="" disabled>Select Role</option>
-                        {roles.map((role) => <option key={role}>{role}</option>)}
-                      </Form.Select>
+                        value={employee.role || ""}
+                        readOnly
+                      />
                     </Form.Group>
                   </Col>
                   <Col md={6}>
