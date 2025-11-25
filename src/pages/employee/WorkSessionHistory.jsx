@@ -7,7 +7,9 @@ import PageHeading from "../../components/PageHeading";
 import "../../styles/AttendanceHistory.css";
 
 import { Table, Form, Button, InputGroup, FormControl } from "react-bootstrap";
-import axios from "axios";
+
+// ⬅️ Reusable API calls
+import { getCurrentUser, getWorkSessions } from "../../api/workSessionApi";
 
 const AttendanceHistory = ({ onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -19,6 +21,7 @@ const AttendanceHistory = ({ onLogout }) => {
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
+  // --- Time format AM/PM ---
   const formatTimeAMPM = (date) => {
     if (!date) return "--";
     const d = new Date(date);
@@ -38,12 +41,10 @@ const AttendanceHistory = ({ onLogout }) => {
     return `${hrs}h ${mins}m`;
   };
 
+  // -------- Fetch Work History --------
   const fetchHistory = useCallback(async (employeeId) => {
     try {
-      const res = await axios.get(
-        `http://localhost:8080/api/v1/work-sessions/employee/${employeeId}`,
-        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
-      );
+      const res = await getWorkSessions(employeeId);
 
       if (res.data && Array.isArray(res.data)) {
         const formatted = res.data.map((s) => {
@@ -60,9 +61,6 @@ const AttendanceHistory = ({ onLogout }) => {
           const totalMillis = (clockOut || new Date()) - clockIn;
           const netMillis = totalMillis - totalBreakMillis;
 
-          let status = s.status;
-          if (status === "Invalid Clock Out") status = "Invalid Clock Out";
-
           return {
             id: s.id,
             date: clockIn.toLocaleDateString(),
@@ -71,9 +69,10 @@ const AttendanceHistory = ({ onLogout }) => {
             totalHours: formatDuration(totalMillis / 1000 / 3600),
             workingHours: formatDuration(netMillis / 1000 / 3600),
             breakHours: formatDuration(totalBreakMillis / 1000 / 3600),
-            status,
+            status: s.status,
           };
         });
+
         setHistory(formatted);
         setFilteredHistory(formatted);
       }
@@ -82,11 +81,10 @@ const AttendanceHistory = ({ onLogout }) => {
     }
   }, []);
 
+  // -------- Fetch Current User --------
   const fetchCurrentUser = useCallback(async () => {
     try {
-      const res = await axios.get("http://localhost:8080/api/v1/work-sessions/me", {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
+      const res = await getCurrentUser();
       setEmployee({ fullName: res.data.fullName, id: res.data.employeeId });
       fetchHistory(res.data.employeeId);
     } catch (err) {
@@ -98,25 +96,21 @@ const AttendanceHistory = ({ onLogout }) => {
     fetchCurrentUser();
   }, [fetchCurrentUser]);
 
-  // Filter & search
+  // -------- Search + Filter --------
   useEffect(() => {
-    const query = searchQuery.toLowerCase();
     let filtered = [...history];
 
-    // Date filter
     if (selectedDate) {
       filtered = filtered.filter((h) => h.date === selectedDate);
     }
 
-    // Text search
     if (searchQuery) {
-      filtered = filtered.filter((h) => {
-        const date = (h.date || "").toLowerCase();
-        const clockIn = (h.clockIn || "").toLowerCase();
-        const clockOut = (h.clockOut || "").toLowerCase();
-        const status = (h.status || "").toLowerCase();
-        return date.includes(query) || clockIn.includes(query) || clockOut.includes(query) || status.includes(query);
-      });
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((h) =>
+        `${h.date} ${h.clockIn} ${h.clockOut} ${h.status}`
+          .toLowerCase()
+          .includes(query)
+      );
     }
 
     setFilteredHistory(filtered);
@@ -150,39 +144,47 @@ const AttendanceHistory = ({ onLogout }) => {
   return (
     <div className="d-flex">
       <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} />
+
       <div className="flex-grow-1">
-<TopNavbar toggleSidebar={toggleSidebar} username={employee?.fullName} />        <div className="p-4">
-          <PageHeading
-            title="Work Session History"
-          />
+        <TopNavbar toggleSidebar={toggleSidebar} username={employee?.fullName} />
+
+        <div className="p-4">
+          <PageHeading title="Work Session History" />
+
+          {/* Search + Filter */}
           <CardContainer title="Search & Filter">
             <div className="d-flex gap-2 flex-wrap mb-3 align-items-center">
-              <div className="row">
-                <div className="col col-6">
-                <InputGroup className="search-box">
-                  <FormControl
-                    placeholder="Search Here..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </InputGroup>
+              <div className="row w-100">
+                <div className="col-md-6">
+                  <InputGroup>
+                    <FormControl
+                      placeholder="Search Here..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </InputGroup>
                 </div>
-                <div className="col col-6">
+
+                <div className="col-md-4">
                   <Form.Select
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
-                    className="scrollable-dropdown"
                   >
                     <option value="">Select Date</option>
                     {uniqueDates.map((d) => (
-                      <option key={d} value={d}>{d}</option>
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
                     ))}
                   </Form.Select>
                 </div>
+
+                <div className="col-md-2">
+                  <Button variant="secondary" onClick={handleReset}>
+                    Reset
+                  </Button>
+                </div>
               </div>
-              <Button variant="secondary" onClick={handleReset}>
-                Reset
-              </Button>
 
               <div className="ms-auto">
                 <strong>Total Records: {filteredHistory.length}</strong>
@@ -190,9 +192,10 @@ const AttendanceHistory = ({ onLogout }) => {
             </div>
           </CardContainer>
 
+          {/* Table */}
           <CardContainer title="Work Session Records">
             <Table bordered hover responsive className="table-theme">
-              <thead style={{ backgroundColor: "#055993", color: "white"}}>
+              <thead style={{ backgroundColor: "#055993", color: "white" }}>
                 <tr>
                   <th>Date</th>
                   <th>Clock In</th>
@@ -203,11 +206,13 @@ const AttendanceHistory = ({ onLogout }) => {
                   <th>Status</th>
                 </tr>
               </thead>
-              <tbody className="overflow-scroll">
+              <tbody>
                 {filteredHistory.map((h, idx) => (
                   <tr
                     key={h.id}
-                    className={h.clockOut === "--" && idx === 0 ? "current-session-row" : ""}
+                    className={
+                      h.clockOut === "--" && idx === 0 ? "current-session-row" : ""
+                    }
                   >
                     <td>{h.date}</td>
                     <td>{h.clockIn}</td>

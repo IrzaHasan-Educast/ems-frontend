@@ -4,6 +4,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "../styles/LoginForm.css"; // Custom CSS
 import Logo from '../assets/images/Educast-Logo.png';
 import LoginImage from '../assets/images/Side-Img.jpg';
+import { login } from "../api/authApi";   // ✅ Reuse login API
 
 const LoginForm = ({ setUserRole }) => {
   const [username, setUsername] = useState("");
@@ -15,10 +16,7 @@ const LoginForm = ({ setUserRole }) => {
     setError("");
 
     try {
-      const response = await axios.post("http://localhost:8080/api/v1/auth/login", {
-        username,
-        password,
-      });
+      const response = await login(username, password);
 
       const { token, role } = response.data;
       localStorage.setItem("token", token);

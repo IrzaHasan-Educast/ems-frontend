@@ -13,6 +13,7 @@ import PageHeading from "../../components/PageHeading";
 import axios from "../../api/axios";
 import Swal from "sweetalert2";
 import ClockButton from "../../components/ClockButton";
+// import { getWorkHistoryByEmployee } from "../../api/workSessionApi";
 
 
 const EmployeeDashboard = ({ onLogout }) => {
@@ -46,10 +47,7 @@ const EmployeeDashboard = ({ onLogout }) => {
 
   const fetchHistory = useCallback(async (employeeId) => {
   try {
-    const res = await axios.get(
-      `http://localhost:8080/api/v1/work-sessions/employee/${employeeId}`,
-      { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
-    );
+    const res = await workSessionApi.getWorkSessions(employeeId);
 
     if (res.data && Array.isArray(res.data)) {
       // Sort descending by clockIn
@@ -324,7 +322,7 @@ const handleClockOut = async () => {
               <div className="text-end">
                 <Button
                   variant="primary"
-      onClick={() => navigate("/employee/attendance-history")}
+      onClick={() => navigate("/employee/work-history")}
                 >
                   View Full History →
                 </Button>

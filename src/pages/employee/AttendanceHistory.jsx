@@ -6,6 +6,8 @@ import TopNavbar from "../../components/EmployeeNavbar";
 import PageHeading from "../../components/PageHeading";
 import CardContainer from "../../components/CardContainer";
 import { getMyAttendance } from "../../api/attendanceApi";
+import { getCurrentUser } from "../../api/workSessionApi"; 
+
 import axios from "axios";
 
 const AttendanceHistory = ({ onLogout }) => {
@@ -24,9 +26,8 @@ const AttendanceHistory = ({ onLogout }) => {
     const fetchData = async () => {
       try {
         // 1. Get employee info
-        const resEmp = await axios.get("http://localhost:8080/api/v1/work-sessions/me", {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        });
+        const resEmp = await getCurrentUser();
+;
         setEmployee({ fullName: resEmp.data.fullName, id: resEmp.data.employeeId });
 
         // 2. Get attendance
