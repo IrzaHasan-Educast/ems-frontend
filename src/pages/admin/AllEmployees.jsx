@@ -10,7 +10,7 @@ import CardContainer from "../../components/CardContainer";
 import ViewEmployeeModal from "../../components/ViewEmployeeModal";
 
 // ✅ Import service functions only
-import { getAllEmployees, getEmployeeById, deleteEmployee, getRoles } from "../../api/employeeApi";
+import { getAllEmployees, getEmployeeById, deleteEmployee, getRoles, toggleActiveEmployee } from "../../api/employeeApi";
 
 const AllEmployees = ({ onLogout }) => {
   const [employees, setEmployees] = useState([]);
@@ -67,6 +67,20 @@ const AllEmployees = ({ onLogout }) => {
 
     fetchEmployees();
   }, []);
+
+  // Toggle active/inactive
+  const handleToggleActive = async (emp) => {
+    try {
+      await toggleActiveEmployee(emp.id);
+      setEmployees(employees.map(e => 
+        e.id === emp.id ? { ...e, active: !e.active } : e
+      ));
+    } catch (error) {
+      console.error("Failed to update status:", error);
+      alert(error.response?.data || "Failed to update status");
+    }
+  };
+
 
   // Edit employee
   const handleEdit = (id) => navigate(`/admin/employees/edit/${id}`);
@@ -154,7 +168,7 @@ const AllEmployees = ({ onLogout }) => {
                     <th>Email</th>
                     <th>Role</th>
                     <th>Designation</th>
-                    <th>Status</th>
+                    <th>Active</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -167,10 +181,40 @@ const AllEmployees = ({ onLogout }) => {
                       <td>{emp.role || "-"}</td>
                       <td>{emp.designation || "-"}</td>
                       <td>
-                        <Badge bg={emp.active ? "success" : "danger"}>
-                          {emp.active ? "Active" : "Inactive"}
-                        </Badge>
+                        {emp.role?.toLowerCase() === "admin" ? (
+                          <span className="badge bg-success text-center">Active</span>
+                        ) : (
+                        <div className="d-flex justify-content-center gap-1">
+                        <div
+                            onClick={() => handleToggleActive(emp)}
+                            style={{
+                              width: "40px",
+                              height: "20px",
+                              borderRadius: "10px",
+                              backgroundColor: emp.active ? "#28a745" : "#dc3545",
+                              position: "relative",
+                              cursor: "pointer",
+                              transition: "background-color 0.3s",
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: "16px",
+                                height: "16px",
+                                borderRadius: "50%",
+                                background: "#fff",
+                                position: "absolute",
+                                top: "2px",
+                                left: emp.active ? "22px" : "2px",
+                                transition: "left 0.3s",
+                              }}
+                            />
+                          </div>
+                        </div>
+                          
+                        )}
                       </td>
+
                       <td className="d-flex justify-content-center gap-1">
                         <Button variant="outline-primary" size="sm" onClick={() => handleView(emp.id)}>
                           <Eye />
@@ -178,9 +222,13 @@ const AllEmployees = ({ onLogout }) => {
                         <Button variant="outline-warning" size="sm" onClick={() => handleEdit(emp.id)}>
                           <PencilSquare />
                         </Button>
-                        <Button variant="outline-danger" size="sm" onClick={() => handleDelete(emp.id)}>
-                          <Trash />
-                        </Button>
+                          {/* <Button 
+                            variant={emp.active ? "outline-danger" : "outline-success"} 
+                            size="sm" 
+                            onClick={() => handleToggleActive(emp)}
+                          >
+                            {emp.active ? "Deactivate" : "Activate"}
+                          </Button> */}
                       </td>
                     </tr>
                   ))}

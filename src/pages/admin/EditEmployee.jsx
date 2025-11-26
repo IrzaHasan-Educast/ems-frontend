@@ -291,6 +291,7 @@ useEffect(() => {
                       checked={employee.active}
                       onChange={handleEmployeeChange}
                       label="Active"
+                      disabled={employee.role?.toLowerCase() === "admin"} // ✅ Admin cannot deactivate
                     />
                   </Col>
                 </Row>

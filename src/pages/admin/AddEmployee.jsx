@@ -24,7 +24,7 @@ const AddEmployee = ({ onLogout }) => {
     gender: "",
     department: "",
     designation: "",
-    role: "",
+    role: "EMPLOYEE", // <- add this
     joiningDate: "",
     active: true,
     username: "",

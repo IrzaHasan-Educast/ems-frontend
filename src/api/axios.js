@@ -25,11 +25,10 @@ instance.interceptors.request.use(
 instance.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Token expired or invalid
+    const url = error.config?.url;
+    if (error.response?.status === 401 && !url?.includes("/auth/login")) {
+      // Token expired or invalid on protected APIs
       localStorage.clear();
-
-      // Redirect user to login page
       window.location.href = "/login";
     }
 
