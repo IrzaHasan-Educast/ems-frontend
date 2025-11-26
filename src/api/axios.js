@@ -3,11 +3,13 @@ import axios from "axios";
 
 // ✅ Base Axios instance
 const instance = axios.create({
-  baseURL: "http://localhost:8080",
+  baseURL: process.env.REACT_APP_API,
+  
   headers: {
     "Content-Type": "application/json",
   },
 });
+console.log("API BASE URL:", process.env.REACT_APP_API);
 
 // ✅ Add token automatically if exists
 instance.interceptors.request.use(

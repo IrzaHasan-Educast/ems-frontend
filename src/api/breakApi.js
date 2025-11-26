@@ -1,7 +1,14 @@
-import axios from "./axios";
+import api from "./axios";
 
+// Start a break for a work session
 export const startBreak = (sessionId) =>
-  axios.post("/api/v1/breaks", { workSessionId: sessionId, startTime: new Date() });
+  api.post("/api/v1/breaks", { 
+    workSessionId: sessionId, 
+    startTime: new Date() 
+  });
 
+// End a break by break ID
 export const endBreak = (breakId) =>
-  axios.put(`/api/v1/breaks/${breakId}`, { endTime: new Date() });
+  api.put(`/api/v1/breaks/${breakId}`, { 
+    endTime: new Date() 
+  });
