@@ -7,7 +7,7 @@ import PageHeading from "../../components/PageHeading";
 import CardContainer from "../../components/CardContainer";
 import { getAllWorkSessionsAdmin } from "../../api/workSessionApi";
 import { FileEarmarkText, Gear } from "react-bootstrap-icons";
-import {getRoles, getAllEmployees } from "../../api/employeeApi";
+import { getRoles, getAllEmployees } from "../../api/employeeApi";
 import * as XLSX from "xlsx";
 
 const allColumns = [
@@ -29,6 +29,7 @@ const WorkSessions = ({ onLogout }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedEmployee, setSelectedEmployee] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("");
+  const [statusFilter, setStatusFilter] = useState(""); // ✅ Status filter
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -36,7 +37,7 @@ const WorkSessions = ({ onLogout }) => {
   const [showColumnsModal, setShowColumnsModal] = useState(false);
   const [selectedColumns, setSelectedColumns] = useState(allColumns.map(c => c.key));
   const [roles, setRoles] = useState([]);
-  const [admin, setAdmin] = useState({name: "admin", role: "Admin"});
+  const [admin, setAdmin] = useState({ name: "admin", role: "Admin" });
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   const formatTime = (d) => {
@@ -56,34 +57,32 @@ const WorkSessions = ({ onLogout }) => {
     const mins = totalMinutes % 60;
     return `${hrs}h ${mins}m`;
   };
-useEffect(() => {
-  const fetchRolesAndAdmin = async () => {
-    try {
-      // get roles
-      const res = await getRoles();
-      setRoles(res.data);
 
-      // get all employees (admin info)
-      const empRes = await getAllEmployees();
-      const allEmployees = empRes.data;
+  useEffect(() => {
+    const fetchRolesAndAdmin = async () => {
+      try {
+        const res = await getRoles();
+        setRoles(res.data);
 
-      const adminEmployee = allEmployees.find(
-        (emp) => emp.role?.toLowerCase() === "admin"
-      );
+        const empRes = await getAllEmployees();
+        const allEmployees = empRes.data;
 
-      if (adminEmployee) {
-        setAdmin({
-          name: adminEmployee.fullName,
-          role: adminEmployee.role,
-        });
+        const adminEmployee = allEmployees.find(
+          (emp) => emp.role?.toLowerCase() === "admin"
+        );
+
+        if (adminEmployee) {
+          setAdmin({
+            name: adminEmployee.fullName,
+            role: adminEmployee.role,
+          });
+        }
+      } catch (err) {
+        console.error(err);
       }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  fetchRolesAndAdmin();
-}, []);
+    };
+    fetchRolesAndAdmin();
+  }, []);
 
   useEffect(() => {
     const fetchSessions = async () => {
@@ -103,6 +102,10 @@ useEffect(() => {
           const totalMillis = (clockOut || new Date()) - clockIn;
           const netMillis = totalMillis - totalBreakMillis;
 
+          let displayStatus = s.status;
+          if (s.onBreak) displayStatus = "On Break";
+          else if (!s.clockOutTime && s.status !== "Invalid Clocked Out") displayStatus = "Working";
+
           return {
             ...s,
             date: clockIn.toLocaleDateString(),
@@ -111,6 +114,7 @@ useEffect(() => {
             totalHours: formatDuration(totalMillis / 1000 / 3600),
             workingHours: formatDuration(netMillis / 1000 / 3600),
             breakHours: formatDuration(totalBreakMillis / 1000 / 3600),
+            displayStatus, // ✅ precomputed status
           };
         });
         setSessions(formatted);
@@ -128,30 +132,33 @@ useEffect(() => {
     const term = searchTerm.toLowerCase();
     const monthFilter = selectedMonth;
     const empFilter = selectedEmployee;
+    const status = statusFilter;
 
     let f = sessions.filter((s) => {
       const matchesSearch =
         [s.employeeName, s.status, s.date, s.clockIn, s.clockOut].join(" ").toLowerCase().includes(term);
       const matchesEmployee = empFilter ? s.employeeName === empFilter : true;
       const matchesMonth = monthFilter ? new Date(s.clockInTime).getMonth() + 1 === parseInt(monthFilter) : true;
-      return matchesSearch && matchesEmployee && matchesMonth;
+      const matchesStatus = status ? s.displayStatus === status : true; // ✅ Status filter
+
+      return matchesSearch && matchesEmployee && matchesMonth && matchesStatus;
     });
 
     setFiltered(f);
     setCurrentPage(1);
-  }, [searchTerm, selectedEmployee, selectedMonth, sessions]);
+  }, [searchTerm, selectedEmployee, selectedMonth, statusFilter, sessions]);
 
   const handleReset = () => {
     setSearchTerm("");
     setSelectedEmployee("");
     setSelectedMonth("");
+    setStatusFilter(""); // ✅ Reset status filter
     setRowsPerPage(10);
     setCurrentPage(1);
-    setSelectedColumns(allColumns.map(c => c.key)); // <-- select all columns
-
+    setSelectedColumns(allColumns.map(c => c.key));
   };
 
-  // Export with proper column order
+  // Export
   const handleExport = () => {
     const fileName = prompt("Enter file name:", "WorkSessions");
     if (!fileName) return;
@@ -163,7 +170,7 @@ useEffect(() => {
 
     const data = filtered.map((s, idx) =>
       selectedColumns.map(col => {
-        switch(col) {
+        switch (col) {
           case "sno": return idx + 1;
           case "employeeName": return s.employeeName;
           case "date": return s.date;
@@ -172,7 +179,7 @@ useEffect(() => {
           case "totalHours": return s.totalHours;
           case "workingHours": return s.workingHours;
           case "breakHours": return s.breakHours;
-          case "status": return s.status;
+          case "status": return s.displayStatus;
           default: return "";
         }
       })
@@ -218,26 +225,23 @@ useEffect(() => {
       case "totalHours": return s.totalHours;
       case "workingHours": return s.workingHours;
       case "breakHours": return s.breakHours;
-      case "status": return (
-        <Badge 
-  bg={
-    s.status === "Completed"
-      ? "success"
-      : s.status === "Working"
-      ? "primary"
-      : s.status === "Invalid Clocked Out"
-      ? "danger"
-      : "secondary"
-  }
->
-  {s.status}
-</Badge>
-
-      );
+      case "status":
+        return (
+          <Badge
+            bg={
+              s.displayStatus === "Completed" ? "success"
+              : s.displayStatus === "Working" ? "primary"
+              : s.displayStatus === "On Break" ? "warning"
+              : s.displayStatus === "Invalid Clocked Out" ? "danger"
+              : "secondary"
+            }
+          >
+            {s.displayStatus}
+          </Badge>
+        );
       default: return "--";
     }
   };
-
 
   return (
     <div className="d-flex">
@@ -253,7 +257,7 @@ useEffect(() => {
           {/* Filters Row */}
           <CardContainer>
             <Row className="align-items-center g-2">
-              <Col md={3}>
+              <Col md={2}>
                 <Form.Control
                   type="text"
                   placeholder="Search..."
@@ -261,7 +265,7 @@ useEffect(() => {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </Col>
-              <Col md={3}>
+              <Col md={2}>
                 <Form.Select value={selectedEmployee} onChange={(e) => setSelectedEmployee(e.target.value)}>
                   <option value="">All Employees</option>
                   {uniqueEmployees.map((emp, idx) => (
@@ -274,6 +278,15 @@ useEffect(() => {
                   <option value="">All Months</option>
                   {["January","February","March","April","May","June","July","August","September","October","November","December"]
                     .map((name,i) => <option key={i} value={i+1}>{name}</option>)}
+                </Form.Select>
+              </Col>
+              <Col md={2}>
+                <Form.Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                  <option value="">All Status</option>
+                  <option value="Working">Working</option>
+                  <option value="On Break">On Break</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Invalid Clocked Out">Invalid Clocked Out</option>
                 </Form.Select>
               </Col>
               <Col md={2}>
@@ -317,7 +330,6 @@ useEffect(() => {
                       </tr>
                     ))}
                   </tbody>
-
                 </Table>
 
                 {/* Pagination */}
