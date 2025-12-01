@@ -14,6 +14,7 @@ import axios from "../../api/axios";
 import Swal from "sweetalert2";
 import ClockButton from "../../components/ClockButton";
 // import { getWorkHistoryByEmployee } from "../../api/workSessionApi";
+import { toPakistanDate, formatTimeAMPM } from "../../utils/time";
 
 
 const EmployeeDashboard = ({ onLogout }) => {
@@ -56,13 +57,13 @@ const EmployeeDashboard = ({ onLogout }) => {
       );
 
       const formatted = sorted.map((s) => {
-        const clockIn = new Date(s.clockInTime);
-        const clockOut = s.clockOutTime ? new Date(s.clockOutTime) : null;
+        const clockIn = toPakistanDate(s.clockInTime);
+        const clockOut = s.clockOutTime ? toPakistanDate(s.clockOutTime) : null;
 
         const totalBreakMillis =
           s.breaks?.reduce((sum, b) => {
-            const start = new Date(b.startTime);
-            const end = b.endTime ? new Date(b.endTime) : new Date();
+            const start = toPakistanDate(b.startTime);
+            const end = b.endTime ? toPakistanDate(b.endTime) : new Date();
             return sum + (end - start);
           }, 0) || 0;
 
@@ -105,8 +106,10 @@ const EmployeeDashboard = ({ onLogout }) => {
       if (res.data) {
         setCurrentSession({
           ...res.data,
-          clockIn: new Date(res.data.clockInTime),
-          clockOut: res.data.clockOutTime ? new Date(res.data.clockOutTime) : null,
+          clockIn: toPakistanDate(res.data.clockInTime),
+          clockOut: res.data.clockOutTime
+            ? toPakistanDate(res.data.clockOutTime)
+            : null,
           breaks: res.data.breaks || [],
           onBreak: res.data.breaks?.some((b) => !b.endTime) || false,
           currentBreakId: res.data.breaks?.find((b) => !b.endTime)?.id || null,

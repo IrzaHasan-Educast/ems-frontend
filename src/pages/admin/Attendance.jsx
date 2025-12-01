@@ -7,7 +7,7 @@ import PageHeading from "../../components/PageHeading";
 import CardContainer from "../../components/CardContainer";
 import { getAllAttendance } from "../../api/attendanceApi";
 import { FileEarmarkText, Gear } from "react-bootstrap-icons";
-import {getRoles, getAllEmployees } from "../../api/employeeApi";
+import { getRoles, getAllEmployees } from "../../api/employeeApi";
 
 import * as XLSX from "xlsx";
 
@@ -25,8 +25,8 @@ const Attendance = ({ onLogout }) => {
   const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(true);
   const [roles, setRoles] = useState([]);
-  const [admin, setAdmin] = useState({name: "admin", role: "Admin"});
-  
+  const [admin, setAdmin] = useState({ name: "admin", role: "Admin" });
+
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedEmployee, setSelectedEmployee] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("");
@@ -39,40 +39,52 @@ const Attendance = ({ onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-  const formatTime = (t) => {
-    if (!t) return "--";
-    return t;
+  const todayStr = new Date().toISOString().split("T")[0];
+
+  const formatDateForCompare = (dateStr) => {
+    if (!dateStr) return null;
+    const d = new Date(dateStr);
+    return d.toISOString().split("T")[0];
   };
 
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "--";
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  };
+
+  const formatTime = (timeStr) => {
+    if (!timeStr) return "--";
+    const d = new Date(`1970-01-01T${timeStr}`);
+    return d.toLocaleTimeString("en-US", { hour12: true });
+  };
+
+  // Fetch roles & admin
   useEffect(() => {
     const fetchRolesAndAdmin = async () => {
       try {
-        // get roles
         const res = await getRoles();
         setRoles(res.data);
-  
-        // get all employees (admin info)
+
         const empRes = await getAllEmployees();
         const allEmployees = empRes.data;
-  
+
         const adminEmployee = allEmployees.find(
           (emp) => emp.role?.toLowerCase() === "admin"
         );
-  
+
         if (adminEmployee) {
-          setAdmin({
-            name: adminEmployee.fullName,
-            role: adminEmployee.role,
-          });
+          setAdmin({ name: adminEmployee.fullName, role: adminEmployee.role });
         }
       } catch (err) {
         console.error(err);
       }
     };
-  
+
     fetchRolesAndAdmin();
   }, []);
 
+  // Fetch attendance
   useEffect(() => {
     const fetchAttendance = async () => {
       try {
@@ -144,8 +156,8 @@ const Attendance = ({ onLogout }) => {
         switch (col) {
           case "sno": return idx + 1;
           case "employeeName": return r.employeeName;
-          case "date": return r.date;
-          case "time": return r.time;
+          case "date": return formatDate(r.date);
+          case "time": return formatTime(r.time);
           case "present": return r.present;
           case "shift": return r.shift;
           default: return "";
@@ -158,14 +170,6 @@ const Attendance = ({ onLogout }) => {
     XLSX.utils.book_append_sheet(wb, ws, "Attendance");
     XLSX.writeFile(wb, `${fileName}.xlsx`);
   };
-
-  const totalPages =
-    rowsPerPage === "All" ? 1 : Math.ceil(filtered.length / rowsPerPage);
-
-  const displayed =
-    rowsPerPage === "All"
-      ? filtered
-      : filtered.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
   const uniqueEmployees = [...new Set(records.map((r) => r.employeeName))];
 
@@ -180,40 +184,35 @@ const Attendance = ({ onLogout }) => {
   const renderCell = (col, r, index) => {
     switch (col) {
       case "sno":
-        return (currentPage - 1) * Number(rowsPerPage) + index + 1;
-
+        return index + 1;
       case "employeeName":
         return r.employeeName;
-
       case "date":
-        return r.date;
-
+        return formatDate(r.date);
       case "time":
-        return r.time;
-
+        return formatTime(r.time);
       case "present":
         return (
           <Badge bg={r.present === "Present" ? "success" : "danger"}>
             {r.present}
           </Badge>
         );
-
       case "shift":
         return r.shift;
-
       default:
         return "--";
     }
   };
 
+  // Split today's attendance and past attendance
+  const todayRecords = filtered.filter(r => formatDateForCompare(r.rawDate) === todayStr);
+  const pastRecords = filtered.filter(r => formatDateForCompare(r.rawDate) !== todayStr);
+
   return (
     <div className="d-flex">
       <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} />
       <div className="flex-grow-1">
-        <TopNavbar toggleSidebar={toggleSidebar} 
-          username={admin.name}
-          role={admin.role}
-        />
+        <TopNavbar toggleSidebar={toggleSidebar} username={admin.name} role={admin.role} />
         <div className="p-4 container">
           <PageHeading title="Attendance Records" />
 
@@ -236,9 +235,7 @@ const Attendance = ({ onLogout }) => {
                 >
                   <option value="">All Employees</option>
                   {uniqueEmployees.map((emp, i) => (
-                    <option key={i} value={emp}>
-                      {emp}
-                    </option>
+                    <option key={i} value={emp}>{emp}</option>
                   ))}
                 </Form.Select>
               </Col>
@@ -253,9 +250,7 @@ const Attendance = ({ onLogout }) => {
                     "January","February","March","April","May","June",
                     "July","August","September","October","November","December",
                   ].map((m, i) => (
-                    <option key={i} value={i + 1}>
-                      {m}
-                    </option>
+                    <option key={i} value={i + 1}>{m}</option>
                   ))}
                 </Form.Select>
               </Col>
@@ -266,9 +261,7 @@ const Attendance = ({ onLogout }) => {
                   onChange={(e) => setRowsPerPage(e.target.value)}
                 >
                   {[10, 25, 50, "All"].map((n) => (
-                    <option key={n} value={n}>
-                      {n} per page
-                    </option>
+                    <option key={n} value={n}>{n} per page</option>
                   ))}
                 </Form.Select>
               </Col>
@@ -281,48 +274,53 @@ const Attendance = ({ onLogout }) => {
             </Row>
           </CardContainer>
 
-          {/* Table */}
+          {/* Today's Attendance */}
           <CardContainer className="mt-3">
+            <h5 style={{color: " #055993", fontWeight: "bold"}}>Today's Attendance</h5>
             {loading ? (
-              <div className="d-flex justify-content-center align-items-center" style={{ height: "50vh" }}>
+              <div className="d-flex justify-content-center align-items-center" style={{ height: "20vh" }}>
                 <Spinner animation="border" />
               </div>
             ) : (
-              <>
-                <Table bordered hover responsive>
-                  <thead style={{ backgroundColor: "#FFA500", color: "white", textAlign: "center" }}>
-                    <tr>
-                      {selectedColumns.map((col) => {
-                        const c = allColumns.find(x => x.key === col);
-                        return <th key={col}>{c.label}</th>;
-                      })}
+              <Table bordered hover responsive>
+                <thead style={{ backgroundColor: "#FFA500", color: "white", textAlign: "center" }}>
+                  <tr>
+                    {selectedColumns.map(col => <th key={col}>{allColumns.find(c => c.key === col).label}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {todayRecords.map((r, idx) => (
+                    <tr key={idx} style={{ textAlign: "center", backgroundColor: "#e6f7ff" }}>
+                      {selectedColumns.map(col => <td key={col}>{renderCell(col, r, idx)}</td>)}
                     </tr>
-                  </thead>
+                  ))}
+                </tbody>
+              </Table>
+            )}
+          </CardContainer>
 
-                  <tbody>
-                    {displayed.map((r, idx) => (
-                      <tr key={idx} style={{ textAlign: "center" }}>
-                        {selectedColumns.map(col => (
-                          <td key={col}>{renderCell(col, r, idx)}</td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </Table>
-
-                {/* Pagination */}
-                {rowsPerPage !== "All" && (
-                  <div className="d-flex justify-content-between align-items-center mt-2 ">
-                    <Button className="btn-secondary" disabled={currentPage === 1} onClick={() => setCurrentPage(currentPage - 1)}>
-                      Previous
-                    </Button>
-                    <span>Page {currentPage} of {totalPages}</span>
-                    <Button disabled={currentPage === totalPages} onClick={() => setCurrentPage(currentPage + 1)}>
-                      Next
-                    </Button>
-                  </div>
-                )}
-              </>
+          {/* Past Attendance */}
+          <CardContainer className="mt-3">
+            <h5 style={{color: " #055993", fontWeight: "bold"}}>Past Attendance</h5>
+            {loading ? (
+              <div className="d-flex justify-content-center align-items-center" style={{ height: "20vh" }}>
+                <Spinner animation="border" />
+              </div>
+            ) : (
+              <Table bordered hover responsive>
+                <thead style={{ backgroundColor: "#FFA500", color: "white", textAlign: "center" }}>
+                  <tr>
+                    {selectedColumns.map(col => <th key={col}>{allColumns.find(c => c.key === col).label}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {pastRecords.map((r, idx) => (
+                    <tr key={idx} style={{ textAlign: "center" }}>
+                      {selectedColumns.map(col => <td key={col}>{renderCell(col, r, idx)}</td>)}
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
             )}
           </CardContainer>
 
