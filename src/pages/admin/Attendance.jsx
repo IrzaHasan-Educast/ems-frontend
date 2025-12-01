@@ -59,6 +59,14 @@ const Attendance = ({ onLogout }) => {
     return d.toLocaleTimeString("en-US", { hour12: true });
   };
 
+  const beautifyShift = (shift) => {
+  if (!shift) return "--";
+  return shift
+    .split("_")
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+};
+
   // Fetch roles & admin
   useEffect(() => {
     const fetchRolesAndAdmin = async () => {
@@ -159,7 +167,7 @@ const Attendance = ({ onLogout }) => {
           case "date": return formatDate(r.date);
           case "time": return formatTime(r.time);
           case "present": return r.present;
-          case "shift": return r.shift;
+          case "shift": return beautifyShift(r.shift);
           default: return "";
         }
       })
@@ -198,7 +206,7 @@ const Attendance = ({ onLogout }) => {
           </Badge>
         );
       case "shift":
-        return r.shift;
+      return beautifyShift(r.shift);
       default:
         return "--";
     }
@@ -207,6 +215,12 @@ const Attendance = ({ onLogout }) => {
   // Split today's attendance and past attendance
   const todayRecords = filtered.filter(r => formatDateForCompare(r.rawDate) === todayStr);
   const pastRecords = filtered.filter(r => formatDateForCompare(r.rawDate) !== todayStr);
+
+  const totalRecords = filtered.length;
+
+  const paginatedRecords = rowsPerPage === "All"
+    ? filtered
+    : filtered.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
   return (
     <div className="d-flex">
@@ -258,7 +272,9 @@ const Attendance = ({ onLogout }) => {
               <Col md={2}>
                 <Form.Select
                   value={rowsPerPage}
-                  onChange={(e) => setRowsPerPage(e.target.value)}
+                  onChange={(e) => {setRowsPerPage(e.target.value);
+                  setCurrentPage(1);
+                }}
                 >
                   {[10, 25, 50, "All"].map((n) => (
                     <option key={n} value={n}>{n} per page</option>
@@ -289,7 +305,9 @@ const Attendance = ({ onLogout }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {todayRecords.map((r, idx) => (
+                  {todayRecords
+                    .slice(0, rowsPerPage === "All" ? todayRecords.length : rowsPerPage)
+                    .map((r, idx) => (
                     <tr key={idx} style={{ textAlign: "center", backgroundColor: "#e6f7ff" }}>
                       {selectedColumns.map(col => <td key={col}>{renderCell(col, r, idx)}</td>)}
                     </tr>
@@ -314,7 +332,7 @@ const Attendance = ({ onLogout }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {pastRecords.map((r, idx) => (
+                  {paginatedRecords.map((r, idx) => (
                     <tr key={idx} style={{ textAlign: "center" }}>
                       {selectedColumns.map(col => <td key={col}>{renderCell(col, r, idx)}</td>)}
                     </tr>
