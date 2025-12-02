@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 
 import LoginForm from "./components/LoginForm";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import HrDashboard from "./pages/hr/HrDashboard";
 import AllEmployees from "./pages/admin/AllEmployees";
 import AddEmployee from "./pages/admin/AddEmployee";
 import EditEmployee from "./pages/admin/EditEmployee";
@@ -94,7 +95,7 @@ function App() {
         <Route
           path="/admin/employees"
           element={
-            <ProtectedRoute allowedRoles={["ADMIN"]}>
+            <ProtectedRoute allowedRoles={["ADMIN","HR"]}>
               <AllEmployees onLogout={handleLogout}/>
             </ProtectedRoute>
           }
@@ -103,7 +104,7 @@ function App() {
         <Route
           path="/admin/employees/add"
           element={
-            <ProtectedRoute allowedRoles={["ADMIN"]}>
+            <ProtectedRoute allowedRoles={["ADMIN","HR"]}>
               <AddEmployee onLogout={handleLogout}/>
             </ProtectedRoute>
           }
@@ -112,7 +113,7 @@ function App() {
         <Route
           path="/admin/employees/edit/:id"
           element={
-            <ProtectedRoute allowedRoles={["ADMIN"]}>
+            <ProtectedRoute allowedRoles={["ADMIN", "HR"]}>
               <EditEmployee onLogout={handleLogout}/>
             </ProtectedRoute>
           }
@@ -120,7 +121,7 @@ function App() {
         <Route
           path="/admin/work-sessions"
           element={
-            <ProtectedRoute allowedRoles={["ADMIN"]}>
+            <ProtectedRoute allowedRoles={["ADMIN", "HR"]}>
               <WorkSessions onLogout={handleLogout} />
             </ProtectedRoute>
           }
@@ -129,14 +130,14 @@ function App() {
         <Route
           path="/admin/attendance"
           element={
-            <ProtectedRoute allowedRoles={["ADMIN"]}>
+            <ProtectedRoute allowedRoles={["ADMIN", "HR"]}>
               <Attendance onLogout={handleLogout} />
             </ProtectedRoute>
           }
         />
 
 
-        {/* HR ROUTES
+        {/* HR ROUTES */}
         <Route
           path="/hr"
           element={
@@ -144,7 +145,7 @@ function App() {
               <HrDashboard onLogout={handleLogout} />
             </ProtectedRoute>
           }
-        /> */}
+        /> 
 
         {/* EMPLOYEE ROUTES */}
         <Route
