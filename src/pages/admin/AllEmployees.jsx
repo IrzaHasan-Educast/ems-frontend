@@ -8,6 +8,7 @@ import { PencilSquare, Trash, Eye } from "react-bootstrap-icons";
 import PageHeading from "../../components/PageHeading";
 import CardContainer from "../../components/CardContainer";
 import ViewEmployeeModal from "../../components/ViewEmployeeModal";
+import { getCurrentUser } from "../../api/userApi";
 
 // ✅ Import service functions only
 import { getAllEmployees, getEmployeeById, deleteEmployee, getRoles, toggleActiveEmployee } from "../../api/employeeApi";
@@ -24,33 +25,27 @@ const AllEmployees = ({ onLogout }) => {
   const navigate = useNavigate();
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-  useEffect(()=>{
-    const fetchRolesAndAdmin = async()=>{
-      try{
-        //get roles
-        const res = await getRoles();
-        setRoles(res.data);
+  useEffect(() => {
+    const fetchRolesAndAdmin = async () => {
+      try {
+        // Roles
+        const rolesRes = await getRoles();
+        setRoles(rolesRes.data);
 
-        // get all employees (admin info)
-        const empRes = await getAllEmployees();
-        const allEmployees = empRes.data;
-
-        const adminEmployee = allEmployees.find(
-        (emp)=>emp.role?.toLowerCase() ==="admin"
-        );
-
-        if(adminEmployee) {
-          setAdmin({
-            name:adminEmployee.fullName,
-            role: adminEmployee.role,
-          });
-        }
-      } catch(err){
-        console.error(err);
+        // Admin info from /users/me
+        const userRes = await getCurrentUser();
+        setAdmin({
+          name: userRes.data.fullName,
+          role: userRes.data.role,
+        });
+      } catch (err) {
+        console.error("Failed to fetch roles or admin info:", err);
       }
     };
+
     fetchRolesAndAdmin();
-  },[]);
+  }, []);
+
 
   // Fetch all employees on component mount
   useEffect(() => {

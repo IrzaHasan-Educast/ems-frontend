@@ -7,6 +7,7 @@ import PageHeading from "../../components/PageHeading";
 import { useNavigate } from "react-router-dom";
 import { getAllEmployees } from "../../api/employeeApi";
 import { getAllAttendance } from "../../api/attendanceApi";
+import { getCurrentUser } from "../../api/userApi";
 
 // Recharts imports
 import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, Legend, ResponsiveContainer } from "recharts";
@@ -31,16 +32,17 @@ const AdminDashboard = ({ onLogout }) => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Employees
+        // Fetch logged-in user info
+        const userRes = await getCurrentUser();
+        setAdmin({
+          name: userRes.data.fullName,
+          role: userRes.data.role
+        });
+
+        // Employees list
         const empRes = await getAllEmployees();
         const allEmployees = empRes.data;
         setEmployees(allEmployees);
-
-        // Find admin info
-        const adminEmployee = allEmployees.find(emp => emp.role?.toLowerCase() === "admin");
-        if (adminEmployee) {
-          setAdmin({ name: adminEmployee.fullName, role: adminEmployee.role });
-        }
 
         // Department stats
         const depts = {};
@@ -51,14 +53,14 @@ const AdminDashboard = ({ onLogout }) => {
         const deptArray = Object.keys(depts).map(key => ({ name: key, value: depts[key] }));
         setDeptStats(deptArray);
 
-        // Attendance stats for employees
+        // Attendance stats
         const attendanceRes = await getAllAttendance();
         const todayStr = new Date().toISOString().split("T")[0];
 
         const employeeList = allEmployees.filter(emp => emp.role.toLowerCase() === "employee");
         const totalEmployees = employeeList.length;
 
-        const presentToday = attendanceRes.data.filter(a => 
+        const presentToday = attendanceRes.data.filter(a =>
           employeeList.some(emp => emp.id === a.employeeId) &&
           a.attendanceDate === todayStr &&
           a.present
@@ -73,6 +75,7 @@ const AdminDashboard = ({ onLogout }) => {
 
     fetchData();
   }, []);
+
 
   const stats = [
     { title: "Total Employees", value: attendanceStats.totalEmployees, description: "Active Employees", color: "#055993", icon: "bi-people-fill" },

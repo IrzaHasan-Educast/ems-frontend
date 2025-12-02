@@ -8,6 +8,7 @@ import CardContainer from "../../components/CardContainer";
 import { getAllWorkSessionsAdmin } from "../../api/workSessionApi";
 import { FileEarmarkText, Gear } from "react-bootstrap-icons";
 import { getRoles, getAllEmployees } from "../../api/employeeApi";
+import { getCurrentUser } from "../../api/userApi";
 import * as XLSX from "xlsx";
 
 const allColumns = [
@@ -61,28 +62,24 @@ const WorkSessions = ({ onLogout }) => {
   useEffect(() => {
     const fetchRolesAndAdmin = async () => {
       try {
-        const res = await getRoles();
-        setRoles(res.data);
+        // Roles
+        const rolesRes = await getRoles();
+        setRoles(rolesRes.data);
 
-        const empRes = await getAllEmployees();
-        const allEmployees = empRes.data;
-
-        const adminEmployee = allEmployees.find(
-          (emp) => emp.role?.toLowerCase() === "admin"
-        );
-
-        if (adminEmployee) {
-          setAdmin({
-            name: adminEmployee.fullName,
-            role: adminEmployee.role,
-          });
-        }
+        // Admin info from /users/me
+        const userRes = await getCurrentUser();
+        setAdmin({
+          name: userRes.data.fullName,
+          role: userRes.data.role,
+        });
       } catch (err) {
-        console.error(err);
+        console.error("Failed to fetch roles or admin info:", err);
       }
     };
+
     fetchRolesAndAdmin();
   }, []);
+
 
   useEffect(() => {
     const fetchSessions = async () => {

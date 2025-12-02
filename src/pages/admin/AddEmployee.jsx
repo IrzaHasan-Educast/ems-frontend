@@ -5,6 +5,7 @@ import Sidebar from "../../components/Sidebar";
 import TopNavbar from "../../components/Navbar";
 import CardContainer from "../../components/CardContainer";
 import AppButton from "../../components/AppButton";
+import { getCurrentUser } from "../../api/userApi";
 
 import { getRoles, addEmployee, getAllEmployees } from "../../api/employeeApi";
 import {
@@ -79,33 +80,26 @@ const AddEmployee = ({ onLogout }) => {
     }
   };
 useEffect(() => {
-  const fetchRolesAndAdmin = async () => {
-    try {
-      // get roles
-      const res = await getRoles();
-      setRoles(res.data);
+    const fetchRolesAndAdmin = async () => {
+      try {
+        // Roles
+        const rolesRes = await getRoles();
+        setRoles(rolesRes.data);
 
-      // get all employees (admin info)
-      const empRes = await getAllEmployees();
-      const allEmployees = empRes.data;
-
-      const adminEmployee = allEmployees.find(
-        (emp) => emp.role?.toLowerCase() === "admin"
-      );
-
-      if (adminEmployee) {
+        // Admin info from /users/me
+        const userRes = await getCurrentUser();
         setAdmin({
-          name: adminEmployee.fullName,
-          role: adminEmployee.role,
+          name: userRes.data.fullName,
+          role: userRes.data.role,
         });
+      } catch (err) {
+        console.error("Failed to fetch roles or admin info:", err);
       }
-    } catch (err) {
-      console.error(err);
-    }
-  };
+    };
 
-  fetchRolesAndAdmin();
-}, []);
+    fetchRolesAndAdmin();
+  }, []);
+
 
   return (
     <div className="d-flex">

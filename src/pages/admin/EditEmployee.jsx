@@ -6,6 +6,7 @@ import Sidebar from "../../components/Sidebar";
 import TopNavbar from "../../components/Navbar";
 import CardContainer from "../../components/CardContainer";
 import AppButton from "../../components/AppButton";
+import { getCurrentUser } from "../../api/userApi";
 
 import { 
   getEmployeeById,
@@ -28,6 +29,7 @@ const EditEmployee = ({ onLogout }) => {
   const [employee, setEmployee] = useState(null);
   const [user, setUser] = useState({ id: null, username: "", password: "" });
   const [roles, setRoles] = useState([]);
+  const [admin, setAdmin] = useState({name:"Admin", role: "Admin"});
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -62,6 +64,27 @@ useEffect(() => {
   fetchData();
   fetchRoles();
 }, [id]);
+
+  useEffect(() => {
+    const fetchRolesAndAdmin = async () => {
+      try {
+        // Roles
+        const rolesRes = await getRoles();
+        setRoles(rolesRes.data);
+
+        // Admin info from /users/me
+        const userRes = await getCurrentUser();
+        setAdmin({
+          name: userRes.data.fullName,
+          role: userRes.data.role,
+        });
+      } catch (err) {
+        console.error("Failed to fetch roles or admin info:", err);
+      }
+    };
+
+    fetchRolesAndAdmin();
+  }, []);
 
 
   const handleEmployeeChange = (e) => {
@@ -124,7 +147,7 @@ useEffect(() => {
     <div className="d-flex">
       <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} />
       <div className="flex-grow-1">
-        <TopNavbar toggleSidebar={toggleSidebar} />
+        <TopNavbar toggleSidebar={toggleSidebar} username={admin.name} role={admin.role} />
         <div className="p-4 d-flex justify-content-center">
           <div className="w-75">
             <CardContainer title="Edit Employee">
