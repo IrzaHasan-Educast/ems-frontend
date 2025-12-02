@@ -33,6 +33,12 @@ const AttendanceHistory = ({ onLogout }) => {
     return `${hours}:${minutes}:${seconds} ${ampm}`;
   };
 
+  const getMonthName = (dateStr) => {
+    const [day, month, year] = dateStr.split("-");
+    const date = new Date(`${year}-${month}-${day}`);
+    return date.toLocaleString("en-US", { month: "long" });
+  };
+
   const formatDuration = (hoursDecimal) => {
     if (!hoursDecimal) return "0h 0m";
     const totalMinutes = Math.round(hoursDecimal * 60);
@@ -63,7 +69,7 @@ const AttendanceHistory = ({ onLogout }) => {
 
           return {
             id: s.id,
-            date: clockIn.toLocaleDateString(),
+            date: clockIn.toLocaleDateString("en-GB").replace(/\//g, "-"),
             clockIn: formatTimeAMPM(clockIn),
             clockOut: clockOut ? formatTimeAMPM(clockOut) : "--",
             totalHours: formatDuration(totalMillis / 1000 / 3600),
@@ -101,7 +107,7 @@ const AttendanceHistory = ({ onLogout }) => {
     let filtered = [...history];
 
     if (selectedDate) {
-      filtered = filtered.filter((h) => h.date === selectedDate);
+      filtered = filtered.filter((h) => getMonthName(h.date) === selectedDate);
     }
 
     if (searchQuery) {
@@ -123,8 +129,7 @@ const AttendanceHistory = ({ onLogout }) => {
   };
 
   if (!employee) return <div>Loading...</div>;
-
-  const uniqueDates = [...new Set(history.map((h) => h.date))];
+  const uniqueMonths = [...new Set(history.map((h) => getMonthName(h.date)))];
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -166,14 +171,11 @@ const AttendanceHistory = ({ onLogout }) => {
                 </div>
 
                 <div className="col-md-4">
-                  <Form.Select
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                  >
-                    <option value="">Select Date</option>
-                    {uniqueDates.map((d) => (
-                      <option key={d} value={d}>
-                        {d}
+                  <Form.Select value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)}>
+                    <option value="">Select Month</option>
+                    {uniqueMonths.map((m) => (
+                      <option key={m} value={m}>
+                        {m}
                       </option>
                     ))}
                   </Form.Select>
@@ -197,6 +199,7 @@ const AttendanceHistory = ({ onLogout }) => {
             <Table bordered hover responsive className="table-theme">
               <thead style={{ backgroundColor: "#055993", color: "white" }}>
                 <tr>
+                  <th>S. No.</th>
                   <th>Date</th>
                   <th>Clock In</th>
                   <th>Clock Out</th>
@@ -208,12 +211,8 @@ const AttendanceHistory = ({ onLogout }) => {
               </thead>
               <tbody>
                 {filteredHistory.map((h, idx) => (
-                  <tr
-                    key={h.id}
-                    className={
-                      h.clockOut === "--" && idx === 0 ? "current-session-row" : ""
-                    }
-                  >
+                  <tr key={h.id} className={h.clockOut === "--" && idx === 0 ? "current-session-row" : ""}>
+                    <td>{idx + 1}</td>   {/* S. No. */}
                     <td>{h.date}</td>
                     <td>{h.clockIn}</td>
                     <td>{h.clockOut}</td>

@@ -20,7 +20,13 @@ const AttendanceHistory = ({ onLogout }) => {
   const [selectedMonth, setSelectedMonth] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
-
+  const beautifyShift = (shift) => {
+    if (!shift) return "--";
+    return shift
+      .split("_")
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(" ");
+  };
   // Fetch employee info + attendance
   useEffect(() => {
     const fetchData = async () => {
@@ -55,7 +61,7 @@ const AttendanceHistory = ({ onLogout }) => {
             rawDate: a.attendanceDate,
             time: timeStr,
             status,
-            shift: a.shift,
+            shift: beautifyShift(a.shift),
           };
         });
 

@@ -60,12 +60,12 @@ const Attendance = ({ onLogout }) => {
   };
 
   const beautifyShift = (shift) => {
-  if (!shift) return "--";
-  return shift
-    .split("_")
-    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    .join(" ");
-};
+    if (!shift) return "--";
+    return shift
+      .split("_")
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(" ");
+  };
 
   // Fetch roles & admin
   useEffect(() => {
@@ -219,8 +219,20 @@ const Attendance = ({ onLogout }) => {
   const totalRecords = filtered.length;
 
   const paginatedRecords = rowsPerPage === "All"
-    ? filtered
-    : filtered.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+      ? filtered
+      : filtered.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+  const totalPages =
+    rowsPerPage === "All"
+      ? 1
+      : Math.ceil(filtered.length / rowsPerPage);
+
+  const handlePrevious = () => {
+    if (currentPage > 1) setCurrentPage(currentPage - 1);
+  };
+
+  const handleNext = () => {
+    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+  };
 
   return (
     <div className="d-flex">
@@ -340,6 +352,30 @@ const Attendance = ({ onLogout }) => {
                 </tbody>
               </Table>
             )}
+            {rowsPerPage !== "All" && (
+              <div className="d-flex justify-content-between align-items-center mt-3">
+                <Button
+                  variant="outline-primary"
+                  disabled={currentPage === 1}
+                  onClick={handlePrevious}
+                >
+                  Previous
+                </Button>
+
+                <span>
+                  Page {currentPage} of {totalPages}
+                </span>
+
+                <Button
+                  variant="outline-primary"
+                  disabled={currentPage === totalPages}
+                  onClick={handleNext}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
+
           </CardContainer>
 
           {/* Column Selection Modal */}
