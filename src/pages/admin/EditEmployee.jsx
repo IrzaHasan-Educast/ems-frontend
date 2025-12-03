@@ -7,6 +7,7 @@ import TopNavbar from "../../components/Navbar";
 import CardContainer from "../../components/CardContainer";
 import AppButton from "../../components/AppButton";
 import { getCurrentUser } from "../../api/userApi";
+import jwtHelper from "../../utils/jwtHelper";
 
 import { 
   getEmployeeById,
@@ -25,11 +26,13 @@ import {
 import { Eye, EyeSlash } from "react-bootstrap-icons";
 
 const EditEmployee = ({ onLogout }) => {
+  const token = localStorage.getItem("token");
+  const initialRole = jwtHelper.getRoleFromToken(token);
   const { id } = useParams();
   const [employee, setEmployee] = useState(null);
   const [user, setUser] = useState({ id: null, username: "", password: "" });
   const [roles, setRoles] = useState([]);
-  const [admin, setAdmin] = useState({name:"Admin", role: "Admin"});
+  const [admin, setAdmin] = useState({ name: "", role: initialRole });
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);

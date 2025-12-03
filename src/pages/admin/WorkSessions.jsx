@@ -10,6 +10,7 @@ import { FileEarmarkText, Gear } from "react-bootstrap-icons";
 import { getRoles, getAllEmployees } from "../../api/employeeApi";
 import { getCurrentUser } from "../../api/userApi";
 import * as XLSX from "xlsx";
+import jwtHelper from "../../utils/jwtHelper";
 
 const allColumns = [
   { key: "sno", label: "S.No" },
@@ -24,6 +25,8 @@ const allColumns = [
 ];
 
 const WorkSessions = ({ onLogout }) => {
+  const token = localStorage.getItem("token");
+  const initialRole = jwtHelper.getRoleFromToken(token);
   const [sessions, setSessions] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -38,7 +41,7 @@ const WorkSessions = ({ onLogout }) => {
   const [showColumnsModal, setShowColumnsModal] = useState(false);
   const [selectedColumns, setSelectedColumns] = useState(allColumns.map(c => c.key));
   const [roles, setRoles] = useState([]);
-  const [admin, setAdmin] = useState({ name: "admin", role: "Admin" });
+  const [admin, setAdmin] = useState({name: "", role: initialRole});
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   const formatTime = (d) => {

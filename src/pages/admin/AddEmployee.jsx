@@ -6,6 +6,7 @@ import TopNavbar from "../../components/Navbar";
 import CardContainer from "../../components/CardContainer";
 import AppButton from "../../components/AppButton";
 import { getCurrentUser } from "../../api/userApi";
+import jwtHelper from "../../utils/jwtHelper";
 
 import { getRoles, addEmployee, getAllEmployees } from "../../api/employeeApi";
 import {
@@ -32,11 +33,13 @@ const AddEmployee = ({ onLogout }) => {
     password: "",
   });
 
+  const token = localStorage.getItem("token");
+  const initialRole = jwtHelper.getRoleFromToken(token);
   const [errors, setErrors] = useState({});
   const [roles, setRoles] = useState([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showPassword, setShowPassword] = useState(false); // toggle state
-  const [admin, setAdmin] = useState({ name: "Admin", role: "Admin" });
+  const [admin, setAdmin] = useState({ name: "", role: initialRole });
 
   const navigate = useNavigate();
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);

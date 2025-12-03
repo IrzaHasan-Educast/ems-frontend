@@ -2,8 +2,8 @@ import React from "react";
 import { Navbar, Nav } from "react-bootstrap";
 
 const TopNavbar = ({ toggleSidebar, username, role }) => {
-  const displayName = username || "Admin";
-  const displayRole = role || "Admin";
+  const displayName = username || "User";
+  const displayRole = role || "";
 
   return (
     <Navbar

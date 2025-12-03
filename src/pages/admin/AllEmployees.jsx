@@ -9,11 +9,14 @@ import PageHeading from "../../components/PageHeading";
 import CardContainer from "../../components/CardContainer";
 import ViewEmployeeModal from "../../components/ViewEmployeeModal";
 import { getCurrentUser } from "../../api/userApi";
+import jwtHelper from "../../utils/jwtHelper";
 
 // ✅ Import service functions only
 import { getAllEmployees, getEmployeeById, deleteEmployee, getRoles, toggleActiveEmployee } from "../../api/employeeApi";
 
 const AllEmployees = ({ onLogout }) => {
+  const token = localStorage.getItem("token");
+  const initialRole = jwtHelper.getRoleFromToken(token);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -21,7 +24,7 @@ const AllEmployees = ({ onLogout }) => {
   const [roles, setRoles] = useState([]);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [admin, setAdmin] = useState({name: "Admin", role: "Admin"});
+  const [admin, setAdmin] = useState({name: "", role: initialRole});
   const navigate = useNavigate();
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
