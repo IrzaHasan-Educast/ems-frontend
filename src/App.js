@@ -10,6 +10,8 @@ import AddEmployee from "./pages/admin/AddEmployee";
 import EditEmployee from "./pages/admin/EditEmployee";
 import WorkSessions from "./pages/admin/WorkSessions";
 import Attendance from "./pages/admin/Attendance";
+import LeaveHistory from "./pages/employee/LeaveHistory"; 
+// import AllLeaves from "./pages/admin/AllLeaves"; 
 
 import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
 import WorkSessionHistory from "./pages/employee/WorkSessionHistory";
@@ -17,6 +19,7 @@ import AttendanceHistory from "./pages/employee/AttendanceHistory";
 
 import jwtHelper from "./utils/jwtHelper";
 import { isTokenExpired } from "./utils/checkToken";
+import ApplyLeave from "./pages/employee/ApplyLeave";
 
 function App() {
 
@@ -173,7 +176,22 @@ function App() {
             </ProtectedRoute>
           }
         />
-
+        <Route
+          path="/employee/leave-history"
+          element={
+            <ProtectedRoute allowedRoles={["EMPLOYEE"]}>
+              <LeaveHistory onLogout={handleLogout}/>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/employee/leave/apply"
+          element={
+            <ProtectedRoute allowedRoles={["EMPLOYEE"]}>
+              <ApplyLeave onLogout={handleLogout}/>
+            </ProtectedRoute>
+          }
+        />
         {/* DEFAULT */}
         <Route
           path="*"
