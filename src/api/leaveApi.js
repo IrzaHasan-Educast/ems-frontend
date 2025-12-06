@@ -25,3 +25,11 @@ export const getLeavesByStatus = (status) => api.get(`/api/v1/leaves/status/${st
 
 // Get leave types
 export const getLeaveTypes = () => api.get("/api/v1/leaves/types");
+
+// Upload prescription
+export const uploadPrescription = (formData) =>
+  api.post("/api/v1/upload/prescription", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });

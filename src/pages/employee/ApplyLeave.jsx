@@ -7,7 +7,8 @@ import TopNavbar from "../../components/Navbar";
 import CardContainer from "../../components/CardContainer";
 import AppButton from "../../components/AppButton";
 import { getCurrentUser } from "../../api/workSessionApi"; 
-import { applyLeave, getLeaveTypes } from "../../api/leaveApi";
+import { applyLeave, getLeaveTypes, uploadPrescription } from "../../api/leaveApi";
+
 
 const ApplyLeave = ({ onLogout }) => {
   const [leave, setLeave] = useState({
@@ -82,22 +83,37 @@ const ApplyLeave = ({ onLogout }) => {
     }
 
     try {
-      const formData = new FormData();
-      formData.append("employeeId", employee.id);  
-      formData.append("leaveType", leave.leaveType);
-      formData.append("startDate", leave.startDate);
-      formData.append("endDate", leave.endDate);
-      formData.append("duration", leave.duration);
-      formData.append("description", leave.description);
-      if (leave.prescription) formData.append("prescription", leave.prescription);
+      let prescriptionUrl = null;
 
-      await applyLeave(formData);
+      // Step 1: Upload file if exists
+      if (leave.prescription) {
+        const f = new FormData();
+        f.append("file", leave.prescription);
+
+        const uploadRes = await uploadPrescription(f);
+        prescriptionUrl = uploadRes.data; // backend returns secure_url
+      }
+
+      // Step 2: Apply leave
+      const leavePayload = {
+        employeeId: employee.id,
+        leaveType: leave.leaveType,
+        startDate: leave.startDate,
+        endDate: leave.endDate,
+        duration: leave.duration,
+        description: leave.description,
+        prescriptionImg: prescriptionUrl, // backend expects this field
+      };
+
+      await applyLeave(leavePayload);
       navigate("/leave-history");
+
     } catch (error) {
       console.error(error);
       alert(error.response?.data || "Failed to apply leave");
     }
   };
+
 
   if (!employee) return <div>Loading...</div>;
 
@@ -202,14 +218,16 @@ const ApplyLeave = ({ onLogout }) => {
                 {showPrescription && (
                   <Row className="mb-3">
                     <Col md={12}>
+                      {showPrescription && (
                       <Form.Group>
-                        <Form.Label>Prescription (optional)</Form.Label>
+                        <Form.Label>Prescription</Form.Label>
                         <Form.Control
                           type="file"
                           name="prescription"
                           onChange={handleChange}
                         />
                       </Form.Group>
+                    )}
                     </Col>
                   </Row>
                 )}

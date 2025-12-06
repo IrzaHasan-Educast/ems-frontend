@@ -32,6 +32,16 @@ const LeaveHistory = ({ onLogout }) => {
     return d.toLocaleString("en-US", { month: "long" });
   };
 
+  const formatDate = (dateStr) => {
+  if (!dateStr) return "";
+  const dateObj = new Date(dateStr);
+  const day = String(dateObj.getDate()).padStart(2, '0');
+  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const year = dateObj.getFullYear();
+  return `${day}-${month}-${year}`;
+};
+
+
   // ---- Fetch Employee Leaves ----
   const fetchLeaves = useCallback(async (employeeId) => {
     try {
@@ -42,8 +52,8 @@ const LeaveHistory = ({ onLogout }) => {
           id: lv.id,
           type: lv.leaveType,
           status: lv.status,
-          startDate: new Date(lv.startDate).toLocaleDateString("en-GB").replace(/\//g, "-"),
-          endDate: new Date(lv.endDate).toLocaleDateString("en-GB").replace(/\//g, "-"),
+          startDate: formatDate(lv.startDate),
+          endDate: formatDate(lv.endDate),
           duration: lv.duration,
           description: lv.description || "--",
           appliedOn: new Date(lv.appliedOn).toLocaleString(),
@@ -179,7 +189,7 @@ const LeaveHistory = ({ onLogout }) => {
           <CardContainer title="Leave Records">
             <Table bordered hover responsive className="table-theme">
               <thead style={{ backgroundColor: "#055993", color: "white" }}>
-                <tr>
+                <tr className="text-center">
                   <th>S. No.</th>
                   <th>Leave Type</th>
                   <th>Status</th>
@@ -192,7 +202,7 @@ const LeaveHistory = ({ onLogout }) => {
                 </tr>
               </thead>
 
-              <tbody>
+              <tbody className="text-center">
                 {filteredLeaves.map((lv, idx) => (
                   <tr key={lv.id}>
                     <td>{idx + 1}</td>
@@ -201,7 +211,7 @@ const LeaveHistory = ({ onLogout }) => {
                     <td>{lv.startDate}</td>
                     <td>{lv.endDate}</td>
                     <td>{lv.duration}</td>
-                    <td>{lv.description}</td>
+                    <td className="text-start">{lv.description}</td>
                     <td>{lv.appliedOn}</td>
                     <td>
                       {lv.prescriptionImg ? (
