@@ -98,11 +98,13 @@ const Sidebar = ({ isOpen, onLogout, user }) => {
             <i className="bi bi-calendar-check me-2"></i> {isOpen && "Attendance"}
           </NavLink>
 
-          {/* <NavLink to="/admin/leaves" className="text-white mt-3" style={{ textDecoration: "none" }}>
-            <i className="bi bi-calendar2-event me-2"></i> {isOpen && "Leave Management"}
+          <NavLink to="/admin/leaves" className="text-white mt-3" style={{ textDecoration: "none" }}>
+            <i className="bi bi-calendar2-event me-2"></i>
+            {isOpen && "Leave Management"}
           </NavLink>
 
-          <NavLink to="/admin/settings" className="text-white mt-3" style={{ textDecoration: "none" }}>
+
+          {/*<NavLink to="/admin/settings" className="text-white mt-3" style={{ textDecoration: "none" }}>
             <i className="bi bi-gear me-2"></i> {isOpen && "Settings"}
           </NavLink> */}
         </Nav>

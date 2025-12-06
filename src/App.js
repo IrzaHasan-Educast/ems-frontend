@@ -11,7 +11,7 @@ import EditEmployee from "./pages/admin/EditEmployee";
 import WorkSessions from "./pages/admin/WorkSessions";
 import Attendance from "./pages/admin/Attendance";
 import LeaveHistory from "./pages/employee/LeaveHistory"; 
-// import AllLeaves from "./pages/admin/AllLeaves"; 
+import AllLeaves from "./pages/admin/AllLeaves"; 
 
 import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
 import WorkSessionHistory from "./pages/employee/WorkSessionHistory";
@@ -138,6 +138,16 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        <Route
+          path="/admin/leaves"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN", "HR"]}>
+              <AllLeaves onLogout={handleLogout} />
+            </ProtectedRoute>
+          }
+        />
+
 
 
         {/* HR ROUTES */}

@@ -15,7 +15,7 @@ export const approveLeave = (leaveId) => api.put(`/api/v1/leaves/${leaveId}/appr
 export const rejectLeave = (leaveId) => api.put(`/api/v1/leaves/${leaveId}/reject`);
 
 // Get all leaves (admin)
-export const getAllLeaves = () => api.get("/api/v1/leaves");
+export const getAllLeaves = () => api.get("/api/v1/leaves/admin");
 
 // Get leaves by employee
 export const getLeavesByEmployee = (employeeId) => api.get(`/api/v1/leaves/employee/${employeeId}`);
