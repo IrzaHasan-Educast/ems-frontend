@@ -20,6 +20,9 @@ export const getAllLeaves = () => api.get("/api/v1/leaves/admin");
 // Get leaves by employee
 export const getLeavesByEmployee = (employeeId) => api.get(`/api/v1/leaves/employee/${employeeId}`);
 
+// Delete leave (employee, only pending)
+export const deleteLeaveById = (leaveId) => api.delete(`/api/v1/leaves/employee/${leaveId}`);
+
 // Get leaves by status
 export const getLeavesByStatus = (status) => api.get(`/api/v1/leaves/status/${status}`);
 
