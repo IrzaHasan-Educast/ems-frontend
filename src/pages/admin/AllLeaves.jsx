@@ -5,9 +5,10 @@ import Sidebar from "../../components/Sidebar";
 import TopNavbar from "../../components/Navbar";
 import PageHeading from "../../components/PageHeading";
 import CardContainer from "../../components/CardContainer";
-import { getAllLeaves, approveLeave, rejectLeave } from "../../api/leaveApi";
+import { getAllLeaves, approveLeave, rejectLeave, setPendingLeave } from "../../api/leaveApi";
 import { getCurrentUser } from "../../api/userApi";
 import { Gear, FileEarmarkText } from "react-bootstrap-icons";
+import { CheckCircle, XCircle, Clock } from "react-bootstrap-icons";
 import * as XLSX from "xlsx";
 import { formatDate } from "../../utils/dateHelper";
 
@@ -47,6 +48,10 @@ const AllLeaves = ({ onLogout }) => {
   const [admin, setAdmin] = useState({ name: "", role: "" });
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
+    // Description modal
+  const [showDescModal, setShowDescModal] = useState(false);
+  const [modalDescription, setModalDescription] = useState("");
 
   // Fetch admin
   useEffect(() => {
@@ -125,7 +130,10 @@ const AllLeaves = ({ onLogout }) => {
   const end = rowsPerPage === "All" ? filtered.length : currentPage * rowsPerPage;
 
   const displayed = filtered.slice(start, end);
-
+  const openDescriptionModal = (desc) => {
+      setModalDescription(desc || "--");
+      setShowDescModal(true);
+  };
   // ============================================
   //   ✅ UPDATED EXCEL EXPORT FUNCTION
   // ============================================
@@ -190,6 +198,14 @@ const AllLeaves = ({ onLogout }) => {
     switch (col) {
       case "sno":
         return start + idx + 1;
+        case "description":
+          const desc = l.description || "";
+          return desc.length > 30 ? (
+            <>
+              {desc.substring(0, 30)}...
+              <Button variant="link" size="sm" onClick={() => openDescriptionModal(desc)}>More</Button>
+            </>
+          ) : desc || "--";
       case "prescriptionImg":
         return l.prescriptionImg ? (
           <a href={l.prescriptionImg} target="_blank" rel="noreferrer">
@@ -212,27 +228,67 @@ const AllLeaves = ({ onLogout }) => {
             {l.status}
           </Badge>
         );
-      case "actions":
+
+// ... inside renderCell
+case "actions":
+  return (
+    <div className="d-flex gap-2 justify-content-center">
+      {["Pending", "Approved", "Rejected"].map(status => {
+        if (l.status === status) return null; // Skip current status
+        let IconComp;
+        let color;
+        switch (status) {
+          case "Approved":
+            IconComp = CheckCircle;
+            color = "green";
+            break;
+          case "Rejected":
+            IconComp = XCircle;
+            color = "red";
+            break;
+          case "Pending":
+            IconComp = Clock;
+            color = "orange";
+            break;
+          default:
+            return null;
+        }
+
         return (
-          <div className="d-flex gap-2 justify-content-center">
-            <Button
-              size="sm"
-              variant="success"
-              disabled={l.status !== "Pending"}
-              onClick={() => approveLeave(l.id)}
-            >
-              Approve
-            </Button>
-            <Button
-              size="sm"
-              variant="danger"
-              disabled={l.status !== "Pending"}
-              onClick={() => rejectLeave(l.id)}
-            >
-              Reject
-            </Button>
-          </div>
+          <IconComp
+            key={status}
+            size={20}
+            color={color}
+            style={{ cursor: "pointer" }}
+            title={`Set to ${status}`}
+            onClick={async () => {
+              try {
+                if (status === "Approved") await approveLeave(l.id);
+                if (status === "Rejected") await rejectLeave(l.id);
+                if (status === "Pending") await setPendingLeave(l.id);
+
+                // Update frontend state immediately
+                setLeaves(prev =>
+                  prev.map(leave =>
+                    leave.id === l.id ? { ...leave, status } : leave
+                  )
+                );
+                setFiltered(prev =>
+                  prev.map(leave =>
+                    leave.id === l.id ? { ...leave, status } : leave
+                  )
+                );
+              } catch (err) {
+                console.error(err);
+                alert("Failed to update status");
+              }
+            }}
+          />
         );
+      })}
+    </div>
+  );
+
       default:
         return l[col];
     }
@@ -401,6 +457,13 @@ const AllLeaves = ({ onLogout }) => {
                 Close
               </Button>
             </Modal.Footer>
+          </Modal>
+
+          {/* Description Modal */}
+          <Modal show={showDescModal} onHide={()=>setShowDescModal(false)}>
+            <Modal.Header closeButton><Modal.Title>Leave Description</Modal.Title></Modal.Header>
+            <Modal.Body>{modalDescription}</Modal.Body>
+            <Modal.Footer><Button variant="secondary" onClick={()=>setShowDescModal(false)}>Close</Button></Modal.Footer>
           </Modal>
         </div>
       </div>

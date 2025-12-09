@@ -4,10 +4,12 @@ import Sidebar from "../../components/EmployeeSidebar";
 import TopNavbar from "../../components/EmployeeNavbar";
 import CardContainer from "../../components/CardContainer";
 import PageHeading from "../../components/PageHeading";
+import { Trash } from "react-bootstrap-icons";
+
 import "../../styles/AttendanceHistory.css";
 import { useNavigate } from "react-router-dom";
 
-import { Table, Form, Button, InputGroup, FormControl, Badge } from "react-bootstrap";
+import { Table, Form, Button, InputGroup, FormControl, Badge, Modal } from "react-bootstrap";
 import { getCurrentUser } from "../../api/workSessionApi";
 import { getLeavesByEmployee, deleteLeaveById } from "../../api/leaveApi";
 import dayjs from "dayjs";
@@ -17,8 +19,10 @@ const LeaveHistory = ({ onLogout }) => {
   const [employee, setEmployee] = useState(null);
   const [leaves, setLeaves] = useState([]);
   const [filteredLeaves, setFilteredLeaves] = useState([]);
-  const navigate = useNavigate();
+  const [showModal, setShowModal] = useState(false);
+  const [modalDescription, setModalDescription] = useState("");
 
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("");
@@ -100,6 +104,11 @@ const LeaveHistory = ({ onLogout }) => {
         alert("Failed to delete leave.");
       }
     }
+  };
+
+  const openDescriptionModal = (desc) => {
+    setModalDescription(desc);
+    setShowModal(true);
   };
 
   if (!employee) return <div>Loading...</div>;
@@ -199,7 +208,23 @@ const LeaveHistory = ({ onLogout }) => {
                   <tr key={lv.id}>
                     <td>{idx + 1}</td>
                     <td>{lv.type}</td>
-                    <td className="text-start">{lv.description}</td>
+                    <td className="text-start">
+                      {lv.description.length > 30
+                        ? (
+                          <>
+                            {lv.description.substring(0, 30)}...
+                            <Button
+                              variant="link"
+                              size="sm"
+                              onClick={() => openDescriptionModal(lv.description)}
+                            >
+                              More
+                            </Button>
+                          </>
+                        )
+                        : lv.description
+                      }
+                    </td>
                     <td>{lv.startDate}</td>
                     <td>{lv.endDate}</td>
                     <td>{lv.duration}</td>
@@ -220,9 +245,13 @@ const LeaveHistory = ({ onLogout }) => {
                     </td>
                     <td>
                       {lv.status.toUpperCase() === "PENDING" && (
-                        <Button variant="danger" size="sm" onClick={() => handleDelete(lv.id)}>
-                          Delete
-                        </Button>
+                        <Trash
+                          size={18}
+                          className="text-danger"
+                          style={{ cursor: "pointer" }}
+                          onClick={() => handleDelete(lv.id)}
+                          title="Delete Pending Leave"
+                        />
                       )}
                     </td>
                   </tr>
@@ -230,6 +259,21 @@ const LeaveHistory = ({ onLogout }) => {
               </tbody>
             </Table>
           </CardContainer>
+
+          {/* Modal for full description */}
+          <Modal show={showModal} onHide={() => setShowModal(false)}>
+            <Modal.Header closeButton>
+              <Modal.Title>Leave Description</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+              <p>{modalDescription}</p>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button variant="secondary" onClick={() => setShowModal(false)}>
+                Close
+              </Button>
+            </Modal.Footer>
+          </Modal>
         </div>
       </div>
     </div>

@@ -1,18 +1,14 @@
-// src/components/EmployeeSidebar.jsx
-import React from "react";
-import { Nav } from "react-bootstrap";
-import { useNavigate, NavLink } from "react-router-dom";
-import Logo from "../assets/images/Educast-Logo.png";
-
-const EmployeeSidebar = ({ isOpen, onLogout }) => {
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("role");
-    localStorage.removeItem("username");
-    window.location.href = "/";
-  };
+import React, { useState } from "react"; 
+import { Nav } from "react-bootstrap"; 
+import { useNavigate, NavLink } from "react-router-dom"; 
+import Logo from "../assets/images/Educast-Logo.png"; 
+const EmployeeSidebar = ({ isOpen, onLogout }) => { 
+  const navigate = useNavigate(); 
+  const [leaveOpen, setLeaveOpen] = useState(false); 
+  const handleLogout = () => { 
+    localStorage.removeItem("token"); 
+    localStorage.removeItem("role"); localStorage.removeItem("username"); window.location.href = "/";
+   };
 
   return (
     <div
@@ -57,13 +53,44 @@ const EmployeeSidebar = ({ isOpen, onLogout }) => {
             <i className="bi bi-calendar-check me-2"></i> {isOpen && "Attendance History"}
           </NavLink>
 
-          <NavLink
-            to="/employee/leave-history"
-            className="text-white mt-2"
-            style={{ textDecoration: "none" }}
-          >
-            <i className="bi bi-calendar2-plus me-2"></i> {isOpen && "Leave"}
-          </NavLink>
+                    {/* Leave Dropdown */}
+          <div className="mt-3">
+            <Nav.Link
+              className="text-white"
+              onClick={() => setLeaveOpen(!leaveOpen)}
+              style={{ textDecoration: "none" }}
+            >
+              <i className="bi bi-calendar2-plus me-2"></i>
+              {isOpen && "Leave"}
+              {isOpen && (
+                <i
+                  className={`bi ms-2 ${
+                    leaveOpen ? "bi-chevron-up" : "bi-chevron-down"
+                  }`}
+                ></i>
+              )}
+            </Nav.Link>
+
+            {leaveOpen && isOpen && (
+              <div className="ms-4 mt-2">
+                <NavLink
+                  to="/employee/leave-history"
+                  className="text-white d-block mb-1"
+                  style={{ textDecoration: "none" }}
+                >
+                   Leave History
+                </NavLink>
+
+                <NavLink
+                  to="/employee/leave/apply"
+                  className="text-white d-block mb-1"
+                  style={{ textDecoration: "none" }}
+                >
+                   Apply Leave
+                </NavLink>
+              </div>
+            )}
+          </div>
         </Nav>
       </div>
 

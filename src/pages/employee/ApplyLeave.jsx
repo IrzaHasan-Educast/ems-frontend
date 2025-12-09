@@ -106,7 +106,7 @@ const ApplyLeave = ({ onLogout }) => {
       };
 
       await applyLeave(leavePayload);
-      navigate("/leave-history");
+      navigate("/employee/leave-history");
 
     } catch (error) {
       console.error(error);
@@ -152,23 +152,11 @@ const ApplyLeave = ({ onLogout }) => {
                       </Form.Select>
                     </Form.Group>
                   </Col>
-
-                  {/* Duration (Read-only) */}
-                  <Col md={6}>
-                    <Form.Group>
-                      <Form.Label>Duration (days)</Form.Label>
-                      <Form.Control
-                        type="number"
-                        value={leave.duration}
-                        readOnly
-                      />
-                    </Form.Group>
-                  </Col>
                 </Row>
 
                 {/* Dates */}
                 <Row className="mb-3">
-                  <Col md={6}>
+                  <Col md={5}>
                     <Form.Group>
                       <Form.Label>Start Date</Form.Label>
                       <Form.Control
@@ -181,7 +169,7 @@ const ApplyLeave = ({ onLogout }) => {
                     </Form.Group>
                   </Col>
 
-                  <Col md={6}>
+                  <Col md={5}>
                     <Form.Group>
                       <Form.Label>End Date</Form.Label>
                       <Form.Control
@@ -191,6 +179,19 @@ const ApplyLeave = ({ onLogout }) => {
                         onChange={handleChange}
                         required
                         min={leave.startDate}   // disable past dates
+                      />
+                    </Form.Group>
+                  </Col>
+
+                  {/* Duration (Read-only) */}
+                  <Col md={2}>
+                    <Form.Group>
+                      <Form.Label >Duration (days)</Form.Label>
+                      <Form.Control
+                        type="number"
+                        value={leave.duration}
+                        readOnly
+                        className="bg-light"
                       />
                     </Form.Group>
                   </Col>
@@ -238,7 +239,7 @@ const ApplyLeave = ({ onLogout }) => {
                   <AppButton
                     text="Cancel"
                     variant="secondary"
-                    onClick={() => navigate("/leave-history")}
+                    onClick={() => navigate("/employee/leave-history")}
                   />
                 </div>
 

@@ -14,6 +14,9 @@ export const approveLeave = (leaveId) => api.put(`/api/v1/leaves/${leaveId}/appr
 // Reject leave (admin)
 export const rejectLeave = (leaveId) => api.put(`/api/v1/leaves/${leaveId}/reject`);
 
+// Reject leave (admin)
+export const setPendingLeave = (leaveId) => api.put(`/api/v1/leaves/${leaveId}/pending`);
+
 // Get all leaves (admin)
 export const getAllLeaves = () => api.get("/api/v1/leaves/admin");
 
