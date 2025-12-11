@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Form, Row, Col } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 
-import Sidebar from "../../components/Sidebar";
-import TopNavbar from "../../components/Navbar";
+import Sidebar from "../../components/EmployeeSidebar";
+import TopNavbar from "../../components/EmployeeNavbar";
 import CardContainer from "../../components/CardContainer";
 import AppButton from "../../components/AppButton";
 import { getCurrentUser } from "../../api/workSessionApi"; 
