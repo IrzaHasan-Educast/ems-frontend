@@ -227,7 +227,7 @@ const AdminDashboard = ({ onLogout }) => {
 
                   <button
                     className="btn btn-danger text-white"
-                    onClick={() => navigate("/admin/leave")}
+                    onClick={() => navigate("/admin/leaves")}
                   >
                     <i className="bi bi-calendar2-event me-2"></i>
                     Leave Management
