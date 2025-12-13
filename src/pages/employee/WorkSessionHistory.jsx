@@ -141,6 +141,8 @@ const AttendanceHistory = ({ onLogout }) => {
         return "text-warning";
       case "Working":
         return "text-primary";
+      case "Early Clocked Out":
+        return "text-secondary";
       default:
         return "";
     }
