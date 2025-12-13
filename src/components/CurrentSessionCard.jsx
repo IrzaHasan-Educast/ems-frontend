@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { Button, Badge, Spinner } from "react-bootstrap";
+import { formatTimeAMPM, getNowUTC, parseApiDate } from "../utils/time";
 
 const CurrentSessionCard = ({
   currentSession,
-  formatTimeAMPM,
   handleClockIn,
   handleClockOut,
   handleTakeBreak,
@@ -11,51 +11,55 @@ const CurrentSessionCard = ({
 }) => {
   const [elapsed, setElapsed] = useState(0);
 
-  // Live timer update
   useEffect(() => {
-    if (!currentSession?.clockIn || currentSession.clockOut) {
+    const clockIn = parseApiDate(currentSession?.clockInTime);
+
+    if (!clockIn || currentSession?.clockOutTime) {
       setElapsed(0);
       return;
     }
+
     const interval = setInterval(() => {
-      const diff = new Date() - new Date(currentSession.clockIn);
-      setElapsed(diff);
+      setElapsed(getNowUTC().getTime() - clockIn.getTime());
     }, 1000);
+
     return () => clearInterval(interval);
-  }, [currentSession]);
+  }, [currentSession?.clockInTime, currentSession?.clockOutTime]);
 
   const formatElapsed = (ms) => {
     const totalSeconds = Math.floor(ms / 1000);
     const hrs = Math.floor(totalSeconds / 3600);
     const mins = Math.floor((totalSeconds % 3600) / 60);
     const secs = totalSeconds % 60;
+
     return `${hrs.toString().padStart(2, "0")}h:${mins
       .toString()
       .padStart(2, "0")}m:${secs.toString().padStart(2, "0")}s`;
   };
 
-  // Status logic
   const getStatus = () => {
-    if (!currentSession?.clockIn) return "No Session";
-    if (currentSession.clockOut) return "Completed";
-    if (currentSession.onBreak) return "On Break";
+    if (!currentSession?.clockInTime) return "No Session";
+    if (currentSession?.clockOutTime) return "Completed";
+    if (currentSession?.onBreak) return "On Break";
     return "Working";
   };
 
-  // Hours calculation
-  const totalHours =
-    currentSession?.clockIn
-      ? ((currentSession.clockOut || new Date()) - new Date(currentSession.clockIn)) / 1000 / 3600
-      : 0;
+  const clockIn = parseApiDate(currentSession?.clockInTime);
+  const clockOut = parseApiDate(currentSession?.clockOutTime);
+
+  const totalHours = clockIn
+    ? ((clockOut || getNowUTC()).getTime() - clockIn.getTime()) / 1000 / 3600
+    : 0;
 
   const breakHours =
     currentSession?.breaks?.reduce((sum, b) => {
-      const start = new Date(b.startTime);
-      const end = b.endTime ? new Date(b.endTime) : new Date();
-      return sum + (end - start) / 1000 / 3600;
+      const start = parseApiDate(b.startTime);
+      const end = parseApiDate(b.endTime) || getNowUTC();
+      if (!start) return sum;
+      return sum + (end.getTime() - start.getTime()) / 1000 / 3600;
     }, 0) || 0;
 
-  const workingHours = totalHours - breakHours;
+  const workingHours = Math.max(totalHours - breakHours, 0);
 
   const formatDuration = (hoursDecimal) => {
     const totalMinutes = Math.round(hoursDecimal * 60);
@@ -64,22 +68,19 @@ const CurrentSessionCard = ({
     return `${hrs}h ${mins}m`;
   };
 
+  const status = getStatus();
   const statusColor =
-    getStatus() === "Working"
-      ? "success"
-      : getStatus() === "On Break"
-      ? "warning"
-      : "secondary";
+    status === "Working" ? "success" : status === "On Break" ? "warning" : "secondary";
 
   return (
     <div className="p-3 border rounded shadow-sm bg-light">
       <div className="d-flex justify-content-between align-items-center flex-wrap mb-3">
         <div>
           <p>
-            <strong>Clock In:</strong> {formatTimeAMPM(currentSession?.clockIn)}
+            <strong>Clock In:</strong> {formatTimeAMPM(currentSession?.clockInTime)}
           </p>
           <p>
-            <strong>Clock Out:</strong> {formatTimeAMPM(currentSession?.clockOut)}
+            <strong>Clock Out:</strong> {formatTimeAMPM(currentSession?.clockOutTime)}
           </p>
           <p>
             <strong>Total Hours:</strong> {formatDuration(totalHours)}
@@ -93,18 +94,20 @@ const CurrentSessionCard = ({
           <p>
             <strong>Status:</strong>{" "}
             <Badge bg={statusColor} style={{ fontSize: "1em" }}>
-              {getStatus()}
+              {status}
             </Badge>
           </p>
         </div>
 
         <div className="d-flex flex-column gap-2 mt-2 align-items-center">
           <h5 style={{ fontFamily: "monospace", color: "#055993" }}>
-            {currentSession?.clockIn && !currentSession.clockOut ? formatElapsed(elapsed) : "--"}
+            {currentSession?.clockInTime && !currentSession?.clockOutTime
+              ? formatElapsed(elapsed)
+              : "--"}
           </h5>
 
           <div className="d-flex gap-2 flex-wrap">
-            {!currentSession?.clockIn || currentSession.clockOut ? (
+            {!currentSession?.clockInTime || currentSession?.clockOutTime ? (
               <Button variant="success" onClick={handleClockIn} disabled={loading}>
                 {loading ? <Spinner animation="border" size="sm" /> : "Clock In"}
               </Button>
@@ -117,7 +120,7 @@ const CurrentSessionCard = ({
             <Button
               variant={currentSession?.onBreak ? "warning" : "info"}
               onClick={handleTakeBreak}
-              disabled={!currentSession?.clockIn || currentSession.clockOut}
+              disabled={!currentSession?.clockInTime || currentSession?.clockOutTime}
             >
               {currentSession?.onBreak ? "End Break" : "Take Break"}
             </Button>
