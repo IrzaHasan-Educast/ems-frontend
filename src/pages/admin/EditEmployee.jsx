@@ -89,6 +89,10 @@ useEffect(() => {
     fetchRolesAndAdmin();
   }, []);
 
+  const isHrEditingAdmin =
+  admin.role?.toLowerCase() === "hr" &&
+  employee?.role?.toLowerCase() === "admin";
+
 
   const handleEmployeeChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -270,6 +274,7 @@ useEffect(() => {
                 </Row>
 
                 {/* Username + Password with eye icon */}
+                {!isHrEditingAdmin && (
                 <Row className="mb-3">
                   <Col md={6}>
                     <Form.Group>
@@ -307,6 +312,8 @@ useEffect(() => {
                     </Form.Group>
                   </Col>
                 </Row>
+              )}
+
 
                 {/* Active checkbox */}
                 <Row className="mb-3">
@@ -317,13 +324,15 @@ useEffect(() => {
                       checked={employee.active}
                       onChange={handleEmployeeChange}
                       label="Active"
-                      disabled={employee.role?.toLowerCase() === "admin"} // ✅ Admin cannot deactivate
+                      disabled={
+                        employee.role?.toLowerCase() === "admin" || isHrEditingAdmin
+                      }
                     />
                   </Col>
                 </Row>
 
                 <div className="d-flex gap-2">
-                  <AppButton text="Update Employee" variant="primary" type="submit" />
+                  <AppButton text="Update Employee" variant="primary" type="submit" disabled={isHrEditingAdmin}/>
                   <AppButton
                     text="Cancel"
                     variant="secondary"

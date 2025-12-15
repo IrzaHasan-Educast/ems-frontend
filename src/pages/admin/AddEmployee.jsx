@@ -83,25 +83,32 @@ const AddEmployee = ({ onLogout }) => {
     }
   };
 useEffect(() => {
-    const fetchRolesAndAdmin = async () => {
-      try {
-        // Roles
-        const rolesRes = await getRoles();
-        setRoles(rolesRes.data);
+  const fetchRolesAndAdmin = async () => {
+    try {
+      // Admin info from /users/me
+      const userRes = await getCurrentUser();
+      const currentRole = userRes.data.role;
+      setAdmin({
+        name: userRes.data.fullName,
+        role: currentRole,
+      });
 
-        // Admin info from /users/me
-        const userRes = await getCurrentUser();
-        setAdmin({
-          name: userRes.data.fullName,
-          role: userRes.data.role,
-        });
-      } catch (err) {
-        console.error("Failed to fetch roles or admin info:", err);
+      // Set roles based on current user role
+      let availableRoles = [];
+      if (currentRole === "ADMIN") {
+        availableRoles = ["HR", "EMPLOYEE"];
+      } else if (currentRole === "HR") {
+        availableRoles = ["EMPLOYEE"];
       }
-    };
+      setRoles(availableRoles);
+    } catch (err) {
+      console.error("Failed to fetch roles or admin info:", err);
+    }
+  };
 
-    fetchRolesAndAdmin();
-  }, []);
+  fetchRolesAndAdmin();
+}, []);
+
 
 
   return (
@@ -206,11 +213,17 @@ useEffect(() => {
                   <Col md={6}>
                     <Form.Group>
                       <Form.Label>Role</Form.Label>
-                      <Form.Control
+                      <Form.Select
                         name="role"
-                        value="EMPLOYEE"
-                        readOnly
-                      />
+                        value={employee.role}
+                        onChange={handleChange}
+                        required
+                      >
+                        <option value="" disabled>Select Role</option>
+                        {roles.map((roleOption) => (
+                          <option key={roleOption} value={roleOption}>{roleOption}</option>
+                        ))}
+                      </Form.Select>
                     </Form.Group>
                   </Col>
                   <Col md={6}>

@@ -108,12 +108,22 @@ const AllEmployees = ({ onLogout }) => {
   };
 
   // Filter employees for search
-  const filteredEmployees = employees.filter((emp) =>
+  const filteredEmployees = employees
+  .filter((emp) =>
     [emp.fullName, emp.email, emp.role, emp.designation]
       .join(" ")
       .toLowerCase()
       .includes(searchTerm.toLowerCase())
-  );
+  )
+  .sort((a, b) => {
+    // Admin always on top
+    if (a.role?.toLowerCase() === "admin" && b.role?.toLowerCase() !== "admin") return -1;
+    if (a.role?.toLowerCase() !== "admin" && b.role?.toLowerCase() === "admin") return 1;
+
+    // Name ascending
+    return a.fullName.localeCompare(b.fullName);
+  });
+
 
   return (
     <div className="d-flex">
@@ -217,9 +227,24 @@ const AllEmployees = ({ onLogout }) => {
                         <Button variant="outline-primary" size="sm" onClick={() => handleView(emp.id)}>
                           <Eye />
                         </Button>
-                        <Button variant="outline-warning" size="sm" onClick={() => handleEdit(emp.id)}>
-                          <PencilSquare />
-                        </Button>
+                        <Button
+  variant="outline-warning"
+  size="sm"
+  disabled={
+    admin.role?.toLowerCase() === "hr" &&
+    emp.role?.toLowerCase() === "admin"
+  }
+  onClick={() => handleEdit(emp.id)}
+  title={
+    admin.role?.toLowerCase() === "hr" &&
+    emp.role?.toLowerCase() === "admin"
+      ? "HR cannot edit Admin"
+      : "Edit Employee"
+  }
+>
+  <PencilSquare />
+</Button>
+
                           {/* <Button 
                             variant={emp.active ? "outline-danger" : "outline-success"} 
                             size="sm" 
