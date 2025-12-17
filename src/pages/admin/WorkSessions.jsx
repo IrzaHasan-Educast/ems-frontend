@@ -7,7 +7,6 @@ import PageHeading from "../../components/PageHeading";
 import CardContainer from "../../components/CardContainer";
 import { getAllWorkSessionsAdmin } from "../../api/workSessionApi";
 import { FileEarmarkText, Gear } from "react-bootstrap-icons";
-import { getRoles, getAllEmployees } from "../../api/employeeApi";
 import { getCurrentUser } from "../../api/userApi";
 import * as XLSX from "xlsx";
 import jwtHelper from "../../utils/jwtHelper";
@@ -40,7 +39,6 @@ const WorkSessions = ({ onLogout }) => {
 
   const [showColumnsModal, setShowColumnsModal] = useState(false);
   const [selectedColumns, setSelectedColumns] = useState(allColumns.map(c => c.key));
-  const [roles, setRoles] = useState([]);
   const [admin, setAdmin] = useState({name: "", role: initialRole});
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
@@ -65,10 +63,6 @@ const WorkSessions = ({ onLogout }) => {
   useEffect(() => {
     const fetchRolesAndAdmin = async () => {
       try {
-        // Roles
-        const rolesRes = await getRoles();
-        setRoles(rolesRes.data);
-
         // Admin info from /users/me
         const userRes = await getCurrentUser();
         setAdmin({
@@ -371,3 +365,4 @@ const WorkSessions = ({ onLogout }) => {
 };
 
 export default WorkSessions;
+

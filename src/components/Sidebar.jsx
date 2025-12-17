@@ -24,7 +24,7 @@ const Sidebar = ({ isOpen, onLogout, user }) => {
       style={{
         backgroundColor: "#f58a29",
         color: "white",
-        minHeight: "100vh",
+        minHeight: "100dvh",
         position: "sticky",
         top: 0,
         alignSelf: "flex-start",
