@@ -23,8 +23,6 @@ export const clockOut = (sessionId) =>
 export const getMe = () => api.get("/api/v1/work-sessions/me");
 
 // Admin: Get all work sessions
-export const getAllWorkSessions = () => api.get("/api/v1/work-sessions/admin/all");
+export const getAllWorkSessions = () => api.get("/api/v1/admin/work-sessions/all");
 
-// Admin alternative endpoint for all work sessions
-export const getAllWorkSessionsAdmin = () =>
-  api.get("/api/v1/admin/work-sessions/all");
+export const syncSessionHours = (id, payload) => api.patch(`/api/v1/admin/work-sessions/${id}/sync-hours`, payload);

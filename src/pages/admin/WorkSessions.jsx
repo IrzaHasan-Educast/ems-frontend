@@ -5,7 +5,7 @@ import Sidebar from "../../components/Sidebar";
 import TopNavbar from "../../components/Navbar";
 import PageHeading from "../../components/PageHeading";
 import CardContainer from "../../components/CardContainer";
-import { getAllWorkSessionsAdmin } from "../../api/workSessionApi";
+import { getAllWorkSessions, } from "../../api/workSessionApi";
 import { FileEarmarkText, Gear } from "react-bootstrap-icons";
 import { getCurrentUser } from "../../api/userApi";
 import * as XLSX from "xlsx";
@@ -32,14 +32,15 @@ const WorkSessions = ({ onLogout }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedEmployee, setSelectedEmployee] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("");
-  const [statusFilter, setStatusFilter] = useState(""); // ✅ Status filter
+  const [statusFilter, setStatusFilter] = useState("");
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const [showColumnsModal, setShowColumnsModal] = useState(false);
   const [selectedColumns, setSelectedColumns] = useState(allColumns.map(c => c.key));
-  const [admin, setAdmin] = useState({name: "", role: initialRole});
+  const [admin, setAdmin] = useState({ name: "", role: initialRole });
+
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   const formatTime = (d) => {
@@ -52,6 +53,22 @@ const WorkSessions = ({ onLogout }) => {
     });
   };
 
+  const formatDurationFromISO = (iso) => {
+  if (!iso) return "0h 0m";
+
+  const match = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!match) return "0h 0m";
+
+  const hours = parseInt(match[1] || 0);
+  const minutes = parseInt(match[2] || 0);
+  const seconds = parseInt(match[3] || 0);
+
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  if (minutes > 0) return `${minutes}m ${seconds}s`;
+  return `${seconds}s`;
+};
+
+
   const formatDuration = (hoursDecimal) => {
     if (!hoursDecimal || isNaN(hoursDecimal)) return "0h 0m";
     const totalMinutes = Math.round(hoursDecimal * 60);
@@ -63,7 +80,6 @@ const WorkSessions = ({ onLogout }) => {
   useEffect(() => {
     const fetchRolesAndAdmin = async () => {
       try {
-        // Admin info from /users/me
         const userRes = await getCurrentUser();
         setAdmin({
           name: userRes.data.fullName,
@@ -73,53 +89,46 @@ const WorkSessions = ({ onLogout }) => {
         console.error("Failed to fetch roles or admin info:", err);
       }
     };
-
     fetchRolesAndAdmin();
   }, []);
 
+useEffect(() => {
+  const fetchSessions = async () => {
+    try {
+      const res = await getAllWorkSessions();
 
-  useEffect(() => {
-    const fetchSessions = async () => {
-      try {
-        const res = await getAllWorkSessionsAdmin();
-        const formatted = res.data.map((s) => {
-          const clockIn = new Date(s.clockInTime);
-          const clockOut = s.clockOutTime ? new Date(s.clockOutTime) : null;
+      const formatted = res.data.map((s) => {
+        let displayStatus = s.status;
+        if (s.onBreak) displayStatus = "On Break";
+        else if (!s.clockOutTime && s.status !== "Invalid Clocked Out")
+          displayStatus = "Working";
 
-          const totalBreakMillis =
-            s.breaks?.reduce((sum, br) => {
-              const start = new Date(br.startTime);
-              const end = br.endTime ? new Date(br.endTime) : new Date();
-              return sum + (end - start);
-            }, 0) || 0;
+        return {
+          ...s,
+          date: new Date(s.clockInTime).toLocaleDateString(),
+          clockIn: formatTime(s.clockInTime),
+          clockOut: formatTime(s.clockOutTime),
 
-          const totalMillis = (clockOut || new Date()) - clockIn;
-          const netMillis = totalMillis - totalBreakMillis;
+          // ✅ DIRECT FROM BACKEND
+          totalHours: formatDurationFromISO(s.totalSessionHours),
+          workingHours: formatDurationFromISO(s.totalWorkingHours),
+          breakHours: formatDurationFromISO(s.idleTime),
 
-          let displayStatus = s.status;
-          if (s.onBreak) displayStatus = "On Break";
-          else if (!s.clockOutTime && s.status !== "Invalid Clocked Out") displayStatus = "Working";
+          displayStatus,
+        };
+      });
 
-          return {
-            ...s,
-            date: clockIn.toLocaleDateString(),
-            clockIn: formatTime(s.clockInTime),
-            clockOut: formatTime(s.clockOutTime),
-            totalHours: formatDuration(totalMillis / 1000 / 3600),
-            workingHours: formatDuration(netMillis / 1000 / 3600),
-            breakHours: formatDuration(totalBreakMillis / 1000 / 3600),
-            displayStatus, // ✅ precomputed status
-          };
-        });
-        setSessions(formatted);
-        setFiltered(formatted);
-      } catch (err) {
-        console.error(err);
-      }
-      setLoading(false);
-    };
-    fetchSessions();
-  }, []);
+      setSessions(formatted);
+      setFiltered(formatted);
+    } catch (err) {
+      console.error(err);
+    }
+    setLoading(false);
+  };
+
+  fetchSessions();
+}, []);
+
 
   // Filtering
   useEffect(() => {
@@ -133,7 +142,7 @@ const WorkSessions = ({ onLogout }) => {
         [s.employeeName, s.status, s.date, s.clockIn, s.clockOut].join(" ").toLowerCase().includes(term);
       const matchesEmployee = empFilter ? s.employeeName === empFilter : true;
       const matchesMonth = monthFilter ? new Date(s.clockInTime).getMonth() + 1 === parseInt(monthFilter) : true;
-      const matchesStatus = status ? s.displayStatus === status : true; // ✅ Status filter
+      const matchesStatus = status ? s.displayStatus === status : true;
 
       return matchesSearch && matchesEmployee && matchesMonth && matchesStatus;
     });
@@ -146,13 +155,12 @@ const WorkSessions = ({ onLogout }) => {
     setSearchTerm("");
     setSelectedEmployee("");
     setSelectedMonth("");
-    setStatusFilter(""); // ✅ Reset status filter
+    setStatusFilter("");
     setRowsPerPage(10);
     setCurrentPage(1);
     setSelectedColumns(allColumns.map(c => c.key));
   };
 
-  // Export
   const handleExport = () => {
     const fileName = prompt("Enter file name:", "WorkSessions");
     if (!fileName) return;
@@ -197,7 +205,6 @@ const WorkSessions = ({ onLogout }) => {
 
   const uniqueEmployees = [...new Set(sessions.map((s) => s.employeeName))];
 
-  // Column modal toggle
   const toggleColumn = (key) => {
     if (selectedColumns.includes(key)) {
       setSelectedColumns(selectedColumns.filter(k => k !== key));
@@ -241,10 +248,7 @@ const WorkSessions = ({ onLogout }) => {
     <div className="d-flex">
       <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} />
       <div className="flex-grow-1">
-        <TopNavbar toggleSidebar={toggleSidebar} 
-          username={admin.name}
-          role={admin.role}
-        />
+        <TopNavbar toggleSidebar={toggleSidebar} username={admin.name} role={admin.role} />
         <div className="p-4 container">
           <PageHeading title="All Work Sessions" />
 
@@ -326,7 +330,6 @@ const WorkSessions = ({ onLogout }) => {
                   </tbody>
                 </Table>
 
-                {/* Pagination */}
                 {rowsPerPage !== "All" && (
                   <div className="d-flex justify-content-between align-items-center mt-2">
                     <Button variant="outline-primary" disabled={currentPage === 1} onClick={handlePrev}>Previous</Button>
@@ -338,7 +341,7 @@ const WorkSessions = ({ onLogout }) => {
             )}
           </CardContainer>
 
-          {/* Column Selection Modal */}
+          {/* Column Modal */}
           <Modal show={showColumnsModal} onHide={() => setShowColumnsModal(false)}>
             <Modal.Header closeButton>
               <Modal.Title>Select Columns to Display</Modal.Title>
@@ -365,4 +368,3 @@ const WorkSessions = ({ onLogout }) => {
 };
 
 export default WorkSessions;
-
