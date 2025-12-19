@@ -34,50 +34,51 @@ const EmployeeDashboard = ({ onLogout }) => {
     return `${hrs}h ${mins}m`;
   };
 
-  const fetchHistory = useCallback(async (employeeId) => {
-    try {
-      const res = await workSessionApi.getWorkSessions(employeeId);
+const fetchHistory = useCallback(async (employeeId) => {
+  try {
+    const res = await workSessionApi.getFirst3WorkSessions(employeeId);
 
-      if (res.data && Array.isArray(res.data)) {
-        const sorted = res.data.sort(
-          (a, b) => parseApiDate(b.clockInTime) - parseApiDate(a.clockInTime)
-        );
+    if (res.data && Array.isArray(res.data)) {
+      const sorted = res.data.sort(
+        (a, b) => parseApiDate(b.clockInTime) - parseApiDate(a.clockInTime)
+      );
 
-        const formatted = sorted.map((s) => {
-          const clockIn = parseApiDate(s.clockInTime);
-          const clockOut = parseApiDate(s.clockOutTime);
+      const formatted = sorted.map((s) => {
+        const clockIn = parseApiDate(s.clockInTime);
+        const clockOut = parseApiDate(s.clockOutTime);
 
-          const totalBreakMillis =
-            s.breaks?.reduce((sum, b) => {
-              const start = parseApiDate(b.startTime);
-              const end = parseApiDate(b.endTime) || getNowUTC();
-              if (!start) return sum;
-              return sum + (end.getTime() - start.getTime());
-            }, 0) || 0;
+        const totalBreakMillis =
+          s.breaks?.reduce((sum, b) => {
+            const start = parseApiDate(b.startTime);
+            const end = parseApiDate(b.endTime) || getNowUTC();
+            if (!start) return sum;
+            return sum + (end.getTime() - start.getTime());
+          }, 0) || 0;
 
-          const totalMillis =
-            (clockOut || getNowUTC()).getTime() - (clockIn?.getTime() || 0);
+        const totalMillis =
+          (clockOut || getNowUTC()).getTime() - (clockIn?.getTime() || 0);
 
-          const netMillis = totalMillis - totalBreakMillis;
+        const netMillis = totalMillis - totalBreakMillis;
 
-          return {
-            id: s.id,
-            clockInTime: s.clockInTime,
-            clockOutTime: s.clockOutTime,
-            clockInFormatted: formatTimeAMPM(s.clockInTime),
-            clockOutFormatted: s.clockOutTime ? formatTimeAMPM(s.clockOutTime) : "--",
-            totalHours: formatDuration(totalMillis / 1000 / 3600),
-            workingHours: formatDuration(netMillis / 1000 / 3600),
-            breakHours: formatDuration(totalBreakMillis / 1000 / 3600),
-          };
-        });
+        return {
+          id: s.id,
+          clockInTime: s.clockInTime,
+          clockOutTime: s.clockOutTime,
+          clockInFormatted: formatTimeAMPM(s.clockInTime),
+          clockOutFormatted: s.clockOutTime ? formatTimeAMPM(s.clockOutTime) : "--",
+          totalHours: formatDuration(totalMillis / 1000 / 3600),
+          workingHours: formatDuration(netMillis / 1000 / 3600),
+          breakHours: formatDuration(totalBreakMillis / 1000 / 3600),
+        };
+      });
 
-        setHistory(formatted);
-      }
-    } catch (err) {
-      console.error("Failed to fetch history", err);
+      setHistory(formatted);
     }
-  }, []);
+  } catch (err) {
+    console.error("Failed to fetch history", err);
+  }
+}, []);
+
 
   const fetchCurrentUser = useCallback(async () => {
     try {

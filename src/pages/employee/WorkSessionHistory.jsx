@@ -143,6 +143,8 @@ const AttendanceHistory = ({ onLogout }) => {
         return "text-primary";
       case "Early Clocked Out":
         return "text-secondary";
+      case "Auto Clocked Out":
+        return "text-info"
       default:
         return "";
     }
@@ -214,7 +216,7 @@ const AttendanceHistory = ({ onLogout }) => {
               <tbody>
                 {filteredHistory.map((h, idx) => (
                   <tr key={h.id} className={h.clockOut === "--" && idx === 0 ? "current-session-row" : ""}>
-                    <td>{idx + 1}</td>   {/* S. No. */}
+                    <td>{idx+1}</td>
                     <td>{h.date}</td>
                     <td>{h.clockIn}</td>
                     <td>{h.clockOut}</td>

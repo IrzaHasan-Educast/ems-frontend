@@ -9,6 +9,10 @@ export const getCurrentUser = () => api.get("/api/v1/work-sessions/me");
 export const getWorkSessions = (employeeId) =>
   api.get(`/api/v1/work-sessions/employee/${employeeId}`);
 
+// Get all work sessions for a specific employee
+export const getFirst3WorkSessions = (employeeId) =>
+  api.get(`/api/v1/work-sessions/employee/${employeeId}/latest-sessions`);
+
 // Get currently active session for logged-in user
 export const getActiveSession = () => api.get("/api/v1/work-sessions/active");
 
