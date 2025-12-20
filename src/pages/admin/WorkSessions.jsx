@@ -5,7 +5,7 @@ import Sidebar from "../../components/Sidebar";
 import TopNavbar from "../../components/Navbar";
 import PageHeading from "../../components/PageHeading";
 import CardContainer from "../../components/CardContainer";
-import { getAllWorkSessions, } from "../../api/workSessionApi";
+import { getAllWorkSessions } from "../../api/workSessionApi";
 import { FileEarmarkText, Gear } from "react-bootstrap-icons";
 import { getCurrentUser } from "../../api/userApi";
 import * as XLSX from "xlsx";
@@ -99,21 +99,32 @@ useEffect(() => {
 
       const formatted = res.data.map((s) => {
         let displayStatus = s.status;
-        if (s.onBreak) displayStatus = "On Break";
-        else if (!s.clockOutTime && s.status !== "Invalid Clocked Out")
-          displayStatus = "Working";
+
+        let totalHours = "";
+        let workingHours = "";
+        let breakHours = formatDurationFromISO(s.idleTime);
+
+        if (displayStatus === "Working" || displayStatus === "On Break") {
+          const dyn = calculateDynamicHours(s);
+          totalHours = dyn.totalHours;
+          workingHours = dyn.workingHours;
+          if (displayStatus === "On Break") {
+            breakHours = dyn.breakHours;
+          }
+        } else {
+          // Completed / Auto Clocked Out / etc
+          totalHours = formatDurationFromISO(s.totalSessionHours);
+          workingHours = formatDurationFromISO(s.totalWorkingHours);
+        }
 
         return {
           ...s,
           date: new Date(s.clockInTime).toLocaleDateString(),
           clockIn: formatTime(s.clockInTime),
           clockOut: formatTime(s.clockOutTime),
-
-          // ✅ DIRECT FROM BACKEND
-          totalHours: formatDurationFromISO(s.totalSessionHours),
-          workingHours: formatDurationFromISO(s.totalWorkingHours),
-          breakHours: formatDurationFromISO(s.idleTime),
-
+          totalHours,
+          workingHours,
+          breakHours,
           displayStatus,
         };
       });
@@ -205,13 +216,49 @@ useEffect(() => {
 
   const uniqueEmployees = [...new Set(sessions.map((s) => s.employeeName))];
 
-  const toggleColumn = (key) => {
-    if (selectedColumns.includes(key)) {
-      setSelectedColumns(selectedColumns.filter(k => k !== key));
-    } else {
-      setSelectedColumns([...selectedColumns, key]);
+  const calculateDynamicHours = (session) => {
+    const now = new Date();
+    const clockIn = new Date(session.clockInTime);
+    let totalMs = now - clockIn; // milliseconds
+    let totalHoursDecimal = totalMs / (1000 * 60 * 60); // convert to hours
+
+    const breakISO = session.idleTime;
+    let breakHoursDecimal = 0;
+
+    if (breakISO) {
+      const match = breakISO.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+      if (match) {
+        const h = parseInt(match[1] || 0);
+        const m = parseInt(match[2] || 0);
+        const s = parseInt(match[3] || 0);
+        breakHoursDecimal = h + m/60 + s/3600;
+      }
     }
+
+    let totalHours = totalHoursDecimal;
+    let workingHours = totalHoursDecimal - breakHoursDecimal;
+
+    return {
+      totalHours: formatDuration(totalHours),
+      workingHours: formatDuration(Math.max(workingHours, 0)),
+      breakHours: formatDurationFromISO(breakISO),
+    };
   };
+
+
+  const toggleColumn = (key) => {
+  if (selectedColumns.includes(key)) {
+    setSelectedColumns(selectedColumns.filter(k => k !== key));
+  } else {
+    // original order maintain karne ke liye
+    setSelectedColumns(
+      allColumns
+        .filter(c => selectedColumns.includes(c.key) || c.key === key)
+        .map(c => c.key)
+    );
+  }
+};
+
 
   const renderCell = (col, s, index) => {
     switch (col) {
