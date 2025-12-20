@@ -234,6 +234,7 @@ useEffect(() => {
               : s.displayStatus === "Working" ? "primary"
               : s.displayStatus === "On Break" ? "warning"
               : s.displayStatus === "Invalid Clocked Out" ? "danger"
+              : s.displayStatus === "Auto Clocked Out" ? "info"
               : "secondary"
             }
           >
@@ -284,6 +285,7 @@ useEffect(() => {
                   <option value="Working">Working</option>
                   <option value="On Break">On Break</option>
                   <option value="Completed">Completed</option>
+                  <option value="Auto Clocked Out">Auto Clocked Out</option>
                   <option value="Invalid Clocked Out">Invalid Clocked Out</option>
                 </Form.Select>
               </Col>

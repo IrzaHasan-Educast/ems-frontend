@@ -11,7 +11,7 @@ import { Table, Form, Button, InputGroup, FormControl } from "react-bootstrap";
 // ⬅️ Reusable API calls
 import { getCurrentUser, getWorkSessions } from "../../api/workSessionApi";
 
-const AttendanceHistory = ({ onLogout }) => {
+const WorkSessionHistory = ({ onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [employee, setEmployee] = useState(null);
   const [history, setHistory] = useState([]);
@@ -235,4 +235,4 @@ const AttendanceHistory = ({ onLogout }) => {
   );
 };
 
-export default AttendanceHistory;
+export default WorkSessionHistory;
