@@ -24,6 +24,7 @@ const EmployeeDashboard = ({ onLogout }) => {
   const [currentSession, setCurrentSession] = useState(null);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [sessionLoading, setSessionLoading] = useState(true); // new
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
@@ -91,25 +92,30 @@ const fetchHistory = useCallback(async (employeeId) => {
   }, [fetchHistory]);
 
   // ✅ IMPORTANT: do not convert here, just store raw backend strings
-  const fetchActiveSession = useCallback(async () => {
-    try {
-      const res = await workSessionApi.getActiveSession();
-      if (res.data) {
-        setCurrentSession({
-          ...res.data,
-          clockInTime: res.data.clockInTime,
-          clockOutTime: res.data.clockOutTime || null,
-          breaks: res.data.breaks || [],
-          onBreak: res.data.breaks?.some((b) => !b.endTime) || false,
-          currentBreakId: res.data.breaks?.find((b) => !b.endTime)?.id || null,
-          sessionId: res.data.id,
-        });
-      } else setCurrentSession(null);
-    } catch (err) {
-      console.error(err);
+const fetchActiveSession = useCallback(async () => {
+  setSessionLoading(true); // start loading
+  try {
+    const res = await workSessionApi.getActiveSession();
+    if (res.data) {
+      setCurrentSession({
+        ...res.data,
+        clockInTime: res.data.clockInTime,
+        clockOutTime: res.data.clockOutTime || null,
+        breaks: res.data.breaks || [],
+        onBreak: res.data.breaks?.some((b) => !b.endTime) || false,
+        currentBreakId: res.data.breaks?.find((b) => !b.endTime)?.id || null,
+        sessionId: res.data.id,
+      });
+    } else {
       setCurrentSession(null);
     }
-  }, []);
+  } catch (err) {
+    console.error(err);
+    setCurrentSession(null);
+  }
+  setSessionLoading(false); // done loading
+}, []);
+
 
   useEffect(() => {
     fetchCurrentUser();
@@ -224,41 +230,47 @@ const fetchHistory = useCallback(async (employeeId) => {
             Welcome, {employee?.fullName}
           </h4>
 
-          <CardContainer title="Current Session">
-            {currentSession ? (
-              <CurrentSessionCard
-                currentSession={currentSession}
-                handleClockIn={handleClockIn}
-                handleClockOut={handleClockOut}
-                handleTakeBreak={handleTakeBreak}
-                loading={loading}
-              />
-            ) : (
-              <div className="text-center p-4">
-                <p>No active session. Start your work now!</p>
-                <div
-                  className="clock-in-circle mx-auto"
-                  onClick={handleClockIn}
-                  style={{
-                    width: "120px",
-                    height: "120px",
-                    borderRadius: "50%",
-                    backgroundColor: "#28a745",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "white",
-                    fontSize: "1.2rem",
-                    cursor: "pointer",
-                    userSelect: "none",
-                    boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
-                  }}
-                >
-                  {loading ? "Loading..." : "Clock In"}
-                </div>
-              </div>
-            )}
-          </CardContainer>
+<CardContainer title="Current Session">
+  {sessionLoading ? (
+    <div className="text-center p-4">
+      <p>Loading current session...</p>
+    </div>
+  ) : currentSession ? (
+    <CurrentSessionCard
+      currentSession={currentSession}
+      handleClockIn={handleClockIn}
+      handleClockOut={handleClockOut}
+      handleTakeBreak={handleTakeBreak}
+      loading={loading}
+    />
+  ) : (
+    <div className="text-center p-4">
+      <p>No active session. Start your work now!</p>
+      <div
+        className="clock-in-circle mx-auto"
+        onClick={handleClockIn}
+        style={{
+          width: "120px",
+          height: "120px",
+          borderRadius: "50%",
+          backgroundColor: "#28a745",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "white",
+          fontSize: "1.2rem",
+          cursor: "pointer",
+          userSelect: "none",
+          boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
+        }}
+      >
+        {loading ? "Loading..." : "Clock In"}
+      </div>
+    </div>
+  )}
+</CardContainer>
+
+
 
           <CardContainer title="Recent Work Sessions">
             <div className="d-flex flex-column gap-3">
