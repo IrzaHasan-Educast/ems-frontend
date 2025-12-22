@@ -5,7 +5,7 @@ import TopNavbar from "../../components/EmployeeNavbar";
 import CardContainer from "../../components/CardContainer";
 import PageHeading from "../../components/PageHeading";
 
-import { Table, Form, Button, InputGroup, FormControl } from "react-bootstrap";
+import { Table, Form, Button, InputGroup, FormControl, Spinner } from "react-bootstrap";
 
 // ⬅️ Reusable API calls
 import { getCurrentUser, getWorkSessions } from "../../api/workSessionApi";
@@ -17,7 +17,8 @@ const WorkSessionHistory = ({ onLogout }) => {
   const [filteredHistory, setFilteredHistory] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
-
+  const [loading, setLoading] = useState("");
+  const [selectedStatus, setselectedStatus] = useState("");
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   // --- Time format AM/PM ---
@@ -63,6 +64,7 @@ const WorkSessionHistory = ({ onLogout }) => {
   // -------- Fetch Work History --------
   const fetchHistory = useCallback(async (employeeId) => {
     try {
+      setLoading(true);
       const res = await getWorkSessions(employeeId);
 
       if (res.data && Array.isArray(res.data)) {
@@ -108,6 +110,8 @@ const WorkSessionHistory = ({ onLogout }) => {
 
     } catch (err) {
       console.error("Failed to fetch history", err);
+    } finally{
+      setLoading(false);
     }
   }, []);
 
@@ -133,6 +137,9 @@ const WorkSessionHistory = ({ onLogout }) => {
     if (selectedDate) {
       filtered = filtered.filter((h) => getMonthName(h.date) === selectedDate);
     }
+    if(selectedStatus){
+      filtered = filtered.filter((h)=> h.status === selectedDate);
+    }
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -144,15 +151,15 @@ const WorkSessionHistory = ({ onLogout }) => {
     }
 
     setFilteredHistory(filtered);
-  }, [searchQuery, selectedDate, history]);
+  }, [searchQuery, selectedDate,selectedStatus, history]);
 
   const handleReset = () => {
     setSelectedDate("");
     setSearchQuery("");
+    setselectedStatus("");
     setFilteredHistory(history);
   };
 
-  if (!employee) return <div>Loading...</div>;
   const uniqueMonths = [...new Set(history.map((h) => getMonthName(h.date)))];
 
   const getStatusColor = (status) => {
@@ -188,7 +195,7 @@ const WorkSessionHistory = ({ onLogout }) => {
           <CardContainer title="Search & Filter">
             <div className="d-flex gap-2 flex-wrap mb-3 align-items-center">
               <div className="row w-100">
-                <div className="col-md-6">
+                <div className="col-md-4">
                   <InputGroup>
                     <FormControl
                       placeholder="Search Here..."
@@ -198,13 +205,24 @@ const WorkSessionHistory = ({ onLogout }) => {
                   </InputGroup>
                 </div>
 
-                <div className="col-md-4">
+                <div className="col-md-3">
                   <Form.Select value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)}>
                     <option value="">Select Month</option>
                     {uniqueMonths.map((m) => (
                       <option key={m} value={m}>
                         {m}
                       </option>
+                    ))}
+                  </Form.Select>
+                </div>
+                <div className="col-md-3">
+                  <Form.Select
+                  value={selectedStatus}
+                  onChange={(e)=>setselectedStatus(e.target.value)}
+                  >
+                    <option value="">All Status</option>
+                    {[...new Set(history.map(h => h.status))].map((s)=>(
+                      <option key={s} value={s}>{s}</option>
                     ))}
                   </Form.Select>
                 </div>
@@ -224,6 +242,12 @@ const WorkSessionHistory = ({ onLogout }) => {
 
           {/* Table */}
           <CardContainer title="Work Session Records">
+            {loading?(
+            <div className="d-flex justify-content-center align-items-center" style={{height:"40vh", color:"rgb(245, 138, 41)"}}>
+              <Spinner animation="border"/>
+              </div>
+            ):(
+
             <Table bordered hover responsive className="table-theme text-center">
               <thead style={{ backgroundColor: "#055993", color: "white" }}>
                 <tr>
@@ -252,6 +276,7 @@ const WorkSessionHistory = ({ onLogout }) => {
                 ))}
               </tbody>
             </Table>
+            )}
           </CardContainer>
         </div>
       </div>

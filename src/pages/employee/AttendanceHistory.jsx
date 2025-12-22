@@ -8,18 +8,18 @@ import CardContainer from "../../components/CardContainer";
 import { getMyAttendance } from "../../api/attendanceApi";
 import { getCurrentUser } from "../../api/workSessionApi"; 
 
-import axios from "axios";
-
 const AttendanceHistory = ({ onLogout }) => {
   const [records, setRecords] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [employee, setEmployee] = useState(null); // added
+  const [employee, setEmployee] = useState(null);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("");
+  const [selectedShift, setSelectedShift] = useState(""); // new
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
   const beautifyShift = (shift) => {
     if (!shift) return "--";
     return shift
@@ -27,21 +27,18 @@ const AttendanceHistory = ({ onLogout }) => {
       .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
       .join(" ");
   };
+
   // Fetch employee info + attendance
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // 1. Get employee info
         const resEmp = await getCurrentUser();
-;
         setEmployee({ fullName: resEmp.data.fullName, id: resEmp.data.employeeId });
 
-        // 2. Get attendance
         const res = await getMyAttendance();
-
         const formatted = res.data.map((a, index) => {
           const dateObj = new Date(a.attendanceDate);
-          const dayOfWeek = dateObj.getDay(); // 0 = Sunday
+          const dayOfWeek = dateObj.getDay();
           const dateStr = `${String(dateObj.getDate()).padStart(2,'0')}-${String(dateObj.getMonth()+1).padStart(2,'0')}-${dateObj.getFullYear()}`;
 
           const timeObj = new Date(`1970-01-01T${a.attendanceTime}`);
@@ -84,25 +81,24 @@ const AttendanceHistory = ({ onLogout }) => {
     const f = records.filter(r => {
       const matchesSearch = [r.date, r.time, r.status, r.shift].join(" ").toLowerCase().includes(term);
       const matchesMonth = selectedMonth ? new Date(r.rawDate).getMonth() + 1 === parseInt(selectedMonth) : true;
-      return matchesSearch && matchesMonth;
+      const matchesShift = selectedShift ? r.shift === selectedShift : true;
+      return matchesSearch && matchesMonth && matchesShift;
     });
     setFiltered(f);
-  }, [searchTerm, selectedMonth, records]);
+  }, [searchTerm, selectedMonth, selectedShift, records]);
 
   const handleReset = () => {
     setSearchTerm("");
     setSelectedMonth("");
+    setSelectedShift("");
   };
-
-  if (!employee) return <div>Loading...</div>;
 
   return (
     <div className="d-flex">
       <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} />
 
       <div className="flex-grow-1">
-        {/* Pass employee name to TopNavbar */}
-        <TopNavbar toggleSidebar={toggleSidebar} username={employee.fullName} />
+        <TopNavbar toggleSidebar={toggleSidebar} username={employee?.fullName || ""} />
 
         <div className="p-4 container">
           <PageHeading title="My Attendance History" />
@@ -110,7 +106,7 @@ const AttendanceHistory = ({ onLogout }) => {
           {/* Filters */}
           <CardContainer title="Search & Filter">
             <Row className="g-2 justify-content-center align-items-center mb-2">
-              <Col md={4}>
+              <Col md={3}>
                 <Form.Control
                   type="text"
                   placeholder="Search by date, time, status, shift..."
@@ -132,6 +128,17 @@ const AttendanceHistory = ({ onLogout }) => {
                   ))}
                 </Form.Select>
               </Col>
+              <Col md={3}>
+                <Form.Select
+                  value={selectedShift}
+                  onChange={(e) => setSelectedShift(e.target.value)}
+                >
+                  <option value="">All Shifts</option>
+                  {[...new Set(records.map(r => r.shift).filter(s => s !== "--"))].map((s, idx) => (
+                    <option key={idx} value={s}>{s}</option>
+                  ))}
+                </Form.Select>
+              </Col>
               <Col md={2}>
                 <Button variant="secondary" onClick={handleReset}>Reset</Button>
               </Col>
@@ -139,9 +146,9 @@ const AttendanceHistory = ({ onLogout }) => {
           </CardContainer>
 
           {/* Table */}
-          <CardContainer  title="Attendance Records">
+          <CardContainer title="Attendance Records">
             {loading ? (
-              <div className="d-flex justify-content-center align-items-center" style={{ height: "50vh" }}>
+              <div className="d-flex justify-content-center align-items-center" style={{ height: "50vh", color: "rgb(245, 138, 41)"}}>
                 <Spinner animation="border" />
               </div>
             ) : (
