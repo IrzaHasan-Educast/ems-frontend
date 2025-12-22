@@ -325,7 +325,7 @@ case "actions":
                 </Form.Select>
               </Col>
 
-              <Col md={3}>
+              <Col md={2}>
                 <Form.Select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
                   <option value="">All Leave Types</option>
                   {leaveTypes.map((t, i) => (
@@ -336,7 +336,7 @@ case "actions":
                 </Form.Select>
               </Col>
 
-              <Col md={3}>
+              <Col md={2}>
                 <Form.Select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
                   <option value="">All Status</option>
                   <option value="Pending">Pending</option>
@@ -345,7 +345,7 @@ case "actions":
                 </Form.Select>
               </Col>
 
-              <Col md={3}>
+              <Col md={2}>
                 <Form.Select value={monthFilter} onChange={e => setMonthFilter(e.target.value)}>
                   <option value="">All Months</option>
                   {["January","Feburary","March","April","May","June","July","August","September","October","November","December"].map((m,i)=>(
@@ -354,7 +354,7 @@ case "actions":
                 </Form.Select>
               </Col>
 
-              <Col md={3}>
+              <Col md={2}>
                 <Form.Select value={rowsPerPage} onChange={(e)=>setRowsPerPage(e.target.value)}>
                   <option value={10}>10 rows</option>
                   <option value={25}>25 rows</option>
@@ -363,7 +363,7 @@ case "actions":
                 </Form.Select>
               </Col>
 
-              <Col md={3} className="d-flex gap-2 justify-content-end">
+              <Col md={10} className="d-flex gap-2 justify-content-end">
                 <Button variant="secondary" onClick={handleReset}>Reset</Button>
                 <Button variant="outline-primary" onClick={() => setShowColumnsModal(true)}>
                   <Gear />

@@ -4,7 +4,6 @@ import Sidebar from "../../components/EmployeeSidebar";
 import TopNavbar from "../../components/EmployeeNavbar";
 import CardContainer from "../../components/CardContainer";
 import PageHeading from "../../components/PageHeading";
-import "../../styles/AttendanceHistory.css";
 
 import { Table, Form, Button, InputGroup, FormControl } from "react-bootstrap";
 
@@ -39,13 +38,27 @@ const WorkSessionHistory = ({ onLogout }) => {
     return date.toLocaleString("en-US", { month: "long" });
   };
 
-  const formatDuration = (hoursDecimal) => {
-    if (!hoursDecimal) return "0h 0m";
-    const totalMinutes = Math.round(hoursDecimal * 60);
-    const hrs = Math.floor(totalMinutes / 60);
-    const mins = totalMinutes % 60;
-    return `${hrs}h ${mins}m`;
+  const millisToHMS = (ms) => {
+    if (!ms || ms < 0) return "0h 0m 0s";
+
+    const totalSeconds = Math.floor(ms / 1000);
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+
+    return `${h}h ${m}m ${s}s`;
   };
+
+
+  const isoToMillis = (iso) => {
+    if (!iso) return 0;
+    const match = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+    const h = parseInt(match?.[1] || 0);
+    const m = parseInt(match?.[2] || 0);
+    const s = parseInt(match?.[3] || 0);
+    return ((h * 60 + m) * 60 + s) * 1000;
+  };
+
 
   // -------- Fetch Work History --------
   const fetchHistory = useCallback(async (employeeId) => {
@@ -53,35 +66,46 @@ const WorkSessionHistory = ({ onLogout }) => {
       const res = await getWorkSessions(employeeId);
 
       if (res.data && Array.isArray(res.data)) {
-        const formatted = res.data.map((s) => {
-          const clockIn = new Date(s.clockInTime);
-          const clockOut = s.clockOutTime ? new Date(s.clockOutTime) : null;
+      const formatted = res.data.map((s) => {
+      const clockIn = new Date(s.clockInTime);
+      const clockOut = s.clockOutTime ? new Date(s.clockOutTime) : null;
+      const now = new Date();
 
-          const totalBreakMillis =
-            s.breaks?.reduce((sum, b) => {
-              const start = new Date(b.startTime);
-              const end = b.endTime ? new Date(b.endTime) : new Date();
-              return sum + (end - start);
-            }, 0) || 0;
+      let totalMs = 0;
+      let workingMs = 0;
+      let breakMs = 0;
 
-          const totalMillis = (clockOut || new Date()) - clockIn;
-          const netMillis = totalMillis - totalBreakMillis;
-
-          return {
-            id: s.id,
-            date: clockIn.toLocaleDateString("en-GB").replace(/\//g, "-"),
-            clockIn: formatTimeAMPM(clockIn),
-            clockOut: clockOut ? formatTimeAMPM(clockOut) : "--",
-            totalHours: formatDuration(totalMillis / 1000 / 3600),
-            workingHours: formatDuration(netMillis / 1000 / 3600),
-            breakHours: formatDuration(totalBreakMillis / 1000 / 3600),
-            status: s.status,
-          };
-        });
-
-        setHistory(formatted);
-        setFilteredHistory(formatted);
+      if (clockOut) {
+        // ✅ Completed session → backend values
+        totalMs = isoToMillis(s.totalSessionHours);
+        workingMs = isoToMillis(s.totalWorkingHours);
+        breakMs = isoToMillis(s.idleTime);
+      } else {
+        // ✅ Working session → dynamic calculation
+        totalMs = now - clockIn;
+        breakMs = isoToMillis(s.idleTime); // agar null → 0
+        workingMs = totalMs - breakMs;
       }
+
+      return {
+        id: s.id,
+        date: clockIn.toLocaleDateString("en-GB").replace(/\//g, "-"),
+        clockIn: formatTimeAMPM(clockIn),
+        clockOut: clockOut ? formatTimeAMPM(clockOut) : "--",
+
+        totalHours: millisToHMS(totalMs),
+        workingHours: millisToHMS(workingMs),
+        breakHours: millisToHMS(breakMs),
+
+        status: s.status,
+      };
+
+    });
+
+      setHistory(formatted);
+      setFilteredHistory(formatted);
+    }
+
     } catch (err) {
       console.error("Failed to fetch history", err);
     }
@@ -200,7 +224,7 @@ const WorkSessionHistory = ({ onLogout }) => {
 
           {/* Table */}
           <CardContainer title="Work Session Records">
-            <Table bordered hover responsive className="table-theme">
+            <Table bordered hover responsive className="table-theme text-center">
               <thead style={{ backgroundColor: "#055993", color: "white" }}>
                 <tr>
                   <th>S. No.</th>

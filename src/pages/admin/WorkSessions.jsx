@@ -282,6 +282,7 @@ useEffect(() => {
               : s.displayStatus === "On Break" ? "warning"
               : s.displayStatus === "Invalid Clocked Out" ? "danger"
               : s.displayStatus === "Auto Clocked Out" ? "info"
+              : s.displayStatus === "Early Clocked Out" ? "secondary"
               : "secondary"
             }
           >
@@ -334,6 +335,7 @@ useEffect(() => {
                   <option value="Completed">Completed</option>
                   <option value="Auto Clocked Out">Auto Clocked Out</option>
                   <option value="Invalid Clocked Out">Invalid Clocked Out</option>
+                  <option value="Early Clocked Out">Early Clocked Out</option>
                 </Form.Select>
               </Col>
               <Col md={2}>
@@ -358,7 +360,7 @@ useEffect(() => {
             ) : (
               <>
                 <Table bordered hover responsive className="mt-2">
-                  <thead style={{ backgroundColor: "#FFA500", color: "white", textAlign: "center" }}>
+                  <thead className="text-center" style={{ backgroundColor: "#FFA500", color: "white", textAlign: "center" }}>
                     <tr>
                       {selectedColumns.map(colKey => {
                         const col = allColumns.find(c => c.key === colKey);
