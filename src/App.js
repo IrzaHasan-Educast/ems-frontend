@@ -8,6 +8,9 @@ import HrDashboard from "./pages/hr/HrDashboard";
 import AllEmployees from "./pages/admin/AllEmployees";
 import AddEmployee from "./pages/admin/AddEmployee";
 import EditEmployee from "./pages/admin/EditEmployee";
+import ViewShifts from "./pages/admin/shifts/ViewShifts";
+import AddShift from "./pages/admin/shifts/AddShift";
+
 import WorkSessions from "./pages/admin/WorkSessions";
 import Attendance from "./pages/admin/Attendance";
 import LeaveHistory from "./pages/employee/LeaveHistory"; 
@@ -20,6 +23,7 @@ import AttendanceHistory from "./pages/employee/AttendanceHistory";
 import jwtHelper from "./utils/jwtHelper";
 import { isTokenExpired } from "./utils/checkToken";
 import ApplyLeave from "./pages/employee/ApplyLeave";
+import AddEditShift from "./pages/admin/shifts/AddEditShift";
 
 function App() {
 
@@ -121,6 +125,11 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        <Route path="/admin/shifts" element={<ViewShifts />} />
+        <Route path="/admin/shifts/add" element={<AddShift />} />
+        <Route path="/admin/shifts/edit/:id" element={<AddEditShift />} />
+
         <Route
           path="/admin/work-sessions"
           element={

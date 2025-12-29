@@ -19,9 +19,10 @@ const LoginForm = ({ setUserRole }) => {
     try {
       const response = await login(username, password);
 
-      const { token, role } = response.data;
+      const { token, role, name } = response.data;
       localStorage.setItem("token", token);
       localStorage.setItem("role", role);
+      localStorage.setItem("name", name);
       setUserRole(role);
 
     } catch (err) {

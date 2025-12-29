@@ -43,9 +43,12 @@ const AdminDashboard = ({ onLogout }) => {
     const fetchData = async () => {
       try {
         const userRes = await getCurrentUser();
+        localStorage.setItem("name",userRes.data.fullName);
+        localStorage.setItem("role",userRes.data.role);
+
         setAdmin({
-          name: userRes.data.fullName,
-          role: userRes.data.role,
+          name: localStorage.getItem("name"),
+          role: localStorage.getItem("role"),
         });
 
         const empRes = await getAllEmployees();

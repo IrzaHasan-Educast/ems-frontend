@@ -130,8 +130,8 @@ const AllEmployees = ({ onLogout }) => {
       <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} />
       <div className="flex-grow-1">
         <TopNavbar toggleSidebar={toggleSidebar}
-        username={admin.name}
-        role={admin.role} />
+        username={localStorage.getItem("name")}
+        role={localStorage.getItem("role")} />
         <div className="p-4 container">
           {/* Heading + Add Employee */}
           

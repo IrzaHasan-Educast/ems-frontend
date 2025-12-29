@@ -7,6 +7,8 @@ import Logo from "../assets/images/Educast-Logo.png";
 
 const Sidebar = ({ isOpen, onLogout, user }) => {
   const [showEmployees, setShowEmployees] = useState(false);
+  const [showShifts, setShowShifts] = useState(false);
+
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -84,6 +86,46 @@ const Sidebar = ({ isOpen, onLogout, user }) => {
             )}
 
           </div>
+
+          {/* Shifts Dropdown */}
+            <div className="mt-3">
+              <Nav.Link
+                className="text-white"
+                onClick={() => setShowShifts(!showShifts)}
+                style={{ textDecoration: "none" }}
+              >
+                <i className="bi bi-clock me-2"></i>
+                {isOpen && "Shifts"}
+                {isOpen && (
+                  <i
+                    className={`bi ms-2 ${
+                      showShifts ? "bi-chevron-up" : "bi-chevron-down"
+                    }`}
+                  ></i>
+                )}
+              </Nav.Link>
+
+              {showShifts && (
+                <div className="ms-4 mt-2">
+                  <NavLink
+                    to="/admin/shifts"
+                    className="text-white d-block mb-1"
+                    style={{ textDecoration: "none" }}
+                  >
+                    <i className="bi bi-list-ul me-2"></i> All Shifts
+                  </NavLink>
+
+                  <NavLink
+                    to="/admin/shifts/add"
+                    className="text-white d-block mb-1"
+                    style={{ textDecoration: "none" }}
+                  >
+                    <i className="bi bi-plus-circle me-2"></i> Add Shift
+                  </NavLink>
+                </div>
+              )}
+            </div>
+
 
           {/* Work Sessions Link */}
           <NavLink
