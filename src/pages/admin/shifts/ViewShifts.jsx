@@ -60,6 +60,7 @@ const ViewShifts = ({ onLogout }) => {
                     <th>Name</th>
                     <th>Start</th>
                     <th>End</th>
+                    <th>Managed By</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -70,6 +71,7 @@ const ViewShifts = ({ onLogout }) => {
                       <td>{s.shiftName}</td>
                       <td>{s.startsAt}</td>
                       <td>{s.endsAt}</td>
+                      <td>{s.managerName}</td>
                       <td className="d-flex gap-2">
                         <Button
                           size="sm"
@@ -84,13 +86,13 @@ const ViewShifts = ({ onLogout }) => {
                         >
                           Delete
                         </Button>
-                        <Button
+                        {/* <Button
                           size="sm"
                           variant="secondary"
-                          onClick={() => navigate(`/admin/shifts/assign/${s.id}`)}
+                          onClick={() => navigate(`/admin/employee-shifts/assign`)}
                         >
                           Assign Employees
-                        </Button>
+                        </Button> */}
                       </td>
                     </tr>
                   ))}

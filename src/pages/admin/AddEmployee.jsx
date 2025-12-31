@@ -70,18 +70,33 @@ const AddEmployee = ({ onLogout }) => {
     return Object.keys(tempErrors).length === 0;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  if (!validateForm()) return;
 
-    try {
-      await addEmployee(employee);
-      navigate("/admin/employees");
-    } catch (error) {
-      console.error(error);
-      alert(error.response?.data || "Failed to create employee");
+  try {
+    await addEmployee(employee);
+    navigate("/admin/employees");
+  } catch (error) {
+    const status = error.response?.status;
+    const data = error.response?.data;
+
+    if (status === 409 && data?.message) {
+      // check message content to decide which field to show error
+      if (data.message.toLowerCase().includes("email")) {
+        setErrors((prev) => ({ ...prev, email: data.message }));
+      } else if (data.message.toLowerCase().includes("username")) {
+        setErrors((prev) => ({ ...prev, username: data.message }));
+      } else {
+        alert(data.message);
+      }
+    } else {
+      alert("Something went wrong. Please try again.");
     }
-  };
+  }
+};
+
+
 useEffect(() => {
   const fetchRolesAndAdmin = async () => {
     try {
@@ -147,9 +162,13 @@ useEffect(() => {
                         name="email"
                         value={employee.email}
                         onChange={handleChange}
-                        required
+                        isInvalid={!!errors.email}
                         placeholder="Enter email"
                       />
+                      <Form.Control.Feedback type="invalid">
+                        {errors.email}
+                      </Form.Control.Feedback>
+
                     </Form.Group>
                   </Col>
                 </Row>

@@ -23,7 +23,9 @@ import AttendanceHistory from "./pages/employee/AttendanceHistory";
 import jwtHelper from "./utils/jwtHelper";
 import { isTokenExpired } from "./utils/checkToken";
 import ApplyLeave from "./pages/employee/ApplyLeave";
-import AddEditShift from "./pages/admin/shifts/AddEditShift";
+import EditShift from "./pages/admin/shifts/EditShift";
+import ViewEmployeeShifts from "./pages/admin/employeeShift/ViewEmployeeShifts";
+import AssignEmployeeShift from "./pages/admin/employeeShift/AssignEmployeeShift";
 
 function App() {
 
@@ -128,7 +130,21 @@ function App() {
 
         <Route path="/admin/shifts" element={<ViewShifts />} />
         <Route path="/admin/shifts/add" element={<AddShift />} />
-        <Route path="/admin/shifts/edit/:id" element={<AddEditShift />} />
+        <Route path="/admin/shifts/edit/:id" element={<EditShift />} />
+
+{/* ===== EMPLOYEE ↔ SHIFT ===== */}
+      <Route
+        path="/admin/employee-shifts/assign"
+        element={<ViewEmployeeShifts onLogout={handleLogout} />}
+      />
+      {/* <Route
+        path="/admin/shifts/assign"
+        element={<AssignEmployeeShift onLogout={handleLogout} />}
+      /> */}
+      {/* <Route
+        path="/admin/employee-shifts/edit/:id"
+        element={<EditEmployeeShift onLogout={handleLogout} />}
+      /> */}
 
         <Route
           path="/admin/work-sessions"

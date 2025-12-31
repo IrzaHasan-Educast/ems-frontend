@@ -15,3 +15,6 @@ export const getUserByEmployeeId = (employeeId) =>
 
 export const updateUser = (userId, data) =>
   api.put(`/v1/users/${userId}`, data);
+
+export const getManagers = () =>
+  api.get(`v1/employees/role/MANAGER`);

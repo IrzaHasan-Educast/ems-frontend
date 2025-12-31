@@ -12,6 +12,10 @@ export const updateShift = (id, shift) => {
   return api.put(`/v1/shifts/${id}`, shift);
 };
 
+export const getShiftById = (id) => {
+  return api.get(`/v1/shifts/${id}`);
+};
+
 export const deleteShift = (id) => {
   return api.delete(`/v1/shifts/${id}`);
 };
