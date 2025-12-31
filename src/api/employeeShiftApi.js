@@ -11,3 +11,5 @@ export const deleteEmployeeShift = (id) =>
 
 export const updateEmployeeShift = (data) =>
   api.put("/v1/employee-shifts/update", data);
+
+export const getEmployeeShiftByEmployeeId = (empId) => api.get(`/v1/employee-shifts/employeeId/${empId}`);

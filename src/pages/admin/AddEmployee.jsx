@@ -9,6 +9,8 @@ import { getCurrentUser } from "../../api/userApi";
 import jwtHelper from "../../utils/jwtHelper";
 
 import { getRoles, addEmployee, getAllEmployees } from "../../api/employeeApi";
+import { getAllShifts } from "../../api/shiftApi"; // ✅ shifts API
+
 import {
   validateFullName,
   validatePhone,
@@ -31,6 +33,8 @@ const AddEmployee = ({ onLogout }) => {
     active: true,
     username: "",
     password: "",
+    shiftId: null, // ✅ new
+
   });
 
   const token = localStorage.getItem("token");
@@ -40,6 +44,7 @@ const AddEmployee = ({ onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showPassword, setShowPassword] = useState(false); // toggle state
   const [admin, setAdmin] = useState({ name: "", role: initialRole });
+  const [shifts, setShifts] = useState([]); // ✅ shifts list
 
   const navigate = useNavigate();
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
@@ -74,27 +79,26 @@ const handleSubmit = async (e) => {
   e.preventDefault();
   if (!validateForm()) return;
 
-  try {
-    await addEmployee(employee);
-    navigate("/admin/employees");
-  } catch (error) {
-    const status = error.response?.status;
-    const data = error.response?.data;
+ try {
+      // ✅ send shiftId only if role=EMPLOYEE
+      const payload = { ...employee };
+      if (employee.role !== "EMPLOYEE") payload.shiftId = null;
 
-    if (status === 409 && data?.message) {
-      // check message content to decide which field to show error
-      if (data.message.toLowerCase().includes("email")) {
-        setErrors((prev) => ({ ...prev, email: data.message }));
-      } else if (data.message.toLowerCase().includes("username")) {
-        setErrors((prev) => ({ ...prev, username: data.message }));
-      } else {
-        alert(data.message);
-      }
-    } else {
-      alert("Something went wrong. Please try again.");
+      await addEmployee(payload);
+      navigate("/admin/employees");
+    } catch (error) {
+      const status = error.response?.status;
+      const data = error.response?.data;
+
+      if (status === 409 && data?.message) {
+        if (data.message.toLowerCase().includes("email"))
+          setErrors((prev) => ({ ...prev, email: data.message }));
+        else if (data.message.toLowerCase().includes("username"))
+          setErrors((prev) => ({ ...prev, username: data.message }));
+        else alert(data.message);
+      } else alert("Something went wrong. Please try again.");
     }
-  }
-};
+  };
 
 
 useEffect(() => {
@@ -111,7 +115,7 @@ useEffect(() => {
       // Set roles based on current user role
       let availableRoles = [];
       if (currentRole === "ADMIN") {
-        availableRoles = ["HR", "EMPLOYEE"];
+        availableRoles = ["HR", "EMPLOYEE","MANAGER"];
       } else if (currentRole === "HR") {
         availableRoles = ["EMPLOYEE"];
       }
@@ -120,10 +124,18 @@ useEffect(() => {
       console.error("Failed to fetch roles or admin info:", err);
     }
   };
+ const fetchShifts = async () => {
+      try {
+        const res = await getAllShifts();
+        setShifts(res.data);
+      } catch (err) {
+        console.error("Failed to fetch shifts:", err);
+      }
+    };
 
-  fetchRolesAndAdmin();
-}, []);
-
+    fetchRolesAndAdmin();
+    fetchShifts();
+  }, []);
 
 
   return (
@@ -230,20 +242,13 @@ useEffect(() => {
                 {/* Role + Joining Date */}
                 <Row className="mb-3">
                   <Col md={6}>
-                    <Form.Group>
+                    <Form.Group> 
                       <Form.Label>Role</Form.Label>
-                      <Form.Select
-                        name="role"
-                        value={employee.role}
-                        onChange={handleChange}
-                        required
-                      >
-                        <option value="" disabled>Select Role</option>
-                        {roles.map((roleOption) => (
-                          <option key={roleOption} value={roleOption}>{roleOption}</option>
-                        ))}
-                      </Form.Select>
-                    </Form.Group>
+                       <Form.Select name="role" value={employee.role} onChange={handleChange} required > 
+                        <option value="" disabled>Select Role</option> 
+                        {roles.map((roleOption) => ( <option key={roleOption} value={roleOption}>{roleOption}</option> ))} 
+                        </Form.Select> 
+                        </Form.Group>
                   </Col>
                   <Col md={6}>
                     <Form.Group>
@@ -258,6 +263,29 @@ useEffect(() => {
                     </Form.Group>
                   </Col>
                 </Row>
+
+{/* ✅ Shift dropdown if EMPLOYEE */}
+                {employee.role === "EMPLOYEE" && (
+                  <Row className="mb-3">
+                    <Col>
+                      <Form.Group>
+                        <Form.Label>Assign Shift</Form.Label>
+                        <Form.Select
+                          name="shiftId"
+                          value={employee.shiftId || ""}
+                          onChange={handleChange}
+                        >
+                          <option value="">Select Shift</option>
+                          {shifts.map((shift) => (
+                            <option key={shift.id} value={shift.id}>
+                              {shift.shiftName} ({shift.startsAt} - {shift.endsAt})
+                            </option>
+                          ))}
+                        </Form.Select>
+                      </Form.Group>
+                    </Col>
+                  </Row>
+                )}
 
                 {/* Username + Password with eye toggle */}
                 <Row className="mb-3">
