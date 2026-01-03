@@ -316,7 +316,6 @@ const Attendance = ({ onLogout }) => {
                 </thead>
                 <tbody>
                   {todayRecords
-                    .slice(0, rowsPerPage === "All" ? todayRecords.length : rowsPerPage)
                     .map((r, idx) => (
                     <tr key={idx} style={{ textAlign: "center", backgroundColor: "#e6f7ff" }}>
                       {selectedColumns.map(col => <td key={col}>{renderCell(col, r, idx)}</td>)}
