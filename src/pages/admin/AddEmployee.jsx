@@ -8,7 +8,7 @@ import AppButton from "../../components/AppButton";
 import { getCurrentUser } from "../../api/userApi";
 import jwtHelper from "../../utils/jwtHelper";
 
-import { getRoles, addEmployee, getAllEmployees } from "../../api/employeeApi";
+import { getRoles, addEmployee } from "../../api/employeeApi";
 import { getAllShifts } from "../../api/shiftApi"; // ✅ shifts API
 
 import {
@@ -100,42 +100,47 @@ const handleSubmit = async (e) => {
     }
   };
 
-
 useEffect(() => {
   const fetchRolesAndAdmin = async () => {
     try {
-      // Admin info from /users/me
       const userRes = await getCurrentUser();
       const currentRole = userRes.data.role;
+
       setAdmin({
         name: userRes.data.fullName,
         role: currentRole,
       });
 
-      // Set roles based on current user role
       let availableRoles = [];
+
       if (currentRole === "ADMIN") {
-        availableRoles = ["HR", "EMPLOYEE","MANAGER"];
-      } else if (currentRole === "HR") {
-        availableRoles = ["EMPLOYEE"];
+        // ✅ Admin can add everyone
+        availableRoles = ["HR", "MANAGER", "EMPLOYEE"];
+      } 
+      else if (currentRole === "HR") {
+        // ✅ HR can add only EMPLOYEE & MANAGER
+        availableRoles = ["EMPLOYEE", "MANAGER"];
       }
+
       setRoles(availableRoles);
     } catch (err) {
       console.error("Failed to fetch roles or admin info:", err);
     }
   };
- const fetchShifts = async () => {
-      try {
-        const res = await getAllShifts();
-        setShifts(res.data);
-      } catch (err) {
-        console.error("Failed to fetch shifts:", err);
-      }
-    };
 
-    fetchRolesAndAdmin();
-    fetchShifts();
-  }, []);
+  const fetchShifts = async () => {
+    try {
+      const res = await getAllShifts();
+      setShifts(res.data);
+    } catch (err) {
+      console.error("Failed to fetch shifts:", err);
+    }
+  };
+
+  fetchRolesAndAdmin();
+  fetchShifts();
+}, []);
+
 
 
   return (

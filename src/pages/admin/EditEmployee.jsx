@@ -13,7 +13,8 @@ import {
 import {
   getEmployeeShiftByEmployeeId,
   assignShift,
-  updateEmployeeShift
+  updateEmployeeShift,
+  deleteEmployeeShift
 } from "../../api/employeeShiftApi";
 
 import { 
@@ -42,6 +43,8 @@ const EditEmployee = ({ onLogout }) => {
   const [shifts, setShifts] = useState([]);
   const [shiftId, setShiftId] = useState("");
   const [existingShift, setExistingShift] = useState(null);
+  const [originalShift, setOriginalShift] = useState(null);
+  const [previousRole, setPreviousRole] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const navigate = useNavigate();
@@ -53,7 +56,9 @@ useEffect(() => {
   const fetchData = async () => {
     try {
       const empRes = await getEmployeeById(id);
-      setEmployee(empRes.data);
+        setEmployee(empRes.data);
+        setPreviousRole(empRes.data.role); // ✅ store original role
+
 
       const userRes = await getUserByEmployeeId(id);
       setUser({ id: userRes.data.id, username: userRes.data.username, password: "" });
@@ -62,40 +67,45 @@ useEffect(() => {
     }
   };
 
-  // Fetch roles
-  const fetchRoles = async () => {
+  fetchData();
+}, [id]);
+
+useEffect(() => {
+  if (employee?.role !== "EMPLOYEE") {
+    setShiftId("");
+    setExistingShift(null);
+  }
+}, [employee?.role]);
+
+
+useEffect(() => {
+  const fetchRolesAndAdmin = async () => {
     try {
-      const res = await getRoles();
-      setRoles(res.data);
-    } catch (error) {
-      console.error("Error fetching roles:", error);
+      const userRes = await getCurrentUser();
+      const currentRole = userRes.data.role;
+
+      setAdmin({
+        name: userRes.data.fullName,
+        role: currentRole,
+      });
+
+      let availableRoles = [];
+
+      if (currentRole === "ADMIN") {
+        availableRoles = ["ADMIN", "HR", "MANAGER", "EMPLOYEE"];
+      } else if (currentRole === "HR") {
+        availableRoles = ["EMPLOYEE", "MANAGER"];
+      }
+
+      setRoles(availableRoles);
+    } catch (err) {
+      console.error("Failed to fetch roles or admin info:", err);
     }
   };
 
-  fetchData();
-  fetchRoles();
-}, [id]);
+  fetchRolesAndAdmin();
+}, []);
 
-  useEffect(() => {
-    const fetchRolesAndAdmin = async () => {
-      try {
-        // Roles
-        const rolesRes = await getRoles();
-        setRoles(rolesRes.data);
-
-        // Admin info from /users/me
-        const userRes = await getCurrentUser();
-        setAdmin({
-          name: userRes.data.fullName,
-          role: userRes.data.role,
-        });
-      } catch (err) {
-        console.error("Failed to fetch roles or admin info:", err);
-      }
-    };
-
-    fetchRolesAndAdmin();
-  }, []);
 
   useEffect(() => {
     if (!employee || employee.role !== "EMPLOYEE") return;
@@ -108,6 +118,7 @@ useEffect(() => {
         const empShiftRes = await getEmployeeShiftByEmployeeId(employee.id);
         if (empShiftRes.data) {
           setExistingShift(empShiftRes.data);
+          setOriginalShift(empShiftRes.data); // ✅ permanent reference
           setShiftId(empShiftRes.data.shiftId);
         }
       } catch (err) {
@@ -144,51 +155,72 @@ useEffect(() => {
 const handleSubmit = async (e) => {
   e.preventDefault();
   if (!validateForm()) return;
+
   try {
-    // First, update employee
-    const updatedEmployee = await updateEmployee(id, employee);
-    // Only assign/update shift if employee is EMPLOYEE
+    /**
+     * 🔴 CASE 1:
+     * EMPLOYEE ➝ NON-EMPLOYEE
+     * → delete assigned shift (if exists)
+     */
+    if (
+      previousRole === "EMPLOYEE" &&
+      employee.role !== "EMPLOYEE" &&
+      originalShift
+    ) {
+      console.log("Deleting employee shift:", originalShift.id);
+      await deleteEmployeeShift(originalShift.id);
+    }
+
+    /**
+     * 🟢 Update employee data
+     */
+    await updateEmployee(id, employee);
+
+    /**
+     * 🟢 CASE 2:
+     * EMPLOYEE ➝ EMPLOYEE
+     * → assign / update shift
+     */
     if (employee.role === "EMPLOYEE") {
       if (!shiftId) {
         alert("Please select a shift before assigning.");
+        return;
+      }
+
+      if (existingShift) {
+        // UPDATE shift
+        await updateEmployeeShift({
+          id: existingShift.id,
+          employeeId: employee.id,
+          shiftId: Number(shiftId),
+        });
       } else {
-        // Debug log to see what existingShift contains
-        console.log("existingShift:", existingShift);
-        
-        // Check if existing shift exists - use existingShift itself as indicator
-        if (existingShift) {
-          // UPDATE: Pass the existing employee-shift record ID
-          const updatePayload = {
-            id: existingShift.id,           // ✅ Pass the employee-shift record ID for update
-            employeeId: employee.id,
-            shiftId: Number(shiftId)
-          };
-          console.log("Updating shift with payload:", updatePayload);
-          await updateEmployeeShift(updatePayload);
-        } else {
-          // INSERT: New shift assignment (no id needed)
-          const insertPayload = {
-            employeeId: employee.id,
-            shiftId: Number(shiftId)
-          };
-          console.log("Assigning new shift with payload:", insertPayload);
-          await assignShift(insertPayload);
-        }
+        // INSERT shift
+        await assignShift({
+          employeeId: employee.id,
+          shiftId: Number(shiftId),
+        });
       }
     }
-    // Update user info
+
+    /**
+     * 🟢 Update user (username / password)
+     */
     if (user.username || user.password) {
       await updateUser(user.id, {
         username: user.username,
-        password: user.password || undefined
+        password: user.password || undefined,
       });
     }
+
+    // ✅ Done
     navigate("/admin/employees");
   } catch (err) {
     console.error("Error updating employee", err);
     alert("Failed to update employee");
   }
 };
+
 
 
 
@@ -301,11 +333,19 @@ const handleSubmit = async (e) => {
                   <Col md={6}>
                     <Form.Group>
                       <Form.Label>Role</Form.Label>
-                      <Form.Control
-                        name="role"
-                        value={employee.role || ""}
-                        readOnly
-                      />
+                      <Form.Select
+  name="role"
+  value={employee.role}
+  onChange={handleEmployeeChange}
+  disabled={admin.role === "EMPLOYEE"} // safety
+>
+  {roles.map((role) => (
+    <option key={role} value={role}>
+      {role}
+    </option>
+  ))}
+</Form.Select>
+
                     </Form.Group>
                   </Col>
                   <Col md={6}>
