@@ -58,11 +58,6 @@ useEffect(() => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (shift.endsAt <= shift.startsAt) {
-      alert("End time must be after start time");
-      return;
-    }
-
     try {
       await updateShift(id, shift);
       navigate("/admin/shifts");
@@ -116,7 +111,6 @@ useEffect(() => {
                       type="time"
                       name="endsAt"
                       value={shift.endsAt}
-                      min={shift.startsAt}
                       onChange={handleChange}
                       required
                     />
