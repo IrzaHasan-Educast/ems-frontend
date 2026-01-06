@@ -1,4 +1,3 @@
-// src/pages/admin/EditEmployee.jsx
 import React, { useState, useEffect } from "react";
 import { Form, Row, Col, Spinner, InputGroup, Button } from "react-bootstrap";
 import { useNavigate, useParams } from "react-router-dom";
@@ -7,27 +6,42 @@ import TopNavbar from "../../components/Navbar";
 import CardContainer from "../../components/CardContainer";
 import AppButton from "../../components/AppButton";
 import { getCurrentUser } from "../../api/userApi";
-import jwtHelper from "../../utils/jwtHelper";
+import {
+  getAllShifts
+} from "../../api/shiftApi";
 
-import { getEmployeeById, getRoles, updateEmployee, getUserByEmployeeId, updateUser } from "../../api/employeeApi";
-import { getAllEmployeeShifts, getEmployeeShiftByEmployeeId, updateEmployeeShift } from "../../api/employeeShiftApi"; // ✅ shift APIs
+import {
+  getEmployeeShiftByEmployeeId,
+  assignShift,
+  updateEmployeeShift
+} from "../../api/employeeShiftApi";
 
+import { 
+  getEmployeeById,
+  getRoles,
+  updateEmployee,
+  getUserByEmployeeId,
+  updateUser
+} from "../../api/employeeApi";
 
-import { validateFullName, validatePhone, validateUsername, validatePassword,} from "../../utils/validators";
+import {
+  validateFullName,
+  validatePhone,
+  validateUsername,
+  validatePassword,
+} from "../../utils/validators";
 import { Eye, EyeSlash } from "react-bootstrap-icons";
-import { getAllShifts } from "../../api/shiftApi";
-
 
 const EditEmployee = ({ onLogout }) => {
-  const token = localStorage.getItem("token");
-  const initialRole = jwtHelper.getRoleFromToken(token);
   const { id } = useParams();
   const [employee, setEmployee] = useState(null);
   const [user, setUser] = useState({ id: null, username: "", password: "" });
   const [roles, setRoles] = useState([]);
-  const [shifts, setShifts] = useState([]);
-  const [admin, setAdmin] = useState({ name: "", role: initialRole });
+  const [admin, setAdmin] = useState({name:"Admin", role: "Admin"});
   const [errors, setErrors] = useState({});
+  const [shifts, setShifts] = useState([]);
+  const [shiftId, setShiftId] = useState("");
+  const [existingShift, setExistingShift] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const navigate = useNavigate();
@@ -35,51 +49,74 @@ const EditEmployee = ({ onLogout }) => {
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
 useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Employee data
-        const empRes = await getEmployeeById(id);
-        setEmployee(empRes.data);
+  // Fetch employee + user data
+  const fetchData = async () => {
+    try {
+      const empRes = await getEmployeeById(id);
+      setEmployee(empRes.data);
 
-        // User data
-        const userRes = await getUserByEmployeeId(id);
-        setUser({ id: userRes.data.id, username: userRes.data.username, password: "" });
+      const userRes = await getUserByEmployeeId(id);
+      setUser({ id: userRes.data.id, username: userRes.data.username, password: "" });
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  };
 
-        // Shifts list
-        const shiftRes = await getAllShifts();
-        setShifts(shiftRes.data);
-        // ✅ Employee assigned shift
-        if (empRes.data.role === "EMPLOYEE") {
-          const empShiftRes = await getEmployeeShiftByEmployeeId(id);
-          if (empShiftRes.data && empShiftRes.data.shift) {
-            setEmployee(prev => ({ ...prev, shiftId: empShiftRes.data.shift.id }));
-          }
-        }
-      } catch (err) {
-        console.error("Error fetching data:", err);
-      }
-    };
+  // Fetch roles
+  const fetchRoles = async () => {
+    try {
+      const res = await getRoles();
+      setRoles(res.data);
+    } catch (error) {
+      console.error("Error fetching roles:", error);
+    }
+  };
 
+  fetchData();
+  fetchRoles();
+}, [id]);
+
+  useEffect(() => {
     const fetchRolesAndAdmin = async () => {
       try {
+        // Roles
         const rolesRes = await getRoles();
         setRoles(rolesRes.data);
 
+        // Admin info from /users/me
         const userRes = await getCurrentUser();
-        setAdmin({ name: userRes.data.fullName, role: userRes.data.role });
+        setAdmin({
+          name: userRes.data.fullName,
+          role: userRes.data.role,
+        });
       } catch (err) {
-        console.error("Failed to fetch roles/admin info:", err);
+        console.error("Failed to fetch roles or admin info:", err);
       }
     };
 
-    fetchData();
     fetchRolesAndAdmin();
-  }, [id]);
+  }, []);
 
+  useEffect(() => {
+    if (!employee || employee.role !== "EMPLOYEE") return;
 
-  const isHrEditingAdmin =
-  admin.role?.toLowerCase() === "hr" &&
-  employee?.role?.toLowerCase() === "admin";
+    const fetchShiftData = async () => {
+      try {
+        const shiftRes = await getAllShifts();
+        setShifts(shiftRes.data);
+
+        const empShiftRes = await getEmployeeShiftByEmployeeId(employee.id);
+        if (empShiftRes.data) {
+          setExistingShift(empShiftRes.data);
+          setShiftId(empShiftRes.data.shiftId);
+        }
+      } catch (err) {
+        console.error("Error fetching shift data", err);
+      }
+    };
+
+    fetchShiftData();
+  }, [employee]);
 
 
   const handleEmployeeChange = (e) => {
@@ -104,39 +141,56 @@ useEffect(() => {
     return Object.keys(tempErrors).length === 0;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-
-    try {
-      await updateEmployee(id, employee);
-
-      if (user.username || user.password) {
-        await updateUser(user.id, { username: user.username, password: user.password || undefined });
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  if (!validateForm()) return;
+  try {
+    // First, update employee
+    const updatedEmployee = await updateEmployee(id, employee);
+    // Only assign/update shift if employee is EMPLOYEE
+    if (employee.role === "EMPLOYEE") {
+      if (!shiftId) {
+        alert("Please select a shift before assigning.");
+      } else {
+        // Debug log to see what existingShift contains
+        console.log("existingShift:", existingShift);
+        
+        // Check if existing shift exists - use existingShift itself as indicator
+        if (existingShift) {
+          // UPDATE: Pass the existing employee-shift record ID
+          const updatePayload = {
+            id: existingShift.id,           // ✅ Pass the employee-shift record ID for update
+            employeeId: employee.id,
+            shiftId: Number(shiftId)
+          };
+          console.log("Updating shift with payload:", updatePayload);
+          await updateEmployeeShift(updatePayload);
+        } else {
+          // INSERT: New shift assignment (no id needed)
+          const insertPayload = {
+            employeeId: employee.id,
+            shiftId: Number(shiftId)
+          };
+          console.log("Assigning new shift with payload:", insertPayload);
+          await assignShift(insertPayload);
+        }
       }
-   // ✅ Update employee shift if role is EMPLOYEE and shiftId selected
-      if (employee.role === "EMPLOYEE" && employee.shiftId) {
-        await updateEmployeeShift({
-          employeeId: id,
-          shiftId: employee.shiftId
-        });
-      }
-      navigate("/admin/employees");
-    } catch (err) {
-    console.error("Error updating employee/user:", err);
-
-  // Friendly error message
-  let msg = "Failed to update employee/user";
-  if (err.response) {
-    if (err.response.status === 403) {
-      msg = "This username is already taken or you are not authorized!";
-    } else if (err.response.data) {
-      msg = err.response.data;
     }
+    // Update user info
+    if (user.username || user.password) {
+      await updateUser(user.id, {
+        username: user.username,
+        password: user.password || undefined
+      });
+    }
+    navigate("/admin/employees");
+  } catch (err) {
+    console.error("Error updating employee", err);
+    alert("Failed to update employee");
   }
-  alert(msg);
-}
-  };
+};
+
+
 
   if (!employee) return (
     <div className="d-flex justify-content-center align-items-center" style={{ height: "60vh" }}>
@@ -266,29 +320,33 @@ useEffect(() => {
                     </Form.Group>
                   </Col>
                 </Row>
-{employee.role === "EMPLOYEE" && (
-                  <Row className="mb-3">
-                    <Col>
-                      <Form.Group>
-                        <Form.Label>Assign Shift</Form.Label>
-                        <Form.Select
-                          name="shiftId"
-                          value={employee.shiftId || ""}
-                          onChange={handleEmployeeChange}
-                        >
-                          <option value="">Select Shift</option>
-                          {shifts.map((shift) => (
-                            <option key={shift.id} value={shift.id}>
-                              {shift.shiftName} ({shift.startsAt} - {shift.endsAt})
-                            </option>
-                          ))}
-                        </Form.Select>
-                      </Form.Group>
-                    </Col>
-                  </Row>
-                )}
+
+                {employee.role === "EMPLOYEE" && (
+                <Row className="mb-3">
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label>Assign Shift</Form.Label>
+                     <Form.Select
+  value={shiftId || ""}
+  onChange={(e) => {
+    const val = e.target.value;
+    setShiftId(val || ""); // keep as string for now
+  }}
+>
+  <option value="">Select Shift</option>
+  {shifts.map((shift) => (
+    <option key={shift.id} value={shift.id}>
+      {shift.shiftName} ({shift.startsAt} - {shift.endsAt})
+    </option>
+  ))}
+</Form.Select>
+                    </Form.Group>
+                  </Col>
+                </Row>
+              )}
+
+
                 {/* Username + Password with eye icon */}
-                {!isHrEditingAdmin && (
                 <Row className="mb-3">
                   <Col md={6}>
                     <Form.Group>
@@ -326,8 +384,6 @@ useEffect(() => {
                     </Form.Group>
                   </Col>
                 </Row>
-              )}
-
 
                 {/* Active checkbox */}
                 <Row className="mb-3">
@@ -338,20 +394,27 @@ useEffect(() => {
                       checked={employee.active}
                       onChange={handleEmployeeChange}
                       label="Active"
-                      disabled={
-                        employee.role?.toLowerCase() === "admin" || isHrEditingAdmin
-                      }
+                      disabled={employee.role?.toLowerCase() === "admin"} // ✅ Admin cannot deactivate
                     />
                   </Col>
                 </Row>
 
                 <div className="d-flex gap-2">
-                  <AppButton text="Update Employee" variant="primary" type="submit" disabled={isHrEditingAdmin}/>
-                  <AppButton
-                    text="Cancel"
-                    variant="secondary"
-                    onClick={() => navigate("/admin/employees")}
-                  />
+                  <div className="d-flex gap-2">
+  {/* Disable submit until employee + shift data is ready */}
+  <AppButton
+    text="Update Employee"
+    variant="primary"
+    type="submit"
+    disabled={!(employee && (employee.role !== "EMPLOYEE" || shiftId))} 
+  />
+  <AppButton
+    text="Cancel"
+    variant="secondary"
+    onClick={() => navigate("/admin/employees")}
+  />
+</div>
+
                 </div>
               </Form>
             </CardContainer>
