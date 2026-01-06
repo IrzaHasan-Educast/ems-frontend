@@ -92,7 +92,7 @@ useEffect(() => {
       let availableRoles = [];
 
       if (currentRole === "ADMIN") {
-        availableRoles = ["ADMIN", "HR", "MANAGER", "EMPLOYEE"];
+        availableRoles = ["HR", "MANAGER", "EMPLOYEE"];
       } else if (currentRole === "HR") {
         availableRoles = ["EMPLOYEE", "MANAGER"];
       }
