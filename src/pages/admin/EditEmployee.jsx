@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Form, Row, Col, Spinner, InputGroup, Button } from "react-bootstrap";
 import { useNavigate, useParams } from "react-router-dom";
 import Sidebar from "../../components/Sidebar";
@@ -58,8 +58,6 @@ useEffect(() => {
       const empRes = await getEmployeeById(id);
         setEmployee(empRes.data);
         setPreviousRole(empRes.data.role); // ✅ store original role
-
-
       const userRes = await getUserByEmployeeId(id);
       setUser({ id: userRes.data.id, username: userRes.data.username, password: "" });
     } catch (error) {
@@ -69,6 +67,16 @@ useEffect(() => {
 
   fetchData();
 }, [id]);
+
+useEffect(() => {
+  if (!employee || !admin.role) return;
+
+  // ❌ HR cannot edit ADMIN
+  if (admin.role === "HR" && employee.role === "ADMIN") {
+    alert("HR is not allowed to edit Admin users");
+    navigate("/admin/employees");
+  }
+}, [employee, admin.role, navigate]);
 
 useEffect(() => {
   if (employee?.role !== "EMPLOYEE") {
@@ -234,7 +242,9 @@ const handleSubmit = async (e) => {
     <div className="d-flex">
       <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} />
       <div className="flex-grow-1">
-        <TopNavbar toggleSidebar={toggleSidebar} username={admin.name} role={admin.role} />
+        <TopNavbar toggleSidebar={toggleSidebar}
+        username={localStorage.getItem("name")}
+        role={localStorage.getItem("role")} />
         <div className="p-4 d-flex justify-content-center">
           <div className="w-75">
             <CardContainer title="Edit Employee">
@@ -333,18 +343,25 @@ const handleSubmit = async (e) => {
                   <Col md={6}>
                     <Form.Group>
                       <Form.Label>Role</Form.Label>
-                      <Form.Select
+<Form.Select
   name="role"
   value={employee.role}
   onChange={handleEmployeeChange}
-  disabled={admin.role === "EMPLOYEE"} // safety
+  disabled={employee.role === "ADMIN"}
 >
+  {/* 🔒 Show ADMIN only if employee is ADMIN (read-only) */}
+  {employee.role === "ADMIN" && (
+    <option value="ADMIN">ADMIN</option>
+  )}
+
   {roles.map((role) => (
     <option key={role} value={role}>
       {role}
     </option>
   ))}
 </Form.Select>
+
+
 
                     </Form.Group>
                   </Col>

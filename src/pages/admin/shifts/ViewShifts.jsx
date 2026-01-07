@@ -4,8 +4,8 @@ import { useNavigate } from "react-router-dom";
 import Sidebar from "../../../components/Sidebar";
 import TopNavbar from "../../../components/Navbar";
 import CardContainer from "../../../components/CardContainer";
-import AppButton from "../../../components/AppButton";
 import { getAllShifts, deleteShift } from "../../../api/shiftApi";
+import PageHeading from "../../../components/PageHeading";
 
 const ViewShifts = ({ onLogout }) => {
   const [shifts, setShifts] = useState([]);
@@ -43,11 +43,12 @@ const ViewShifts = ({ onLogout }) => {
             role={localStorage.getItem("role")}
         />
         <div className="p-4">
-          <CardContainer title="All Shifts">
-            <AppButton
-              text="Add Shift"
-              onClick={() => navigate("/admin/shifts/add")}
-            />
+          <PageHeading
+            title="All Shift"
+            buttonText="Add shift"
+            onButtonClick={() => navigate("/admin/shifts/add")}
+          />
+          <CardContainer>
             {loading ? (
               <div className="text-center mt-3">
                 <Spinner animation="border" />
