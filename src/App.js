@@ -20,12 +20,14 @@ import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
 import WorkSessionHistory from "./pages/employee/WorkSessionHistory";
 import AttendanceHistory from "./pages/employee/AttendanceHistory";
 
+import ManagerDashboard from "./pages/manager/ManagerDashboard";
+
 import jwtHelper from "./utils/jwtHelper";
 import { isTokenExpired } from "./utils/checkToken";
 import ApplyLeave from "./pages/employee/ApplyLeave";
 import EditShift from "./pages/admin/shifts/EditShift";
 import ViewEmployeeShifts from "./pages/admin/employeeShift/ViewEmployeeShifts";
-import AssignEmployeeShift from "./pages/admin/employeeShift/AssignEmployeeShift";
+// import AssignEmployeeShift from "./pages/admin/employeeShift/AssignEmployeeShift";
 
 function App() {
 
@@ -184,6 +186,16 @@ function App() {
             </ProtectedRoute>
           }
         /> 
+
+        {/* ADMIN ROUTES */}
+        <Route
+          path="/manager"
+          element={
+            <ProtectedRoute allowedRoles={["MANAGER"]}>
+              <ManagerDashboard onLogout={handleLogout} />
+            </ProtectedRoute>
+          }
+        />
 
         {/* EMPLOYEE ROUTES */}
         <Route
