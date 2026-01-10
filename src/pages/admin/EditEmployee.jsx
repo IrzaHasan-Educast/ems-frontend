@@ -166,7 +166,7 @@ const handleSubmit = async (e) => {
 
   try {
     /**
-     * 🔴 CASE 1:
+     * CASE 1:
      * EMPLOYEE ➝ NON-EMPLOYEE
      * → delete assigned shift (if exists)
      */
@@ -180,12 +180,12 @@ const handleSubmit = async (e) => {
     }
 
     /**
-     * 🟢 Update employee data
+     * Update employee data
      */
     await updateEmployee(id, employee);
 
     /**
-     * 🟢 CASE 2:
+     * CASE 2:
      * EMPLOYEE ➝ EMPLOYEE
      * → assign / update shift
      */
@@ -212,16 +212,16 @@ const handleSubmit = async (e) => {
     }
 
     /**
-     * 🟢 Update user (username / password)
+     * Update user (username / password)
      */
     if (user.username || user.password) {
       await updateUser(user.id, {
         username: user.username,
         password: user.password || undefined,
+        role: employee.role, 
       });
     }
 
-    // ✅ Done
     navigate("/admin/employees");
   } catch (err) {
     console.error("Error updating employee", err);
