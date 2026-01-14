@@ -1,6 +1,6 @@
 // src/pages/AttendanceHistory.jsx
 import React, { useState, useEffect, useCallback } from "react";
-import Sidebar from "../../components/EmployeeSidebar";
+import Sidebar from "../../components/Sidebar";
 import TopNavbar from "../../components/EmployeeNavbar";
 import CardContainer from "../../components/CardContainer";
 import PageHeading from "../../components/PageHeading";
@@ -186,7 +186,11 @@ const WorkSessionHistory = ({ onLogout }) => {
       <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} />
 
       <div className="flex-grow-1">
-        <TopNavbar toggleSidebar={toggleSidebar} username={employee?.fullName} />
+        <TopNavbar 
+          toggleSidebar={toggleSidebar}
+          username={localStorage.getItem("name")}
+          role={localStorage.getItem("role")}
+        />
 
         <div className="p-4">
           <PageHeading title="Work Session History" />

@@ -1,8 +1,8 @@
 // src/pages/employee/AttendanceHistory.jsx
 import React, { useEffect, useState } from "react";
 import { Table, Spinner, Form, Row, Col, Button, Badge } from "react-bootstrap";
-import Sidebar from "../../components/EmployeeSidebar";
-import TopNavbar from "../../components/EmployeeNavbar";
+import Sidebar from "../../components/Sidebar";
+import TopNavbar from "../../components/Navbar";
 import PageHeading from "../../components/PageHeading";
 import CardContainer from "../../components/CardContainer";
 import { getMyAttendance } from "../../api/attendanceApi";
@@ -98,7 +98,11 @@ const AttendanceHistory = ({ onLogout }) => {
       <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} />
 
       <div className="flex-grow-1">
-        <TopNavbar toggleSidebar={toggleSidebar} username={employee?.fullName || ""} />
+        <TopNavbar 
+          toggleSidebar={toggleSidebar}
+          username={localStorage.getItem("name")}
+          role={localStorage.getItem("role")}
+        /> 
 
         <div className="p-4 container">
           <PageHeading title="My Attendance History" />

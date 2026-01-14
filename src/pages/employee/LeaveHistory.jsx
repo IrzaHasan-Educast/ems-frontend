@@ -1,6 +1,6 @@
 // src/pages/employee/LeaveHistory.jsx
 import React, { useState, useEffect, useCallback } from "react";
-import Sidebar from "../../components/EmployeeSidebar";
+import Sidebar from "../../components/Sidebar";
 import TopNavbar from "../../components/EmployeeNavbar";
 import CardContainer from "../../components/CardContainer";
 import PageHeading from "../../components/PageHeading";

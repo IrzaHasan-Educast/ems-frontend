@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import Sidebar from "../../components/EmployeeSidebar";
+import Sidebar from "../../components/Sidebar";
 import TopNavbar from "../../components/EmployeeNavbar";
 import CardContainer from "../../components/CardContainer";
 import CurrentSessionCard from "../../components/CurrentSessionCard";

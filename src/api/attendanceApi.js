@@ -11,3 +11,8 @@ export const getMyAttendance = () =>
 // Get all attendance (admin only)
 export const getAllAttendance = () =>
   api.get("/v1/attendance/all");
+
+// Manager specific APIs
+export const getManagerAttendanceHistory = () => api.get("v1/attendance/manager/history");
+
+export const getManagerTodayAttendance = () => api.get("v1/attendance/manager/today");

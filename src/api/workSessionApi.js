@@ -30,3 +30,8 @@ export const getMe = () => api.get("/v1/work-sessions/me");
 export const getAllWorkSessions = () => api.get("/v1/admin/work-sessions/all");
 
 export const syncSessionHours = (id, payload) => api.patch(`/v1/admin/work-sessions/${id}/sync-hours`, payload);
+
+// Manager specific APIs
+export const getManagerWorkSessionHistory = () => api.get("v1/work-sessions/manager/history");
+
+export const getManagerTeamActiveSessions = () => api.get("v1/work-sessions/manager/active");

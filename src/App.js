@@ -27,6 +27,8 @@ import { isTokenExpired } from "./utils/checkToken";
 import ApplyLeave from "./pages/employee/ApplyLeave";
 import EditShift from "./pages/admin/shifts/EditShift";
 import ViewEmployeeShifts from "./pages/admin/employeeShift/ViewEmployeeShifts";
+import TeamWorkSessions from "./pages/manager/TeamWorkSessions";
+import TeamAttendance from "./pages/manager/TeamAttendance";
 // import AssignEmployeeShift from "./pages/admin/employeeShift/AssignEmployeeShift";
 
 function App() {
@@ -197,6 +199,12 @@ function App() {
           }
         />
 
+        {/* Manager Dashboard */}
+        <Route path="/manager/team-sessions" element={<TeamWorkSessions onLogout={handleLogout} />} />
+        <Route path="/manager/team-attendance" element={<TeamAttendance onLogout={handleLogout} />} />
+        {/* <Route path="/manager/my-work-history" element={<EmployeeWorkHistory onLogout={handleLogout} />} />
+        <Route path="/manager/my-attendance" element={<EmployeeAttendance onLogout={handleLogout} />} /> */}
+
         {/* EMPLOYEE ROUTES */}
         <Route
           path="/employee"
@@ -210,7 +218,7 @@ function App() {
         <Route
           path="/employee/work-history"
           element={
-            <ProtectedRoute allowedRoles={["EMPLOYEE"]}>
+            <ProtectedRoute allowedRoles={["EMPLOYEE", "MANAGER"]}>
               <WorkSessionHistory onLogout={handleLogout}/>
             </ProtectedRoute>
           }
@@ -218,7 +226,7 @@ function App() {
         <Route
           path="/employee/attendance-history"
           element={
-            <ProtectedRoute allowedRoles={["EMPLOYEE"]}>
+            <ProtectedRoute allowedRoles={["EMPLOYEE", "MANAGER"]}>
               <AttendanceHistory onLogout={handleLogout}/>
             </ProtectedRoute>
           }
@@ -226,7 +234,7 @@ function App() {
         <Route
           path="/employee/leave-history"
           element={
-            <ProtectedRoute allowedRoles={["EMPLOYEE"]}>
+            <ProtectedRoute allowedRoles={["EMPLOYEE", "MANAGER"]}>
               <LeaveHistory onLogout={handleLogout}/>
             </ProtectedRoute>
           }
@@ -234,7 +242,7 @@ function App() {
         <Route
           path="/employee/leave/apply"
           element={
-            <ProtectedRoute allowedRoles={["EMPLOYEE"]}>
+            <ProtectedRoute allowedRoles={["EMPLOYEE", "MANAGER"]}>
               <ApplyLeave onLogout={handleLogout}/>
             </ProtectedRoute>
           }

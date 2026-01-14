@@ -13,3 +13,5 @@ export const updateEmployeeShift = (data) =>
   api.put("/v1/employee-shifts/update", data);
 
 export const getEmployeeShiftByEmployeeId = (empId) => api.get(`/v1/employee-shifts/employeeId/${empId}`);
+export const getEmployeeListByManager = () => api.get("/v1/employee-shifts/employees");
+export const getEmployeeShiftCountByManager = () => api.get("/v1/employee-shifts/shift/employee-count");
