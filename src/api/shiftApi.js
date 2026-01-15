@@ -19,3 +19,7 @@ export const getShiftById = (id) => {
 export const deleteShift = (id) => {
   return api.delete(`/v1/shifts/${id}`);
 };
+
+export const getMyShift = () =>{
+  return api.get("v1/shifts/my");
+}

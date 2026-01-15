@@ -19,6 +19,7 @@ const allColumns = [
   { key: "time", label: "Time" },
   { key: "present", label: "Present" },
   { key: "shift", label: "Shift" },
+  { key: "assignedShift", label: "Assigned Shift" },
 ];
 
 const Attendance = ({ onLogout }) => {
@@ -106,6 +107,7 @@ const Attendance = ({ onLogout }) => {
           time: a.attendanceTime,
           present: a.present ? "Present" : "Absent",
           shift: a.shift,
+          assignedShift: a.assignedShift,
           rawDate: a.attendanceDate,
         }));
 
@@ -126,7 +128,7 @@ const Attendance = ({ onLogout }) => {
 
     const f = records.filter((r) => {
       const matchesSearch =
-        [r.employeeName, r.date, r.time, r.present, r.shift]
+        [r.employeeName, r.date, r.time, r.present, r.shift, r.assignedShift]
           .join(" ")
           .toLowerCase()
           .includes(term);
@@ -169,6 +171,7 @@ const Attendance = ({ onLogout }) => {
           case "time": return formatTime(r.time);
           case "present": return r.present;
           case "shift": return beautifyShift(r.shift);
+          case "assignedShift": return r.assignedShift;
           default: return "";
         }
       })
@@ -208,6 +211,8 @@ const Attendance = ({ onLogout }) => {
         );
       case "shift":
       return beautifyShift(r.shift);
+      case "assignedShift":
+      return beautifyShift(r.assignedShift);
       default:
         return "--";
     }
@@ -236,7 +241,11 @@ const Attendance = ({ onLogout }) => {
     <div className="d-flex">
       <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} />
       <div className="flex-grow-1">
-        <TopNavbar toggleSidebar={toggleSidebar} username={admin.name} role={admin.role} />
+        <TopNavbar 
+          toggleSidebar={toggleSidebar}
+          username={localStorage.getItem("name")}
+          role={localStorage.getItem("role")}
+        />
         <div className="p-4 container">
           <PageHeading title="Attendance Records" />
 

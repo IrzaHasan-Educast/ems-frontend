@@ -1,192 +1,439 @@
-import React, { useState, useEffect } from "react";
-import ManagerSidebar from "../../components/Sidebar";
-import Navbar from "../../components/Navbar";
-import CardContainer from "../../components/CardContainer";
+// src/pages/manager/TeamWorkSessions.jsx
+import React, { useEffect, useState } from "react";
+import { Table, Spinner, Form, Row, Col, Button, Modal, Badge } from "react-bootstrap";
+import Sidebar from "../../components/Sidebar"; 
+import TopNavbar from "../../components/Navbar"; 
 import PageHeading from "../../components/PageHeading";
-import { Table, Badge, Spinner, Form, InputGroup } from "react-bootstrap";
-import * as workSessionApi from "../../api/workSessionApi";
-import {
-  formatTimeAMPM,
-  formatPakistanDateLabel,
-  parseApiDate,
-  getNowUTC,
-} from "../../utils/time";
+import CardContainer from "../../components/CardContainer";
+import { getManagerWorkSessionHistory } from "../../api/workSessionApi"; 
+import { FileEarmarkText, Gear } from "react-bootstrap-icons";
+import * as XLSX from "xlsx";
+import jwtHelper from "../../utils/jwtHelper";
+
+const allColumns = [
+  { key: "sno", label: "S.No" },
+  { key: "employeeName", label: "Employee" },
+  { key: "date", label: "Date" },
+  { key: "clockIn", label: "Clock In" },
+  { key: "clockOut", label: "Clock Out" },
+  { key: "totalHours", label: "Total Hours" },
+  { key: "workingHours", label: "Working Hours" },
+  { key: "breakHours", label: "Break Hours" },
+  { key: "status", label: "Status" },
+];
 
 const TeamWorkSessions = ({ onLogout }) => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [sessions, setSessions] = useState([]);
-  const [filteredSessions, setFilteredSessions] = useState([]);
+  const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  // Filters State
   const [searchTerm, setSearchTerm] = useState("");
-  const [dateFilter, setDateFilter] = useState("");
+  const [selectedEmployee, setSelectedEmployee] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  
+  // Pagination State
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Column Management State
+  const [showColumnsModal, setShowColumnsModal] = useState(false);
+  const [selectedColumns, setSelectedColumns] = useState(allColumns.map(c => c.key));
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
+  // --- TIME & DATE HELPERS ---
+
+  // Date Format: 14-01-2026
+  const formatDateDDMMYYYY = (isoDate) => {
+    if (!isoDate) return "--";
+    const d = new Date(isoDate);
+    // 'en-GB' format gives DD/MM/YYYY, we just replace / with -
+    return d.toLocaleDateString("en-GB").replace(/\//g, "-");
+  };
+
+  const formatTime = (d) => {
+    if (!d) return "--";
+    return new Date(d).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    });
+  };
+
+  const formatDurationFromISO = (iso) => {
+    if (!iso) return "0h 0m";
+    const match = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+    if (!match) return "0h 0m";
+    const hours = parseInt(match[1] || 0);
+    const minutes = parseInt(match[2] || 0);
+    const seconds = parseInt(match[3] || 0);
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    if (minutes > 0) return `${minutes}m ${seconds}s`;
+    return `${seconds}s`;
+  };
+
   const formatDuration = (hoursDecimal) => {
+    if (!hoursDecimal || isNaN(hoursDecimal)) return "0h 0m";
     const totalMinutes = Math.round(hoursDecimal * 60);
     const hrs = Math.floor(totalMinutes / 60);
     const mins = totalMinutes % 60;
     return `${hrs}h ${mins}m`;
   };
 
+  const calculateDynamicHours = (session) => {
+    const now = new Date();
+    const clockIn = new Date(session.clockInTime);
+    let totalMs = now - clockIn; 
+    let totalHoursDecimal = totalMs / (1000 * 60 * 60); 
+
+    const breakISO = session.idleTime; 
+    let breakHoursDecimal = 0;
+
+    if (breakISO) {
+      const match = breakISO.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+      if (match) {
+        const h = parseInt(match[1] || 0);
+        const m = parseInt(match[2] || 0);
+        const s = parseInt(match[3] || 0);
+        breakHoursDecimal = h + m/60 + s/3600;
+      }
+    }
+
+    let workingHours = totalHoursDecimal - breakHoursDecimal;
+
+    return {
+      totalHours: formatDuration(totalHoursDecimal),
+      workingHours: formatDuration(Math.max(workingHours, 0)),
+      breakHours: formatDurationFromISO(breakISO),
+    };
+  };
+
+  // --- DATA FETCHING ---
   useEffect(() => {
     const fetchSessions = async () => {
       setLoading(true);
       try {
-        const res = await workSessionApi.getManagerWorkSessionHistory();
-        const sorted = (res.data || []).sort(
-          (a, b) => parseApiDate(b.clockInTime) - parseApiDate(a.clockInTime)
-        );
-        setSessions(sorted);
-        setFilteredSessions(sorted);
+        const res = await getManagerWorkSessionHistory();
+        
+        const formatted = res.data.map((s) => {
+          let displayStatus = s.status;
+          let totalHours = "";
+          let workingHours = "";
+          let breakHours = formatDurationFromISO(s.idleTime);
+
+          if (displayStatus === "Working" || displayStatus === "On Break") {
+            const dyn = calculateDynamicHours(s);
+            totalHours = dyn.totalHours;
+            workingHours = dyn.workingHours;
+            if (displayStatus === "On Break") {
+              breakHours = dyn.breakHours;
+            }
+          } else {
+            totalHours = formatDurationFromISO(s.totalSessionHours);
+            workingHours = formatDurationFromISO(s.totalWorkingHours);
+          }
+
+          return {
+            ...s,
+            date: formatDateDDMMYYYY(s.clockInTime), // Applied New Date Format Here
+            clockIn: formatTime(s.clockInTime),
+            clockOut: formatTime(s.clockOutTime),
+            totalHours,
+            workingHours,
+            breakHours,
+            displayStatus,
+          };
+        });
+
+        // Sort by Date Descending (Latest first)
+        formatted.sort((a, b) => new Date(b.clockInTime) - new Date(a.clockInTime));
+
+        setSessions(formatted);
+        setFiltered(formatted);
       } catch (err) {
         console.error("Error fetching team sessions:", err);
       }
       setLoading(false);
     };
+
     fetchSessions();
   }, []);
 
+  // --- FILTERING ---
   useEffect(() => {
-    let filtered = sessions;
+    const term = searchTerm.toLowerCase();
+    const monthFilter = selectedMonth;
+    const empFilter = selectedEmployee;
+    const status = statusFilter;
 
-    if (searchTerm) {
-      filtered = filtered.filter((s) =>
-        s.employeeName?.toLowerCase().includes(searchTerm.toLowerCase())
+    let f = sessions.filter((s) => {
+      const matchesSearch =
+        [s.employeeName, s.status, s.date, s.clockIn, s.clockOut].join(" ").toLowerCase().includes(term);
+      const matchesEmployee = empFilter ? s.employeeName === empFilter : true;
+      const matchesMonth = monthFilter ? new Date(s.clockInTime).getMonth() + 1 === parseInt(monthFilter) : true;
+      const matchesStatus = status ? s.displayStatus === status : true;
+
+      return matchesSearch && matchesEmployee && matchesMonth && matchesStatus;
+    });
+
+    setFiltered(f);
+    setCurrentPage(1);
+  }, [searchTerm, selectedEmployee, selectedMonth, statusFilter, sessions]);
+
+  // Handlers
+  const handleReset = () => {
+    setSearchTerm("");
+    setSelectedEmployee("");
+    setSelectedMonth("");
+    setStatusFilter("");
+    setRowsPerPage(10);
+    setCurrentPage(1);
+    setSelectedColumns(allColumns.map(c => c.key));
+  };
+
+  const handleExport = () => {
+    const fileName = prompt("Enter file name:", "Team_WorkSessions");
+    if (!fileName) return;
+
+    const headers = selectedColumns.map(colKey => {
+      const col = allColumns.find(c => c.key === colKey);
+      return col ? col.label : colKey;
+    });
+
+    const data = filtered.map((s, idx) =>
+      selectedColumns.map(col => {
+        switch (col) {
+          case "sno": return idx + 1;
+          case "employeeName": return s.employeeName;
+          case "date": return s.date;
+          case "clockIn": return s.clockIn;
+          case "clockOut": return s.clockOut;
+          case "totalHours": return s.totalHours;
+          case "workingHours": return s.workingHours;
+          case "breakHours": return s.breakHours;
+          case "status": return s.displayStatus;
+          default: return "";
+        }
+      })
+    );
+
+    const worksheetData = [headers, ...data];
+    const ws = XLSX.utils.aoa_to_sheet(worksheetData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Team Sessions");
+    XLSX.writeFile(wb, `${fileName}.xlsx`);
+  };
+
+  const toggleColumn = (key) => {
+    if (selectedColumns.includes(key)) {
+      setSelectedColumns(selectedColumns.filter(k => k !== key));
+    } else {
+      setSelectedColumns(
+        allColumns
+          .filter(c => selectedColumns.includes(c.key) || c.key === key)
+          .map(c => c.key)
       );
     }
+  };
 
-    if (dateFilter) {
-      filtered = filtered.filter((s) =>
-        s.clockInTime?.startsWith(dateFilter)
-      );
+  const totalPages = rowsPerPage === "All" ? 1 : Math.ceil(filtered.length / rowsPerPage);
+  const displayed =
+    rowsPerPage === "All"
+      ? filtered
+      : filtered.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+
+  const handlePrev = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
+  const handleNext = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+
+  const uniqueEmployees = [...new Set(sessions.map((s) => s.employeeName))];
+
+  // Render Cell Logic with Compact Styling
+  const renderCell = (col, s, index) => {
+    switch (col) {
+      case "sno": {
+        const base = rowsPerPage === "All" ? 0 : (currentPage - 1) * Number(rowsPerPage);
+        return base + index + 1;
+      }
+      case "employeeName": return <span className="fw-semibold text-dark">{s.employeeName}</span>;
+      case "date": return s.date;
+      case "clockIn": return s.clockIn;
+      case "clockOut": return s.clockOut;
+      case "totalHours": return s.totalHours;
+      case "workingHours": return s.workingHours;
+      case "breakHours": return s.breakHours;
+      case "status":
+        return (
+          <Badge
+            bg={
+              s.displayStatus === "Completed" ? "success"
+              : s.displayStatus === "Working" ? "primary"
+              : s.displayStatus === "On Break" ? "warning"
+              : s.displayStatus === "Invalid Clocked Out" ? "danger"
+              : s.displayStatus === "Auto Clocked Out" ? "info"
+              : "secondary"
+            }
+            style={{ fontSize: "0.75rem", padding: "4px 6px" }}
+          >
+            {s.displayStatus}
+          </Badge>
+        );
+      default: return "--";
     }
+  };
 
-    setFilteredSessions(filtered);
-  }, [searchTerm, dateFilter, sessions]);
+  // Compact Cell Style Object
+  const cellStyle = {
+    padding: "6px 8px", // Reduced Padding
+    verticalAlign: "middle",
+    fontSize: "0.9rem", // Slightly smaller font
+    whiteSpace: "nowrap" // Prevents breaking
+  };
 
   return (
     <div className="d-flex">
-      <ManagerSidebar isOpen={isSidebarOpen} onLogout={onLogout} />
+      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} />
 
       <div className="flex-grow-1">
-        <Navbar
+        <TopNavbar
           toggleSidebar={toggleSidebar}
           username={localStorage.getItem("name")}
           role={localStorage.getItem("role") || "Manager"}
         />
-
-        <div className="container-fluid p-3">
+        <div className="p-3 container-fluid">
           <PageHeading title="Team Work Sessions" />
 
+          {/* Filters Row */}
           <CardContainer>
-            {/* Filters */}
-            <div className="row mb-3">
-              <div className="col-md-6 mb-2">
-                <InputGroup>
-                  <InputGroup.Text>
-                    <i className="bi bi-search"></i>
-                  </InputGroup.Text>
-                  <Form.Control
-                    placeholder="Search by employee name..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </InputGroup>
-              </div>
-              <div className="col-md-6 mb-2">
-                <InputGroup>
-                  <InputGroup.Text>
-                    <i className="bi bi-calendar"></i>
-                  </InputGroup.Text>
-                  <Form.Control
-                    type="date"
-                    value={dateFilter}
-                    onChange={(e) => setDateFilter(e.target.value)}
-                  />
-                </InputGroup>
-              </div>
-            </div>
+            <Row className="align-items-center g-2">
+              <Col lg={2} md={4} sm={6}>
+                <Form.Control
+                  size="sm"
+                  type="text"
+                  placeholder="Search..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </Col>
+              <Col lg={2} md={4} sm={6}>
+                <Form.Select size="sm" value={selectedEmployee} onChange={(e) => setSelectedEmployee(e.target.value)}>
+                  <option value="">All Employees</option>
+                  {uniqueEmployees.map((emp, idx) => (
+                    <option key={idx} value={emp}>{emp}</option>
+                  ))}
+                </Form.Select>
+              </Col>
+              <Col lg={2} md={4} sm={6}>
+                <Form.Select size="sm" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}>
+                  <option value="">All Months</option>
+                  {["January","February","March","April","May","June","July","August","September","October","November","December"]
+                    .map((name,i) => <option key={i} value={i+1}>{name}</option>)}
+                </Form.Select>
+              </Col>
+              <Col lg={2} md={4} sm={6}>
+                <Form.Select size="sm" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                  <option value="">All Status</option>
+                  <option value="Working">Working</option>
+                  <option value="On Break">On Break</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Auto Clocked Out">Auto Clocked Out</option>
+                </Form.Select>
+              </Col>
+              <Col lg={2} md={4} sm={6}>
+                <Form.Select size="sm" value={rowsPerPage} onChange={(e) => setRowsPerPage(e.target.value)}>
+                  {[10, 25, 50, "All"].map((num) => <option key={num} value={num}>{num} per page</option>)}
+                </Form.Select>
+              </Col>
+              <Col lg={2} md={12} className="d-flex gap-2 justify-content-end">
+                <Button variant="secondary" size="sm" onClick={handleReset}>Reset</Button>
+                <Button variant="outline-primary" size="sm" onClick={() => setShowColumnsModal(true)}><Gear /></Button>
+                <Button variant="success" size="sm" onClick={handleExport}><FileEarmarkText /></Button>
+              </Col>
+            </Row>
+          </CardContainer>
 
+          {/* Table Container */}
+          <CardContainer className="mt-3">
             {loading ? (
-              <div className="text-center p-5">
-                <Spinner animation="border" variant="primary" />
-                <p className="mt-2">Loading sessions...</p>
+              <div className="d-flex justify-content-center align-items-center" style={{ height: "40vh" }}>
+                <Spinner animation="border" variant="warning" />
               </div>
-            ) : filteredSessions.length > 0 ? (
-              <div className="table-responsive">
-                <Table striped bordered hover>
-                  <thead className="table-dark">
-                    <tr>
-                      <th>#</th>
-                      <th>Employee</th>
-                      <th>Date</th>
-                      <th>Clock In</th>
-                      <th>Clock Out</th>
-                      <th>Total Hours</th>
-                      <th>Break Hours</th>
-                      <th>Working Hours</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredSessions.map((session, idx) => {
-                      const clockIn = parseApiDate(session.clockInTime);
-                      const clockOut = parseApiDate(session.clockOutTime);
-
-                      const totalBreakMillis =
-                        session.breaks?.reduce((sum, b) => {
-                          const start = parseApiDate(b.startTime);
-                          const end = parseApiDate(b.endTime) || getNowUTC();
-                          if (!start) return sum;
-                          return sum + (end.getTime() - start.getTime());
-                        }, 0) || 0;
-
-                      const totalMillis =
-                        (clockOut || getNowUTC()).getTime() -
-                        (clockIn?.getTime() || 0);
-                      const netMillis = totalMillis - totalBreakMillis;
-
-                      const isActive = !session.clockOutTime;
-                      const isOnBreak = session.breaks?.some((b) => !b.endTime);
-
-                      return (
-                        <tr key={idx}>
-                          <td>{idx + 1}</td>
-                          <td>
-                            <strong>{session.employeeName || "Unknown"}</strong>
-                          </td>
-                          <td>{formatPakistanDateLabel(session.clockInTime)}</td>
-                          <td>{formatTimeAMPM(session.clockInTime)}</td>
-                          <td>
-                            {session.clockOutTime
-                              ? formatTimeAMPM(session.clockOutTime)
-                              : "--"}
-                          </td>
-                          <td>{formatDuration(totalMillis / 1000 / 3600)}</td>
-                          <td>{formatDuration(totalBreakMillis / 1000 / 3600)}</td>
-                          <td>{formatDuration(netMillis / 1000 / 3600)}</td>
-                          <td>
-                            {isActive ? (
-                              isOnBreak ? (
-                                <Badge bg="warning">On Break</Badge>
-                              ) : (
-                                <Badge bg="info">Working</Badge>
-                              )
-                            ) : (
-                              <Badge bg="success">Completed</Badge>
-                            )}
-                          </td>
+            ) : filtered.length > 0 ? (
+              <>
+                <div className="table-responsive">
+                  <Table bordered hover size="sm" className="mt-2 mb-0">
+                    <thead className="text-center" style={{ backgroundColor: "#FFA500", color: "white" }}>
+                      <tr>
+                        {selectedColumns.map(colKey => {
+                          const col = allColumns.find(c => c.key === colKey);
+                          return (
+                            <th key={colKey} style={{ padding: "8px", whiteSpace: "nowrap" }}>
+                              {col ? col.label : colKey}
+                            </th>
+                          );
+                        })}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {displayed.map((s, idx) => (
+                        <tr key={idx} style={{ textAlign: "center" }}>
+                          {selectedColumns.map(col => (
+                            <td key={col} style={cellStyle}>
+                              {renderCell(col, s, idx)}
+                            </td>
+                          ))}
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </Table>
-              </div>
+                      ))}
+                    </tbody>
+                  </Table>
+                </div>
+
+                {/* Pagination */}
+                {rowsPerPage !== "All" && (
+                  <div className="d-flex justify-content-between align-items-center mt-3">
+                    <Button variant="outline-primary" size="sm" disabled={currentPage === 1} onClick={handlePrev}>
+                      Previous
+                    </Button>
+                    <span className="small fw-semibold text-muted">Page {currentPage} of {totalPages}</span>
+                    <Button variant="outline-primary" size="sm" disabled={currentPage === totalPages} onClick={handleNext}>
+                      Next
+                    </Button>
+                  </div>
+                )}
+              </>
             ) : (
-              <p className="text-center text-muted">No sessions found</p>
+              <div className="text-center p-4 text-muted">No Work Sessions Found</div>
             )}
           </CardContainer>
+
+          {/* Column Toggle Modal */}
+          <Modal show={showColumnsModal} onHide={() => setShowColumnsModal(false)} centered>
+            <Modal.Header closeButton>
+              <Modal.Title>Table Columns</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+              <Form>
+                {allColumns.map(col => (
+                  <Form.Check
+                    key={col.key}
+                    type="switch"
+                    id={`col-switch-${col.key}`}
+                    label={col.label}
+                    checked={selectedColumns.includes(col.key)}
+                    onChange={() => toggleColumn(col.key)}
+                    className="mb-2"
+                  />
+                ))}
+              </Form>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button variant="warning" size="sm" className="text-white" onClick={() => setShowColumnsModal(false)}>Done</Button>
+            </Modal.Footer>
+          </Modal>
+
         </div>
       </div>
     </div>
