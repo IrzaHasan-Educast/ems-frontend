@@ -3,7 +3,8 @@ import Sidebar from "../../components/Sidebar";
 import TopNavbar from "../../components/Navbar"; // Consistent Navbar
 import CardContainer from "../../components/CardContainer";
 import PageHeading from "../../components/PageHeading";
-import { Trash, FileEarmarkText, Eye } from "react-bootstrap-icons";
+import { Trash, FileEarmarkText, Eye, Image as ImageIcon } from "react-bootstrap-icons";
+// import { FileEarmarkText, Eye, Image as ImageIcon } from "react-bootstrap-icons";
 import { useNavigate } from "react-router-dom";
 import { Table, Form, Button, InputGroup, FormControl, Badge, Modal, Spinner, Row, Col } from "react-bootstrap";
 import { getCurrentUser } from "../../api/workSessionApi";
@@ -34,6 +35,10 @@ const LeaveHistory = ({ onLogout }) => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
+  // modals
+    const [showImageModal, setShowImageModal] = useState(false);
+    const [selectedImage, setSelectedImage] = useState(null);
+  
   const navigate = useNavigate();
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
@@ -121,7 +126,10 @@ const LeaveHistory = ({ onLogout }) => {
     setCurrentPage(1);
     setFilteredLeaves(leaves);
   };
-
+  const handleViewImage = (url) => {
+    setSelectedImage(url);
+    setShowImageModal(true);
+  };
   const handleDelete = async (leaveId) => {
     if (window.confirm("Are you sure you want to delete this pending leave request?")) {
       try {
@@ -276,7 +284,7 @@ const LeaveHistory = ({ onLogout }) => {
                             {lv.startDate} <i className="bi bi-arrow-right-short text-muted"></i> {lv.endDate}
                           </td>
                           <td>{getStatusBadge(lv.status)}</td>
-                          <td>
+                          {/* <td>
                             {lv.prescriptionImg ? (
                               <a href={lv.prescriptionImg} target="_blank" rel="noreferrer" className="btn btn-outline-info btn-sm py-0 px-2">
                                 <i className="bi bi-file-earmark-image"></i>
@@ -284,7 +292,21 @@ const LeaveHistory = ({ onLogout }) => {
                             ) : (
                               <span className="text-muted">-</span>
                             )}
-                          </td>
+                          </td> */}
+                          <td>
+                                                      {lv.prescriptionImg ? (
+                                                        <Button 
+                                                          variant="outline-primary" size="sm" 
+                                                          style={{padding: "2px 6px"}} 
+                                                          onClick={() => handleViewImage(lv.prescriptionImg)}
+                                                          title="View Prescription"
+                                                        >
+                                                          <ImageIcon />
+                                                        </Button>
+                                                      ) : (
+                                                        <span className="text-muted small">--</span>
+                                                      )}
+                                                    </td>
                           <td>
                             {lv.status.toUpperCase() === "PENDING" ? (
                               <Button variant="outline-danger" size="sm" style={{padding: "2px 6px"}} onClick={() => handleDelete(lv.id)} title="Delete Request">
@@ -311,6 +333,16 @@ const LeaveHistory = ({ onLogout }) => {
               </>
             )}
           </CardContainer>
+          {/* PRESCRIPTION MODAL */}
+          <Modal show={showImageModal} onHide={() => setShowImageModal(false)} centered size="lg">
+            <Modal.Header closeButton className="py-2"><Modal.Title className="fs-6">Medical Proof</Modal.Title></Modal.Header>
+            <Modal.Body className="text-center p-4 bg-light">
+               {selectedImage && (
+                 <img src={selectedImage} alt="Prescription" className="img-fluid rounded shadow-sm" style={{maxHeight: "70vh"}} />
+               )}
+            </Modal.Body>
+          </Modal>
+
 
           {/* DESCRIPTION MODAL */}
           <Modal show={showModal} onHide={() => setShowModal(false)} centered>

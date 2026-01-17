@@ -168,6 +168,13 @@ const Sidebar = ({ isOpen, onLogout }) => {
                     <i className="bi bi-calendar2-week me-2"></i>
                     {isOpen && "Team Attendance"}
                   </NavLink>
+
+                  <NavLink to="/manager/team-leave" className="text-white mb-2" style={linkStyle}>
+                    <i className="bi bi-calendar2-week me-2"></i>
+                    {isOpen && "Team Leave Request"}
+                  </NavLink>
+
+
                 </>
               )}
             </>

@@ -21,6 +21,7 @@ import WorkSessionHistory from "./pages/employee/WorkSessionHistory";
 import AttendanceHistory from "./pages/employee/AttendanceHistory";
 
 import ManagerDashboard from "./pages/manager/ManagerDashboard";
+import ManagerLeaveRequests from "./pages/manager/ManagerLeaveRequests";
 
 import jwtHelper from "./utils/jwtHelper";
 import { isTokenExpired } from "./utils/checkToken";
@@ -202,6 +203,14 @@ function App() {
         {/* Manager Dashboard */}
         <Route path="/manager/team-sessions" element={<TeamWorkSessions onLogout={handleLogout} />} />
         <Route path="/manager/team-attendance" element={<TeamAttendance onLogout={handleLogout} />} />
+        <Route
+          path="/manager/team-leave"
+          element={
+            <ProtectedRoute allowedRoles={["MANAGER"]}>
+              <ManagerLeaveRequests onLogout={handleLogout} />
+            </ProtectedRoute>
+          }
+        />
         {/* <Route path="/manager/my-work-history" element={<EmployeeWorkHistory onLogout={handleLogout} />} />
         <Route path="/manager/my-attendance" element={<EmployeeAttendance onLogout={handleLogout} />} /> */}
 

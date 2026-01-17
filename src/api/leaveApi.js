@@ -20,6 +20,9 @@ export const setPendingLeave = (leaveId) => api.put(`/v1/leaves/${leaveId}/pendi
 // Get all leaves (admin)
 export const getAllLeaves = () => api.get("/v1/leaves/admin");
 
+// Get leaves of their employees
+export const getEmployeeLeavesByManager = () => api.get("/v1/leaves/manager");
+
 // Get leaves by employee
 export const getLeavesByEmployee = (employeeId) => api.get(`/v1/leaves/employee/${employeeId}`);
 

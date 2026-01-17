@@ -1,97 +1,91 @@
-// src/pages/admin/AllLeaves.jsx
 import React, { useEffect, useState } from "react";
-import { Table, Spinner, Form, Row, Col, Button, Modal, Badge } from "react-bootstrap";
+import { Table, Spinner, Form, Row, Col, Button, Modal, Badge, InputGroup } from "react-bootstrap";
 import Sidebar from "../../components/Sidebar";
 import TopNavbar from "../../components/Navbar";
 import PageHeading from "../../components/PageHeading";
 import CardContainer from "../../components/CardContainer";
 import { getAllLeaves, approveLeave, rejectLeave, setPendingLeave } from "../../api/leaveApi";
 import { getCurrentUser } from "../../api/userApi";
-import { Gear, FileEarmarkText } from "react-bootstrap-icons";
-import { CheckCircle, XCircle, Clock } from "react-bootstrap-icons";
+import { Gear, FileEarmarkText, CheckCircle, XCircle, Clock, Eye, Image as ImageIcon } from "react-bootstrap-icons";
 import * as XLSX from "xlsx";
 import { formatDate } from "../../utils/dateHelper";
 
+// ✅ Column Definitions
 const allColumns = [
   { key: "sno", label: "S.No" },
-  { key: "employeeName", label: "Employee" },
+  { key: "employeeName", label: "Employee Name" },
   { key: "leaveType", label: "Leave Type" },
-  { key: "description", label: "Description" },
+  { key: "description", label: "Reason" },
   { key: "startDate", label: "Start Date" },
   { key: "endDate", label: "End Date" },
   { key: "duration", label: "Days" },
-  { key: "prescriptionImg", label: "Prescription" },
+  { key: "prescriptionImg", label: "Proof / Link" },
   { key: "status", label: "Status" },
   { key: "actions", label: "Actions" },
 ];
 
 const AllLeaves = ({ onLogout }) => {
+  // States
   const [leaves, setLeaves] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(true);
-
+  
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [monthFilter, setMonthFilter] = useState("");
   const [employeeFilter, setEmployeeFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
-
+  
   // Pagination
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
-
-  // Column settings
+  
+  // Column Management
   const [selectedColumns, setSelectedColumns] = useState(allColumns.map(c => c.key));
   const [showColumnsModal, setShowColumnsModal] = useState(false);
+  
+  // View Modals
+  const [showDescModal, setShowDescModal] = useState(false);
+  const [modalDescription, setModalDescription] = useState("");
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
 
+  // User & UI
   const [admin, setAdmin] = useState({ name: "", role: "" });
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-    // Description modal
-  const [showDescModal, setShowDescModal] = useState(false);
-  const [modalDescription, setModalDescription] = useState("");
-
-  // Fetch admin
+  // --- INITIAL FETCH ---
   useEffect(() => {
-    const fetchAdmin = async () => {
-      const res = await getCurrentUser();
-      setAdmin({ name: res.data.fullName, role: res.data.role });
-    };
-    fetchAdmin();
-  }, []);
-
-  // Fetch leave data
-  useEffect(() => {
-    const fetchLeaves = async () => {
+    const fetchData = async () => {
       try {
-        const res = await getAllLeaves();
-        const formatted = res.data
+        const userRes = await getCurrentUser();
+        setAdmin({ name: userRes.data.fullName, role: userRes.data.role });
+
+        const leavesRes = await getAllLeaves();
+        const formatted = leavesRes.data
           .map(l => ({
             ...l,
             startDate: formatDate(l.startDate),
             endDate: formatDate(l.endDate),
             status: l.status.charAt(0).toUpperCase() + l.status.slice(1).toLowerCase(),
-            leaveType: l.leaveType.charAt(0).toUpperCase() + l.leaveType.slice(1).toLowerCase(),
+            leaveType: l.leaveType.charAt(0).toUpperCase() + l.leaveType.slice(1).toLowerCase().replace("_", " "),
           }))
-          .sort((a, b) => new Date(b.startDate) - new Date(a.startDate));
+          .sort((a, b) => new Date(b.startDate) - new Date(a.startDate)); // Latest first
 
         setLeaves(formatted);
         setFiltered(formatted);
       } catch (error) {
-        console.error(error);
+        console.error("Fetch Error:", error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
-    fetchLeaves();
+    fetchData();
   }, []);
 
-  // Unique filters (dropdown)
-  const employeeNames = [...new Set(leaves.map(l => l.employeeName))];
-  const leaveTypes = [...new Set(leaves.map(l => l.leaveType))];
-
-  // Main Filtering Logic
+  // --- FILTER LOGIC ---
   useEffect(() => {
     const term = searchTerm.toLowerCase();
 
@@ -113,6 +107,7 @@ const AllLeaves = ({ onLogout }) => {
     setCurrentPage(1);
   }, [searchTerm, statusFilter, monthFilter, employeeFilter, typeFilter, leaves]);
 
+  // --- HELPERS ---
   const handleReset = () => {
     setSearchTerm("");
     setStatusFilter("");
@@ -124,347 +119,226 @@ const AllLeaves = ({ onLogout }) => {
     setSelectedColumns(allColumns.map(c => c.key));
   };
 
-  // Pagination math
-  const totalPages = rowsPerPage === "All" ? 1 : Math.ceil(filtered.length / rowsPerPage);
-  const start = rowsPerPage === "All" ? 0 : (currentPage - 1) * rowsPerPage;
-  const end = rowsPerPage === "All" ? filtered.length : currentPage * rowsPerPage;
-
-  const displayed = filtered.slice(start, end);
-  const openDescriptionModal = (desc) => {
-      setModalDescription(desc || "--");
-      setShowDescModal(true);
+  const toggleColumn = (key) => {
+    if (selectedColumns.includes(key)) {
+      setSelectedColumns(selectedColumns.filter(k => k !== key));
+    } else {
+      const newSelection = allColumns
+        .filter(c => selectedColumns.includes(c.key) || c.key === key)
+        .map(c => c.key);
+      setSelectedColumns(newSelection);
+    }
   };
-  // ============================================
-  //   ✅ UPDATED EXCEL EXPORT FUNCTION
-  // ============================================
-  const exportToExcel = () => {
-    const fileName = window.prompt("Enter file name:");
 
-    // ❌ User pressed Cancel OR Empty → Stop
-    if (!fileName || fileName.trim() === "") return;
+  const handleExport = () => {
+    const fileName = prompt("Enter file name:", "All_Leaves");
+    if (!fileName) return;
 
-    // Only selected columns (Actions column excluded)
-    const exportCols = selectedColumns.filter(col => col !== "actions");
+    const headers = selectedColumns
+      .filter(col => col !== "actions")
+      .map(k => allColumns.find(c => c.key === k).label);
 
-    const excelData = filtered.map((row, index) => {
-      const obj = {};
+    const data = filtered.map((row, index) => 
+      selectedColumns
+        .filter(col => col !== "actions")
+        .map(col => {
+           if(col === "sno") return index + 1;
+           if(col === "prescriptionImg") return row.prescriptionImg || "N/A";
+           return row[col] || "--";
+        })
+    );
 
-      exportCols.forEach(col => {
-        switch (col) {
-          case "sno":
-            obj["S.No"] = index + 1;
-            break;
-          case "employeeName":
-            obj["Employee"] = row.employeeName;
-            break;
-          case "leaveType":
-            obj["Leave Type"] = row.leaveType;
-            break;
-          case "description":
-            obj["Description"] = row.description;
-            break;
-          case "startDate":
-            obj["Start Date"] = row.startDate;
-            break;
-          case "endDate":
-            obj["End Date"] = row.endDate;
-            break;
-          case "duration":
-            obj["Days"] = row.duration;
-            break;
-          case "prescriptionImg":
-            obj["Prescription"] = row.prescriptionImg || "--";
-            break;
-          case "status":
-            obj["Status"] = row.status;
-            break;
-          default:
-            break;
-        }
-      });
-
-      return obj;
-    });
-
-    const ws = XLSX.utils.json_to_sheet(excelData);
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Leaves");
-
     XLSX.writeFile(wb, `${fileName}.xlsx`);
   };
 
-  // Render table cells
+  const handleViewImage = (url) => {
+    setSelectedImage(url);
+    setShowImageModal(true);
+  };
+
+  const handleAction = async (id, newStatus) => {
+    try {
+        if (newStatus === "Approved") await approveLeave(id);
+        if (newStatus === "Rejected") await rejectLeave(id);
+        if (newStatus === "Pending") await setPendingLeave(id);
+
+        // Optimistic Update
+        const updatedList = leaves.map(l => l.id === id ? { ...l, status: newStatus } : l);
+        setLeaves(updatedList);
+        // Filter logic will automatically handle `filtered` state due to useEffect dependency
+    } catch (err) {
+        console.error(err);
+        alert("Failed to update status");
+    }
+  };
+
+  // --- PAGINATION ---
+  const totalPages = rowsPerPage === "All" ? 1 : Math.ceil(filtered.length / rowsPerPage);
+  const displayed = rowsPerPage === "All" ? filtered : filtered.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+  const handlePrev = () => currentPage > 1 && setCurrentPage(currentPage - 1);
+  const handleNext = () => currentPage < totalPages && setCurrentPage(currentPage + 1);
+
+  // --- UNIQUE DROPDOWN OPTIONS ---
+  const employeeNames = [...new Set(leaves.map(l => l.employeeName))].sort();
+  const leaveTypes = [...new Set(leaves.map(l => l.leaveType))].sort();
+
+  // --- RENDER CELL ---
   const renderCell = (col, l, idx) => {
     switch (col) {
-      case "sno":
-        return start + idx + 1;
-        case "description":
-          const desc = l.description || "";
-          return desc.length > 30 ? (
-            <>
-              {desc.substring(0, 30)}...
-              <Button variant="link" size="sm" onClick={() => openDescriptionModal(desc)}>More</Button>
-            </>
-          ) : desc || "--";
+      case "sno": return rowsPerPage === "All" ? idx + 1 : (currentPage - 1) * rowsPerPage + idx + 1;
+      case "employeeName": return <span className="fw-bold">{l.employeeName}</span>;
+      case "leaveType": return <Badge bg="info" text="dark" className="fw-normal">{l.leaveType}</Badge>;
+      case "description":
+        return <Button variant="link" className="p-0 text-decoration-none small" onClick={() => { setModalDescription(l.description); setShowDescModal(true); }}>View</Button>;
       case "prescriptionImg":
         return l.prescriptionImg ? (
-          <a href={l.prescriptionImg} target="_blank" rel="noreferrer">
-            View
-          </a>
-        ) : (
-          "--"
-        );
+          <Button variant="outline-primary" size="sm" style={{padding: "1px 5px"}} onClick={() => handleViewImage(l.prescriptionImg)} title="View Proof">
+            <ImageIcon />
+          </Button>
+        ) : <span className="text-muted small">--</span>;
       case "status":
+         return <Badge bg={l.status === "Approved" ? "success" : l.status === "Rejected" ? "danger" : "warning"} text={l.status === "Pending" ? "dark" : "white"}>{l.status}</Badge>;
+      case "actions":
         return (
-          <Badge
-            bg={
-              l.status === "Approved"
-                ? "success"
-                : l.status === "Rejected"
-                ? "danger"
-                : "warning"
-            }
-          >
-            {l.status}
-          </Badge>
+          <div className="d-flex gap-2 justify-content-center">
+            {l.status !== "Approved" && <CheckCircle size={18} color="green" style={{cursor: "pointer"}} title="Approve" onClick={() => handleAction(l.id, "Approved")} />}
+            {l.status !== "Rejected" && <XCircle size={18} color="red" style={{cursor: "pointer"}} title="Reject" onClick={() => handleAction(l.id, "Rejected")} />}
+            {l.status !== "Pending" && <Clock size={18} color="orange" style={{cursor: "pointer"}} title="Mark Pending" onClick={() => handleAction(l.id, "Pending")} />}
+          </div>
         );
-
-// ... inside renderCell
-case "actions":
-  return (
-    <div className="d-flex gap-2 justify-content-center">
-      {["Pending", "Approved", "Rejected"].map(status => {
-        if (l.status === status) return null; // Skip current status
-        let IconComp;
-        let color;
-        switch (status) {
-          case "Approved":
-            IconComp = CheckCircle;
-            color = "green";
-            break;
-          case "Rejected":
-            IconComp = XCircle;
-            color = "red";
-            break;
-          case "Pending":
-            IconComp = Clock;
-            color = "orange";
-            break;
-          default:
-            return null;
-        }
-
-        return (
-          <IconComp
-            key={status}
-            size={20}
-            color={color}
-            style={{ cursor: "pointer" }}
-            title={`Set to ${status}`}
-            onClick={async () => {
-              try {
-                if (status === "Approved") await approveLeave(l.id);
-                if (status === "Rejected") await rejectLeave(l.id);
-                if (status === "Pending") await setPendingLeave(l.id);
-
-                // Update frontend state immediately
-                setLeaves(prev =>
-                  prev.map(leave =>
-                    leave.id === l.id ? { ...leave, status } : leave
-                  )
-                );
-                setFiltered(prev =>
-                  prev.map(leave =>
-                    leave.id === l.id ? { ...leave, status } : leave
-                  )
-                );
-              } catch (err) {
-                console.error(err);
-                alert("Failed to update status");
-              }
-            }}
-          />
-        );
-      })}
-    </div>
-  );
-
-      default:
-        return l[col];
+      default: return l[col] || "--";
     }
   };
 
   return (
     <div className="d-flex">
-      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} />
-      <div className="flex-grow-1">
-        <TopNavbar toggleSidebar={toggleSidebar} username={admin.name} role={admin.role} />
-        <div className="p-4 container">
+      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar} />
+      <div className="flex-grow-1" style={{ minWidth: 0 }}>
+        <TopNavbar toggleSidebar={toggleSidebar} username={admin.name} role={admin.role} onLogout={onLogout} />
+        
+        <div className="p-3 container-fluid">
           <PageHeading title="All Leave Requests" />
 
-          {/* Filters */}
+          {/* FILTERS */}
           <CardContainer>
-            <Row className="align-items-center g-2">
-              <Col md={3}>
-                <Form.Control
-                  type="text"
-                  placeholder="Search..."
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                />
+            <Row className="g-2 align-items-center">
+              <Col lg={3} md={6}>
+                 <InputGroup size="sm">
+                   <InputGroup.Text><i className="bi bi-search"></i></InputGroup.Text>
+                   <Form.Control placeholder="Search..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                 </InputGroup>
               </Col>
-
-              <Col md={3}>
-                <Form.Select value={employeeFilter} onChange={e => setEmployeeFilter(e.target.value)}>
+              <Col lg={2} md={4} sm={6}>
+                <Form.Select size="sm" value={employeeFilter} onChange={e => setEmployeeFilter(e.target.value)}>
                   <option value="">All Employees</option>
-                  {employeeNames.map((n, i) => (
-                    <option key={i} value={n}>
-                      {n}
-                    </option>
-                  ))}
+                  {employeeNames.map((n, i) => <option key={i} value={n}>{n}</option>)}
                 </Form.Select>
               </Col>
-
-              <Col md={2}>
-                <Form.Select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
-                  <option value="">All Leave Types</option>
-                  {leaveTypes.map((t, i) => (
-                    <option key={i} value={t}>
-                      {t}
-                    </option>
-                  ))}
+              <Col lg={2} md={4} sm={6}>
+                <Form.Select size="sm" value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
+                  <option value="">All Types</option>
+                  {leaveTypes.map((t, i) => <option key={i} value={t}>{t}</option>)}
                 </Form.Select>
               </Col>
-
-              <Col md={2}>
-                <Form.Select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+              <Col lg={2} md={4} sm={6}>
+                <Form.Select size="sm" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
                   <option value="">All Status</option>
                   <option value="Pending">Pending</option>
                   <option value="Approved">Approved</option>
                   <option value="Rejected">Rejected</option>
                 </Form.Select>
               </Col>
-
-              <Col md={2}>
-                <Form.Select value={monthFilter} onChange={e => setMonthFilter(e.target.value)}>
+              <Col lg={2} md={4} sm={6}>
+                <Form.Select size="sm" value={monthFilter} onChange={e => setMonthFilter(e.target.value)}>
                   <option value="">All Months</option>
-                  {["January","Feburary","March","April","May","June","July","August","September","October","November","December"].map((m,i)=>(
-                    <option key={i} value={i+1}>{m}</option>
-                  ))}
+                  {["January","February","March","April","May","June","July","August","September","October","November","December"].map((m,i)=><option key={i} value={i+1}>{m}</option>)}
                 </Form.Select>
               </Col>
-
-              <Col md={2}>
-                <Form.Select value={rowsPerPage} onChange={(e)=>setRowsPerPage(e.target.value)}>
-                  <option value={10}>10 rows</option>
-                  <option value={25}>25 rows</option>
-                  <option value={50}>50 rows</option>
-                  <option value="All">All</option>
-                </Form.Select>
-              </Col>
-
-              <Col md={10} className="d-flex gap-2 justify-content-end">
-                <Button variant="secondary" onClick={handleReset}>Reset</Button>
-                <Button variant="outline-primary" onClick={() => setShowColumnsModal(true)}>
-                  <Gear />
-                </Button>
-                <Button variant="success" onClick={exportToExcel}>
-                  <FileEarmarkText />
-                </Button>
+              <Col lg={1} md={4} sm={6}>
+                 <Form.Select size="sm" value={rowsPerPage} onChange={(e) => {setRowsPerPage(e.target.value); setCurrentPage(1);}}>
+                   {[10, 25, 50, "All"].map(n => <option key={n} value={n}>{n}</option>)}
+                 </Form.Select>
               </Col>
             </Row>
+            
+            <div className="d-flex justify-content-end gap-2 mt-2">
+                <Button variant="secondary" size="sm" onClick={handleReset}>Reset</Button>
+                <Button variant="outline-primary" size="sm" onClick={() => setShowColumnsModal(true)} title="Columns"><Gear /></Button>
+                <Button variant="success" size="sm" onClick={handleExport}><FileEarmarkText /> Export</Button>
+            </div>
           </CardContainer>
 
-          {/* Table */}
-          <CardContainer className="mt-3">
+          {/* TABLE */}
+          <CardContainer className="mt-3" style={{ padding: "0" }}>
             {loading ? (
-              <div className="d-flex justify-content-center align-items-center" style={{ height: "40vh" }}>
-                <Spinner animation="border" variant="warning" />
-              </div>
+              <div className="text-center p-5"><Spinner animation="border" variant="warning" /></div>
+            ) : filtered.length === 0 ? (
+               <div className="text-center p-5 text-muted">No records found.</div>
             ) : (
               <>
-                <Table bordered hover responsive className="mt-2 text-center">
-                  <thead style={{ backgroundColor: "#FFA500", color: "white" }}>
-                    <tr>
-                      {selectedColumns.map(cKey => (
-                        <th key={cKey}>{allColumns.find(c => c.key === cKey)?.label}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {displayed.map((l, idx) => (
-                      <tr key={l.id}>
-                        {selectedColumns.map(col => (
-                          <td key={col}>{renderCell(col, l, idx)}</td>
+                <div style={{ overflowX: "auto" }}>
+                  <Table bordered hover size="sm" className="mb-0 w-100">
+                    <thead style={{ backgroundColor: "#FFA500", color: "white", textAlign: "center" }}>
+                      <tr>
+                        {selectedColumns.map(cKey => (
+                          <th key={cKey} style={{padding: "8px", whiteSpace: "nowrap"}}>
+                             {allColumns.find(c => c.key === cKey)?.label}
+                          </th>
                         ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </Table>
+                    </thead>
+                    <tbody>
+                      {displayed.map((l, idx) => (
+                        <tr key={l.id} style={{textAlign: "center", verticalAlign: "middle"}}>
+                          {selectedColumns.map(col => (
+                            <td key={col} style={{padding: "6px"}}>{renderCell(col, l, idx)}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                </div>
 
-                {/* Pagination */}
+                {/* PAGINATION */}
                 {rowsPerPage !== "All" && (
-                  <div className="d-flex justify-content-between align-items-center mt-2">
-                    <Button
-                      variant="outline-primary"
-                      disabled={currentPage === 1}
-                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    >
-                      Previous
-                    </Button>
-
-                    <span>
-                      Page {currentPage} of {totalPages}
-                    </span>
-
-                    <Button
-                      variant="outline-primary"
-                      disabled={currentPage === totalPages}
-                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    >
-                      Next
-                    </Button>
+                  <div className="d-flex justify-content-between align-items-center p-3">
+                    <Button variant="outline-primary" size="sm" disabled={currentPage === 1} onClick={handlePrev}>Previous</Button>
+                    <span className="small text-muted">Page {currentPage} of {totalPages}</span>
+                    <Button variant="outline-primary" size="sm" disabled={currentPage === totalPages} onClick={handleNext}>Next</Button>
                   </div>
                 )}
               </>
             )}
           </CardContainer>
 
-          {/* Columns Modal */}
-          <Modal show={showColumnsModal} onHide={() => setShowColumnsModal(false)}>
-            <Modal.Header closeButton>
-              <Modal.Title>Select Columns to Display</Modal.Title>
-            </Modal.Header>
+          {/* MODALS */}
+          {/* Columns */}
+          <Modal show={showColumnsModal} onHide={() => setShowColumnsModal(false)} centered size="sm" scrollable>
+            <Modal.Header closeButton className="py-2"><Modal.Title className="fs-6">Show/Hide Columns</Modal.Title></Modal.Header>
             <Modal.Body>
               {allColumns.map(c => (
-                <Form.Check
-                  key={c.key}
-                  type="checkbox"
-                  label={c.label}
-                  checked={selectedColumns.includes(c.key)}
-                  onChange={() => {
-                    setSelectedColumns(prev =>
-                      prev.includes(c.key)
-                        ? prev.filter(k => k !== c.key)
-                        : [...prev, c.key]
-                    );
-                  }}
-                />
+                <Form.Check key={c.key} type="switch" label={c.label} checked={selectedColumns.includes(c.key)} onChange={() => toggleColumn(c.key)} className="mb-2" />
               ))}
             </Modal.Body>
-            <Modal.Footer>
-              <Button variant="secondary" onClick={() => setShowColumnsModal(false)}>
-                Close
-              </Button>
-            </Modal.Footer>
           </Modal>
 
-          {/* Description Modal */}
-          <Modal show={showDescModal} onHide={()=>setShowDescModal(false)}>
-            <Modal.Header closeButton><Modal.Title>Leave Description</Modal.Title></Modal.Header>
-            <Modal.Body>{modalDescription}</Modal.Body>
-            <Modal.Footer><Button variant="secondary" onClick={()=>setShowDescModal(false)}>Close</Button></Modal.Footer>
+          {/* Description */}
+          <Modal show={showDescModal} onHide={()=>setShowDescModal(false)} centered>
+            <Modal.Header closeButton className="py-2"><Modal.Title className="fs-6">Reason</Modal.Title></Modal.Header>
+            <Modal.Body className="p-4"><p className="mb-0 text-break">{modalDescription || "No description."}</p></Modal.Body>
           </Modal>
+
+          {/* Image */}
+          <Modal show={showImageModal} onHide={() => setShowImageModal(false)} centered size="lg">
+             <Modal.Header closeButton className="py-2"><Modal.Title className="fs-6">Proof</Modal.Title></Modal.Header>
+             <Modal.Body className="text-center bg-light p-4">
+                {selectedImage && <img src={selectedImage} alt="Prescription" className="img-fluid rounded shadow-sm" style={{maxHeight: "75vh"}} />}
+             </Modal.Body>
+          </Modal>
+
         </div>
       </div>
     </div>
