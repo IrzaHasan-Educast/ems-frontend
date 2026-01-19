@@ -10,7 +10,6 @@ import AddEmployee from "./pages/admin/AddEmployee";
 import EditEmployee from "./pages/admin/EditEmployee";
 import ViewShifts from "./pages/admin/shifts/ViewShifts";
 import AddShift from "./pages/admin/shifts/AddShift";
-
 import WorkSessions from "./pages/admin/WorkSessions";
 import Attendance from "./pages/admin/Attendance";
 import LeaveHistory from "./pages/employee/LeaveHistory"; 
@@ -22,14 +21,16 @@ import AttendanceHistory from "./pages/employee/AttendanceHistory";
 
 import ManagerDashboard from "./pages/manager/ManagerDashboard";
 import ManagerLeaveRequests from "./pages/manager/ManagerLeaveRequests";
+import ManagerTeam from "./pages/manager/ManagerTeam";
+import TeamWorkSessions from "./pages/manager/TeamWorkSessions";
+import TeamAttendance from "./pages/manager/TeamAttendance";
 
 import jwtHelper from "./utils/jwtHelper";
 import { isTokenExpired } from "./utils/checkToken";
 import ApplyLeave from "./pages/employee/ApplyLeave";
 import EditShift from "./pages/admin/shifts/EditShift";
 import ViewEmployeeShifts from "./pages/admin/employeeShift/ViewEmployeeShifts";
-import TeamWorkSessions from "./pages/manager/TeamWorkSessions";
-import TeamAttendance from "./pages/manager/TeamAttendance";
+
 // import AssignEmployeeShift from "./pages/admin/employeeShift/AssignEmployeeShift";
 
 function App() {
@@ -201,7 +202,9 @@ function App() {
         />
 
         {/* Manager Dashboard */}
+        <Route path="/manager/team" element={<ManagerTeam onLogout={handleLogout} />} />
         <Route path="/manager/team-sessions" element={<TeamWorkSessions onLogout={handleLogout} />} />
+        <Route path="/manager/team-attendance" element={<TeamAttendance onLogout={handleLogout} />} />
         <Route path="/manager/team-attendance" element={<TeamAttendance onLogout={handleLogout} />} />
         <Route
           path="/manager/team-leave"

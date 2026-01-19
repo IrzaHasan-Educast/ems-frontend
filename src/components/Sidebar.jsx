@@ -159,8 +159,13 @@ const Sidebar = ({ isOpen, onLogout }) => {
                 <>
                   {isOpen && <hr className="bg-white my-3" />}
                   
-                  <NavLink to="/manager/team-sessions" className="text-white mb-2" style={linkStyle}>
+                  <NavLink to="/manager/team" className="text-white mb-2" style={linkStyle}>
                     <i className="bi bi-people-fill me-2"></i>
+                    {isOpen && "My Team"}
+                  </NavLink>
+
+                  <NavLink to="/manager/team-sessions" className="text-white mb-2" style={linkStyle}>
+                    <i className="bi bi-person-lines-fill me-2"></i>
                     {isOpen && "Team Sessions"}
                   </NavLink>
 
@@ -170,7 +175,7 @@ const Sidebar = ({ isOpen, onLogout }) => {
                   </NavLink>
 
                   <NavLink to="/manager/team-leave" className="text-white mb-2" style={linkStyle}>
-                    <i className="bi bi-calendar2-week me-2"></i>
+                    <i className="bi bi-card-text me-2"></i>
                     {isOpen && "Team Leave Request"}
                   </NavLink>
 

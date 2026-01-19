@@ -18,3 +18,6 @@ export const updateUser = (userId, data) =>
 
 export const getManagers = () =>
   api.get(`v1/employees/role/MANAGER`);
+
+export const getEmployeeDetailsByManager = ()=>
+  api.get(`v1/employees/manager/employees`);
