@@ -30,6 +30,7 @@ import { isTokenExpired } from "./utils/checkToken";
 import ApplyLeave from "./pages/employee/ApplyLeave";
 import EditShift from "./pages/admin/shifts/EditShift";
 import ViewEmployeeShifts from "./pages/admin/employeeShift/ViewEmployeeShifts";
+import EmployeeProfile from "./pages/employee/EmployeeProfile";
 
 // import AssignEmployeeShift from "./pages/admin/employeeShift/AssignEmployeeShift";
 
@@ -223,6 +224,15 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["EMPLOYEE"]}>
               <EmployeeDashboard onLogout={handleLogout} />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/employee/my-profile"
+          element={
+            <ProtectedRoute allowedRoles={["EMPLOYEE","ADMIN","HR","MANAGER"]}>
+              <EmployeeProfile onLogout={handleLogout} />
             </ProtectedRoute>
           }
         />

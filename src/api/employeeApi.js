@@ -21,3 +21,6 @@ export const getManagers = () =>
 
 export const getEmployeeDetailsByManager = ()=>
   api.get(`v1/employees/manager/employees`);
+
+export const getMyDetails = ()=>
+  api.get(`v1/employees/my`);

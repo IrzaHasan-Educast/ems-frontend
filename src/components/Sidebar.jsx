@@ -4,7 +4,7 @@ import { useNavigate, NavLink } from "react-router-dom";
 import Logo from "../assets/images/Educast-Logo.png"; // Apna path check kar lena
 import jwtHelper from "../utils/jwtHelper";
 
-const Sidebar = ({ isOpen, onLogout }) => {
+const Sidebar = ({ isOpen, onLogout, toggleSidebar  }) => {
   const navigate = useNavigate();
   
   // State for Dropdowns
@@ -22,6 +22,13 @@ const Sidebar = ({ isOpen, onLogout }) => {
     localStorage.clear(); // Token, role, sab clear
     if (onLogout) onLogout(); 
     navigate("/login"); 
+  };
+
+    // Helper for Mobile View
+  const handleMobileClick = () => {
+    if (window.innerWidth < 992 && isOpen && typeof toggleSidebar === 'function') {
+      toggleSidebar();
+    }
   };
 
   // Common Style for links
@@ -178,12 +185,20 @@ const Sidebar = ({ isOpen, onLogout }) => {
                     <i className="bi bi-card-text me-2"></i>
                     {isOpen && "Team Leave Request"}
                   </NavLink>
-
-
                 </>
               )}
             </>
           )}
+
+{/* =======================================================
+                SECTION 3: COMMON LINKS (For Everyone)
+            ======================================================== */}
+            <div className="mt-2 border-top pt-2 border-white-50">
+               <NavLink to="/employee/my-profile" className="text-white mt-2" style={linkStyle}>
+                  <i className="bi bi-person-circle me-2"></i>
+                  {isOpen && "My Profile"}
+               </NavLink>
+            </div>
 
         </Nav>
       </div>
