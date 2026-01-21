@@ -265,7 +265,7 @@ const AllLeaves = ({ onLogout }) => {
             </Row>
             
             <div className="d-flex justify-content-end gap-2 mt-2">
-                <Button variant="secondary" size="sm" onClick={handleReset}>Reset</Button>
+                <Button variant="secondary" size="sm" onClick={handleReset}>↻</Button>
                 <Button variant="outline-primary" size="sm" onClick={() => setShowColumnsModal(true)} title="Columns"><Gear /></Button>
                 <Button variant="success" size="sm" onClick={handleExport}><FileEarmarkText /> Export</Button>
             </div>

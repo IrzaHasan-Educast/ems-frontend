@@ -302,7 +302,7 @@ const Attendance = ({ onLogout }) => {
               </Col>
 
               <Col md={2} className="d-flex justify-content-end gap-2">
-                <Button variant="secondary" onClick={handleReset}>Reset</Button>
+                <Button variant="secondary" onClick={handleReset}>↻</Button>
                 <Button variant="outline-primary" onClick={() => setShowColumnsModal(true)}><Gear /></Button>
                 <Button variant="success" onClick={handleExport}><FileEarmarkText /></Button>
               </Col>

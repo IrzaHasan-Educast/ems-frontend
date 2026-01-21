@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../../components/Sidebar";
-import TopNavbar from "../../components/EmployeeNavbar";
+import TopNavbar from "../../components/Navbar";
 import CardContainer from "../../components/CardContainer";
 import CurrentSessionCard from "../../components/CurrentSessionCard";
 import { Button } from "react-bootstrap";

@@ -1,287 +1,298 @@
-// src/pages/AttendanceHistory.jsx
 import React, { useState, useEffect, useCallback } from "react";
+import { Table, Form, Button, InputGroup, FormControl, Spinner, Badge, Row, Col } from "react-bootstrap";
 import Sidebar from "../../components/Sidebar";
-import TopNavbar from "../../components/EmployeeNavbar";
+import TopNavbar from "../../components/Navbar"; 
 import CardContainer from "../../components/CardContainer";
 import PageHeading from "../../components/PageHeading";
-
-import { Table, Form, Button, InputGroup, FormControl, Spinner } from "react-bootstrap";
-
-// ⬅️ Reusable API calls
+import { FileEarmarkText } from "react-bootstrap-icons";
 import { getCurrentUser, getWorkSessions } from "../../api/workSessionApi";
+import jwtHelper from "../../utils/jwtHelper";
 
 const WorkSessionHistory = ({ onLogout }) => {
+  // 1. JWT & User
+  const token = localStorage.getItem("token");
+  const role = jwtHelper.getRoleFromToken(token);
+  
+  // 2. States
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [employee, setEmployee] = useState(null);
   const [history, setHistory] = useState([]);
-  const [filteredHistory, setFilteredHistory] = useState([]);
+  const [filtered, setFiltered] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Filters
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedDate, setSelectedDate] = useState("");
-  const [loading, setLoading] = useState("");
-  const [selectedStatus, setselectedStatus] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("");
+  
+  // Pagination
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
+
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-  // --- Time format AM/PM ---
+  // --- HELPERS ---
   const formatTimeAMPM = (date) => {
     if (!date) return "--";
     const d = new Date(date);
-    let hours = d.getHours();
-    const minutes = String(d.getMinutes()).padStart(2, "0");
-    const seconds = String(d.getSeconds()).padStart(2, "0");
-    const ampm = hours >= 12 ? "PM" : "AM";
-    hours = hours % 12 || 12;
-    return `${hours}:${minutes}:${seconds} ${ampm}`;
+    return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", second: "2-digit", hour12: true });
+  };
+
+  const formatDate = (date) => {
+    if (!date) return "--";
+    const d = new Date(date);
+    const day = d.getDate().toString().padStart(2, '0');
+    const month = d.toLocaleString('en-US', { month: 'short' });
+    const year = d.getFullYear().toString().slice(-2);
+    return `${day}-${month}-${year}`; // 19-Jan-26
   };
 
   const getMonthName = (dateStr) => {
-    const [day, month, year] = dateStr.split("-");
-    const date = new Date(`${year}-${month}-${day}`);
-    return date.toLocaleString("en-US", { month: "long" });
+    // Expecting format: YYYY-MM-DD or similar
+    const d = new Date(dateStr);
+    return d.toLocaleString("en-US", { month: "long" });
   };
-
-  const millisToHMS = (ms) => {
-    if (!ms || ms < 0) return "0h 0m 0s";
-
-    const totalSeconds = Math.floor(ms / 1000);
-    const h = Math.floor(totalSeconds / 3600);
-    const m = Math.floor((totalSeconds % 3600) / 60);
-    const s = totalSeconds % 60;
-
-    return `${h}h ${m}m ${s}s`;
-  };
-
 
   const isoToMillis = (iso) => {
     if (!iso) return 0;
     const match = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
-    const h = parseInt(match?.[1] || 0);
-    const m = parseInt(match?.[2] || 0);
-    const s = parseInt(match?.[3] || 0);
+    if (!match) return 0;
+    const h = parseInt(match[1] || 0);
+    const m = parseInt(match[2] || 0);
+    const s = parseInt(match[3] || 0);
     return ((h * 60 + m) * 60 + s) * 1000;
   };
 
+  const millisToHMS = (ms) => {
+    if (!ms || ms < 0) return "0h 0m";
+    const totalSeconds = Math.floor(ms / 1000);
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    return `${h}h ${m}m`; // Simplified
+  };
 
-  // -------- Fetch Work History --------
+  // --- DATA FETCHING ---
   const fetchHistory = useCallback(async (employeeId) => {
+    setLoading(true);
     try {
-      setLoading(true);
       const res = await getWorkSessions(employeeId);
-
       if (res.data && Array.isArray(res.data)) {
-      const formatted = res.data.map((s) => {
-      const clockIn = new Date(s.clockInTime);
-      const clockOut = s.clockOutTime ? new Date(s.clockOutTime) : null;
-      const now = new Date();
+        const formatted = res.data.map((s) => {
+          const clockIn = new Date(s.clockInTime);
+          const clockOut = s.clockOutTime ? new Date(s.clockOutTime) : null;
+          const now = new Date();
 
-      let totalMs = 0;
-      let workingMs = 0;
-      let breakMs = 0;
+          let totalMs = 0, workingMs = 0, breakMs = 0;
 
-      if (clockOut) {
-        // ✅ Completed session → backend values
-        totalMs = isoToMillis(s.totalSessionHours);
-        workingMs = isoToMillis(s.totalWorkingHours);
-        breakMs = isoToMillis(s.idleTime);
-      } else {
-        // ✅ Working session → dynamic calculation
-        totalMs = now - clockIn;
-        breakMs = isoToMillis(s.idleTime); // agar null → 0
-        workingMs = totalMs - breakMs;
+          if (s.status === "Completed" || s.status.includes("Clocked Out")) {
+            // Completed
+            totalMs = isoToMillis(s.totalSessionHours);
+            workingMs = isoToMillis(s.totalWorkingHours);
+            breakMs = isoToMillis(s.idleTime);
+          } else {
+            // Active
+            totalMs = now - clockIn;
+            breakMs = isoToMillis(s.idleTime);
+            workingMs = totalMs - breakMs;
+          }
+
+          return {
+            id: s.id,
+            dateObj: clockIn, // For Sorting
+            date: formatDate(clockIn),
+            monthName: clockIn.toLocaleString("en-US", { month: "long" }),
+            clockIn: formatTimeAMPM(clockIn),
+            clockOut: clockOut ? formatTimeAMPM(clockOut) : "--",
+            totalHours: millisToHMS(totalMs),
+            workingHours: millisToHMS(workingMs),
+            breakHours: millisToHMS(breakMs),
+            status: s.status,
+          };
+        });
+
+        // Sort: Latest first
+        formatted.sort((a, b) => b.dateObj - a.dateObj);
+
+        setHistory(formatted);
+        setFiltered(formatted);
       }
-
-      return {
-        id: s.id,
-        date: clockIn.toLocaleDateString("en-GB").replace(/\//g, "-"),
-        clockIn: formatTimeAMPM(clockIn),
-        clockOut: clockOut ? formatTimeAMPM(clockOut) : "--",
-
-        totalHours: millisToHMS(totalMs),
-        workingHours: millisToHMS(workingMs),
-        breakHours: millisToHMS(breakMs),
-
-        status: s.status,
-      };
-
-    });
-
-      setHistory(formatted);
-      setFilteredHistory(formatted);
-    }
-
     } catch (err) {
       console.error("Failed to fetch history", err);
-    } finally{
+    } finally {
       setLoading(false);
     }
   }, []);
 
-  // -------- Fetch Current User --------
-  const fetchCurrentUser = useCallback(async () => {
-    try {
-      const res = await getCurrentUser();
-      setEmployee({ fullName: res.data.fullName, id: res.data.employeeId });
-      fetchHistory(res.data.employeeId);
-    } catch (err) {
-      console.error("Failed fetching user", err);
-    }
+  useEffect(() => {
+    const initData = async () => {
+      try {
+        const res = await getCurrentUser();
+        setEmployee({ fullName: res.data.fullName, id: res.data.employeeId });
+        fetchHistory(res.data.employeeId);
+      } catch (err) {
+        console.error("Failed fetching user", err);
+        setLoading(false);
+      }
+    };
+    initData();
   }, [fetchHistory]);
 
+  // --- FILTERING ---
   useEffect(() => {
-    fetchCurrentUser();
-  }, [fetchCurrentUser]);
-
-  // -------- Search + Filter --------
-  useEffect(() => {
-    let filtered = [...history];
-
-    if (selectedDate) {
-      filtered = filtered.filter((h) => getMonthName(h.date) === selectedDate);
-    }
-    if(selectedStatus){
-      filtered = filtered.filter((h)=> h.status === selectedDate);
-    }
+    let result = [...history];
 
     if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter((h) =>
-        `${h.date} ${h.clockIn} ${h.clockOut} ${h.status}`
-          .toLowerCase()
-          .includes(query)
+      const q = searchQuery.toLowerCase();
+      result = result.filter((h) =>
+        [h.date, h.status].join(" ").toLowerCase().includes(q)
       );
     }
 
-    setFilteredHistory(filtered);
-  }, [searchQuery, selectedDate,selectedStatus, history]);
-
-  const handleReset = () => {
-    setSelectedDate("");
-    setSearchQuery("");
-    setselectedStatus("");
-    setFilteredHistory(history);
-  };
-
-  const uniqueMonths = [...new Set(history.map((h) => getMonthName(h.date)))];
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "Invalid Clocked Out":
-        return "text-danger";
-      case "Completed":
-        return "text-success";
-      case "On Break":
-        return "text-warning";
-      case "Working":
-        return "text-primary";
-      case "Early Clocked Out":
-        return "text-secondary";
-      case "Auto Clocked Out":
-        return "text-info"
-      default:
-        return "";
+    if (selectedMonth) {
+      result = result.filter((h) => h.monthName === selectedMonth);
     }
+
+    if (selectedStatus) {
+      result = result.filter((h) => h.status === selectedStatus);
+    }
+
+    setFiltered(result);
+    setCurrentPage(1);
+  }, [searchQuery, selectedMonth, selectedStatus, history]);
+
+  // --- HANDLERS ---
+  const handleReset = () => {
+    setSelectedMonth("");
+    setSelectedStatus("");
+    setSearchQuery("");
+    setRowsPerPage(10);
+    setCurrentPage(1);
+    setFiltered(history);
   };
+
+  // --- PAGINATION ---
+  const totalPages = rowsPerPage === "All" ? 1 : Math.ceil(filtered.length / rowsPerPage);
+  const paginatedData = rowsPerPage === "All" ? filtered : filtered.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+  const handlePrevious = () => currentPage > 1 && setCurrentPage(currentPage - 1);
+  const handleNext = () => currentPage < totalPages && setCurrentPage(currentPage + 1);
+
+  // --- UI HELPERS ---
+  const getStatusBadge = (status) => {
+    const map = {
+      "Completed": "success",
+      "Working": "primary",
+      "On Break": "warning",
+      "Invalid Clocked Out": "danger",
+      "Auto Clocked Out": "info",
+      "Early Clocked Out": "secondary"
+    };
+    return <Badge bg={map[status] || "secondary"}>{status}</Badge>;
+  };
+
+  const uniqueMonths = [...new Set(history.map((h) => h.monthName))];
+  const uniqueStatus = [...new Set(history.map((h) => h.status))];
 
   return (
     <div className="d-flex">
-      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} />
+      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar} />
 
-      <div className="flex-grow-1">
-        <TopNavbar 
-          toggleSidebar={toggleSidebar}
-          username={localStorage.getItem("name")}
-          role={localStorage.getItem("role")}
-        />
+      <div className="flex-grow-1" style={{ minWidth: 0 }}>
+        <TopNavbar toggleSidebar={toggleSidebar} username={employee?.fullName} role={role} onLogout={onLogout} />
 
-        <div className="p-4">
+        <div className="p-3 container-fluid">
           <PageHeading title="Work Session History" />
 
-          {/* Search + Filter */}
-          <CardContainer title="Search & Filter">
-            <div className="d-flex gap-2 flex-wrap mb-3 align-items-center">
-              <div className="row w-100">
-                <div className="col-md-4">
-                  <InputGroup>
-                    <FormControl
-                      placeholder="Search Here..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                  </InputGroup>
-                </div>
+          {/* FILTERS */}
+          <CardContainer>
+            <Row className="g-2 align-items-center">
+              <Col lg={3} md={6}>
+                <InputGroup size="sm">
+                  <InputGroup.Text><i className="bi bi-search"></i></InputGroup.Text>
+                  <FormControl
+                    placeholder="Search date..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </InputGroup>
+              </Col>
 
-                <div className="col-md-3">
-                  <Form.Select value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)}>
-                    <option value="">Select Month</option>
-                    {uniqueMonths.map((m) => (
-                      <option key={m} value={m}>
-                        {m}
-                      </option>
-                    ))}
-                  </Form.Select>
-                </div>
-                <div className="col-md-3">
-                  <Form.Select
-                  value={selectedStatus}
-                  onChange={(e)=>setselectedStatus(e.target.value)}
-                  >
-                    <option value="">All Status</option>
-                    {[...new Set(history.map(h => h.status))].map((s)=>(
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </Form.Select>
-                </div>
+              <Col lg={2} md={4} sm={6}>
+                <Form.Select size="sm" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}>
+                  <option value="">All Months</option>
+                  {uniqueMonths.map((m) => <option key={m} value={m}>{m}</option>)}
+                </Form.Select>
+              </Col>
 
-                <div className="col-md-2">
-                  <Button variant="secondary" onClick={handleReset}>
-                    Reset
-                  </Button>
-                </div>
-              </div>
+              <Col lg={2} md={4} sm={6}>
+                <Form.Select size="sm" value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>
+                  <option value="">All Status</option>
+                  {uniqueStatus.map((s) => <option key={s} value={s}>{s}</option>)}
+                </Form.Select>
+              </Col>
 
-              <div className="ms-auto">
-                <strong>Total Records: {filteredHistory.length}</strong>
-              </div>
-            </div>
+              <Col lg={2} md={4} sm={6}>
+                 <Form.Select size="sm" value={rowsPerPage} onChange={(e) => {setRowsPerPage(e.target.value); setCurrentPage(1);}}>
+                  {[10, 25, 50, "All"].map(n => <option key={n} value={n}>{n} per page</option>)}
+                </Form.Select>
+              </Col>
+
+              <Col lg={3} md={12} className="d-flex justify-content-end gap-2">
+                <Button variant="secondary" size="sm" onClick={handleReset}>↻</Button>
+              </Col>
+            </Row>
           </CardContainer>
 
-          {/* Table */}
-          <CardContainer title="Work Session Records">
-            {loading?(
-            <div className="d-flex justify-content-center align-items-center" style={{height:"40vh", color:"rgb(245, 138, 41)"}}>
-              <Spinner animation="border"/>
-              </div>
-            ):(
+          {/* TABLE */}
+          <CardContainer className="mt-3" style={{ padding: "0" }}>
+            {loading ? (
+              <div className="text-center p-5"><Spinner animation="border" variant="warning" /></div>
+            ) : filtered.length === 0 ? (
+              <div className="text-center p-5 text-muted">No session records found.</div>
+            ) : (
+              <>
+                <div style={{ overflowX: "auto" }}>
+                  <Table bordered hover size="sm" className="mb-0 w-100">
+                    <thead style={{ backgroundColor: "#FFA500", color: "white", textAlign: "center" }}>
+                      <tr>
+                        <th className="p-2">S. No.</th>
+                        <th className="p-2">Date</th>
+                        <th className="p-2">Clock In</th>
+                        <th className="p-2">Clock Out</th>
+                        <th className="p-2">Total Hours</th>
+                        <th className="p-2">Working Hours</th>
+                        <th className="p-2">Break Hours</th>
+                        <th className="p-2">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginatedData.map((h, idx) => (
+                        <tr key={h.id} style={{ textAlign: "center", verticalAlign: "middle" }}>
+                          <td style={{padding: "6px"}}>{rowsPerPage === "All" ? idx + 1 : (currentPage - 1) * rowsPerPage + idx + 1}</td>
+                          <td style={{padding: "6px"}}>{h.date}</td>
+                          <td style={{padding: "6px"}}>{h.clockIn}</td>
+                          <td style={{padding: "6px"}}>{h.clockOut}</td>
+                          <td style={{padding: "6px"}}>{h.totalHours}</td>
+                          <td style={{padding: "6px"}}>{h.workingHours}</td>
+                          <td style={{padding: "6px"}}>{h.breakHours}</td>
+                          <td style={{padding: "6px"}}>{getStatusBadge(h.status)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                </div>
 
-            <Table bordered hover responsive className="table-theme text-center">
-              <thead style={{ backgroundColor: "#055993", color: "white" }}>
-                <tr>
-                  <th>S. No.</th>
-                  <th>Date</th>
-                  <th>Clock In</th>
-                  <th>Clock Out</th>
-                  <th>Total Hours</th>
-                  <th>Working Hours</th>
-                  <th>Break Hours</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredHistory.map((h, idx) => (
-                  <tr key={h.id} className={h.clockOut === "--" && idx === 0 ? "current-session-row" : ""}>
-                    <td>{idx+1}</td>
-                    <td>{h.date}</td>
-                    <td>{h.clockIn}</td>
-                    <td>{h.clockOut}</td>
-                    <td>{h.totalHours}</td>
-                    <td>{h.workingHours}</td>
-                    <td>{h.breakHours}</td>
-                    <td className={getStatusColor(h.status)}>{h.status}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
+                {/* PAGINATION */}
+                {rowsPerPage !== "All" && paginatedData.length > 0 && (
+                  <div className="d-flex justify-content-between align-items-center p-3">
+                    <Button variant="outline-primary" size="sm" disabled={currentPage === 1} onClick={handlePrevious}>Previous</Button>
+                    <span className="small text-muted">Page {currentPage} of {totalPages}</span>
+                    <Button variant="outline-primary" size="sm" disabled={currentPage === totalPages} onClick={handleNext}>Next</Button>
+                  </div>
+                )}
+              </>
             )}
           </CardContainer>
+
         </div>
       </div>
     </div>

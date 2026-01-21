@@ -193,12 +193,13 @@ const Sidebar = ({ isOpen, onLogout, toggleSidebar  }) => {
 {/* =======================================================
                 SECTION 3: COMMON LINKS (For Everyone)
             ======================================================== */}
-            <div className="mt-2 border-top pt-2 border-white-50">
+            {/* <NavLink to="/admin/attendance" className="text-white mt-2" style={linkStyle}>
+                <i className="bi bi-calendar-check me-2"></i> {isOpen && "Attendance"}
+              </NavLink> */}
                <NavLink to="/employee/my-profile" className="text-white mt-2" style={linkStyle}>
                   <i className="bi bi-person-circle me-2"></i>
                   {isOpen && "My Profile"}
                </NavLink>
-            </div>
 
         </Nav>
       </div>

@@ -1,6 +1,5 @@
-// src/pages/admin/WorkSessions.jsx
 import React, { useEffect, useState } from "react";
-import { Table, Spinner, Form, Row, Col, Button, Modal, Badge } from "react-bootstrap";
+import { Table, Spinner, Form, Row, Col, Button, Modal, Badge, InputGroup } from "react-bootstrap";
 import Sidebar from "../../components/Sidebar";
 import TopNavbar from "../../components/Navbar";
 import PageHeading from "../../components/PageHeading";
@@ -10,11 +9,14 @@ import { FileEarmarkText, Gear } from "react-bootstrap-icons";
 import { getCurrentUser } from "../../api/userApi";
 import * as XLSX from "xlsx";
 import jwtHelper from "../../utils/jwtHelper";
+import { formatTimeAMPM, parseApiDate } from "../../utils/time"; 
 
 const allColumns = [
   { key: "sno", label: "S.No" },
   { key: "employeeName", label: "Employee" },
+  { key: "assignedShift", label: "Shift" },
   { key: "date", label: "Date" },
+  { key: "day", label: "Day" },
   { key: "clockIn", label: "Clock In" },
   { key: "clockOut", label: "Clock Out" },
   { key: "totalHours", label: "Total Hours" },
@@ -23,51 +25,56 @@ const allColumns = [
   { key: "status", label: "Status" },
 ];
 
+const defaultVisibleColumns = ["sno", "employeeName", "assignedShift", "date", "clockIn", "clockOut", "totalHours", "workingHours", "status"];
+
 const WorkSessions = ({ onLogout }) => {
   const token = localStorage.getItem("token");
   const initialRole = jwtHelper.getRoleFromToken(token);
+  
   const [sessions, setSessions] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [admin, setAdmin] = useState({ name: "", role: initialRole });
+
+  // Filters
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedEmployee, setSelectedEmployee] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [shiftFilter, setShiftFilter] = useState(""); 
+  
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-
   const [showColumnsModal, setShowColumnsModal] = useState(false);
-  const [selectedColumns, setSelectedColumns] = useState(allColumns.map(c => c.key));
-  const [admin, setAdmin] = useState({ name: "", role: initialRole });
+  const [selectedColumns, setSelectedColumns] = useState(defaultVisibleColumns);
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-  const formatTime = (d) => {
-    if (!d) return "--";
-    return new Date(d).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: true,
-    });
+  // ✅ UPDATED DATE FORMAT: 19-Jan-26
+  const formatShortDate = (val) => {
+     const d = parseApiDate(val);
+     if(!d) return "--";
+     
+     const day = d.getDate().toString().padStart(2, '0');
+     const month = d.toLocaleString('en-US', { month: 'short' });
+     const year = d.getFullYear().toString().slice(-2); // Last 2 digits
+     
+     return `${day}-${month}-${year}`; // 19-Jan-26
   };
 
+  // --- HELPERS: Duration ---
   const formatDurationFromISO = (iso) => {
-  if (!iso) return "0h 0m";
-
-  const match = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
-  if (!match) return "0h 0m";
-
-  const hours = parseInt(match[1] || 0);
-  const minutes = parseInt(match[2] || 0);
-  const seconds = parseInt(match[3] || 0);
-
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  if (minutes > 0) return `${minutes}m ${seconds}s`;
-  return `${seconds}s`;
-};
-
+    if (!iso) return "0h 0m";
+    const match = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+    if (!match) return "0h 0m";
+    const hours = parseInt(match[1] || 0);
+    const minutes = parseInt(match[2] || 0);
+    const seconds = parseInt(match[3] || 0);
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    if (minutes > 0) return `${minutes}m ${seconds}s`;
+    return `${seconds}s`;
+  };
 
   const formatDuration = (hoursDecimal) => {
     if (!hoursDecimal || isNaN(hoursDecimal)) return "0h 0m";
@@ -77,150 +84,11 @@ const WorkSessions = ({ onLogout }) => {
     return `${hrs}h ${mins}m`;
   };
 
-  useEffect(() => {
-    const fetchRolesAndAdmin = async () => {
-      try {
-        const userRes = await getCurrentUser();
-        setAdmin({
-          name: userRes.data.fullName,
-          role: userRes.data.role,
-        });
-      } catch (err) {
-        console.error("Failed to fetch roles or admin info:", err);
-      }
-    };
-    fetchRolesAndAdmin();
-  }, []);
-
-useEffect(() => {
-  const fetchSessions = async () => {
-    try {
-      const res = await getAllWorkSessions();
-
-      const formatted = res.data.map((s) => {
-        let displayStatus = s.status;
-
-        let totalHours = "";
-        let workingHours = "";
-        let breakHours = formatDurationFromISO(s.idleTime);
-
-        if (displayStatus === "Working" || displayStatus === "On Break") {
-          const dyn = calculateDynamicHours(s);
-          totalHours = dyn.totalHours;
-          workingHours = dyn.workingHours;
-          if (displayStatus === "On Break") {
-            breakHours = dyn.breakHours;
-          }
-        } else {
-          // Completed / Auto Clocked Out / etc
-          totalHours = formatDurationFromISO(s.totalSessionHours);
-          workingHours = formatDurationFromISO(s.totalWorkingHours);
-        }
-
-        return {
-          ...s,
-          date: new Date(s.clockInTime).toLocaleDateString(),
-          clockIn: formatTime(s.clockInTime),
-          clockOut: formatTime(s.clockOutTime),
-          totalHours,
-          workingHours,
-          breakHours,
-          displayStatus,
-        };
-      });
-
-      setSessions(formatted);
-      setFiltered(formatted);
-    } catch (err) {
-      console.error(err);
-    }
-    setLoading(false);
-  };
-
-  fetchSessions();
-}, []);
-
-
-  // Filtering
-  useEffect(() => {
-    const term = searchTerm.toLowerCase();
-    const monthFilter = selectedMonth;
-    const empFilter = selectedEmployee;
-    const status = statusFilter;
-
-    let f = sessions.filter((s) => {
-      const matchesSearch =
-        [s.employeeName, s.status, s.date, s.clockIn, s.clockOut].join(" ").toLowerCase().includes(term);
-      const matchesEmployee = empFilter ? s.employeeName === empFilter : true;
-      const matchesMonth = monthFilter ? new Date(s.clockInTime).getMonth() + 1 === parseInt(monthFilter) : true;
-      const matchesStatus = status ? s.displayStatus === status : true;
-
-      return matchesSearch && matchesEmployee && matchesMonth && matchesStatus;
-    });
-
-    setFiltered(f);
-    setCurrentPage(1);
-  }, [searchTerm, selectedEmployee, selectedMonth, statusFilter, sessions]);
-
-  const handleReset = () => {
-    setSearchTerm("");
-    setSelectedEmployee("");
-    setSelectedMonth("");
-    setStatusFilter("");
-    setRowsPerPage(10);
-    setCurrentPage(1);
-    setSelectedColumns(allColumns.map(c => c.key));
-  };
-
-  const handleExport = () => {
-    const fileName = prompt("Enter file name:", "WorkSessions");
-    if (!fileName) return;
-
-    const headers = selectedColumns.map(colKey => {
-      const col = allColumns.find(c => c.key === colKey);
-      return col ? col.label : colKey;
-    });
-
-    const data = filtered.map((s, idx) =>
-      selectedColumns.map(col => {
-        switch (col) {
-          case "sno": return idx + 1;
-          case "employeeName": return s.employeeName;
-          case "date": return s.date;
-          case "clockIn": return s.clockIn;
-          case "clockOut": return s.clockOut;
-          case "totalHours": return s.totalHours;
-          case "workingHours": return s.workingHours;
-          case "breakHours": return s.breakHours;
-          case "status": return s.displayStatus;
-          default: return "";
-        }
-      })
-    );
-
-    const worksheetData = [headers, ...data];
-    const ws = XLSX.utils.aoa_to_sheet(worksheetData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Work Sessions");
-    XLSX.writeFile(wb, `${fileName}.xlsx`);
-  };
-
-  const totalPages = rowsPerPage === "All" ? 1 : Math.ceil(filtered.length / rowsPerPage);
-  const displayed =
-    rowsPerPage === "All"
-      ? filtered
-      : filtered.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
-
-  const handlePrev = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
-  const handleNext = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages));
-
-  const uniqueEmployees = [...new Set(sessions.map((s) => s.employeeName))];
-
   const calculateDynamicHours = (session) => {
     const now = new Date();
     const clockIn = new Date(session.clockInTime);
-    let totalMs = now - clockIn; // milliseconds
-    let totalHoursDecimal = totalMs / (1000 * 60 * 60); // convert to hours
+    let totalMs = now - clockIn; 
+    let totalHoursDecimal = totalMs / (1000 * 60 * 60);
 
     const breakISO = session.idleTime;
     let breakHoursDecimal = 0;
@@ -235,183 +103,274 @@ useEffect(() => {
       }
     }
 
-    let totalHours = totalHoursDecimal;
     let workingHours = totalHoursDecimal - breakHoursDecimal;
 
     return {
-      totalHours: formatDuration(totalHours),
+      totalHours: formatDuration(totalHoursDecimal),
       workingHours: formatDuration(Math.max(workingHours, 0)),
       breakHours: formatDurationFromISO(breakISO),
     };
   };
 
+  // --- DATA FETCHING ---
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const userRes = await getCurrentUser();
+        setAdmin({ name: userRes.data.fullName, role: userRes.data.role });
+
+        const res = await getAllWorkSessions();
+        const formatted = res.data.map((s) => {
+          let displayStatus = s.status;
+          let totalHours = "";
+          let workingHours = "";
+          let breakHours = formatDurationFromISO(s.idleTime);
+
+          if (displayStatus === "Working" || displayStatus === "On Break") {
+            const dyn = calculateDynamicHours(s);
+            totalHours = dyn.totalHours;
+            workingHours = dyn.workingHours;
+            if (displayStatus === "On Break") breakHours = dyn.breakHours;
+          } else {
+            totalHours = formatDurationFromISO(s.totalSessionHours);
+            workingHours = formatDurationFromISO(s.totalWorkingHours);
+          }
+
+          const dateObj = new Date(s.clockInTime);
+
+          return {
+            ...s,
+            rawDate: dateObj,
+            date: formatShortDate(s.clockInTime), // ✅ New Format
+            day: dateObj.toLocaleDateString("en-US", { weekday: "long" }),
+            clockIn: formatTimeAMPM(s.clockInTime),
+            clockOut: formatTimeAMPM(s.clockOutTime),
+            totalHours,
+            workingHours,
+            breakHours,
+            displayStatus,
+            assignedShift: s.assignedShift || "Default", 
+          };
+        });
+
+        formatted.sort((a, b) => b.rawDate - a.rawDate);
+
+        setSessions(formatted);
+        setFiltered(formatted);
+      } catch (err) {
+        console.error("Error fetching sessions:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  // --- FILTERING ---
+  useEffect(() => {
+    const term = searchTerm.toLowerCase();
+    
+    let f = sessions.filter((s) => {
+      const matchesSearch = [s.employeeName, s.displayStatus, s.date].join(" ").toLowerCase().includes(term);
+      const matchesEmployee = selectedEmployee ? s.employeeName === selectedEmployee : true;
+      const matchesMonth = selectedMonth ? (s.rawDate.getMonth() + 1) === parseInt(selectedMonth) : true;
+      const matchesStatus = statusFilter ? s.displayStatus === statusFilter : true;
+      const matchesShift = shiftFilter ? s.assignedShift === shiftFilter : true;
+
+      return matchesSearch && matchesEmployee && matchesMonth && matchesStatus && matchesShift;
+    });
+
+    setFiltered(f);
+    setCurrentPage(1);
+  }, [searchTerm, selectedEmployee, selectedMonth, statusFilter, shiftFilter, sessions]);
+
+  // --- HANDLERS ---
+  const handleReset = () => {
+    setSearchTerm("");
+    setSelectedEmployee("");
+    setSelectedMonth("");
+    setStatusFilter("");
+    setShiftFilter("");
+    setRowsPerPage(10);
+    setCurrentPage(1);
+    setSelectedColumns(defaultVisibleColumns);
+  };
+
+  const handleExport = () => {
+    const fileName = prompt("Enter file name:", "WorkSessions");
+    if (!fileName) return;
+
+    const headers = selectedColumns.map(k => allColumns.find(c => c.key === k).label);
+    const data = filtered.map((s, idx) => 
+      selectedColumns.map(col => {
+        switch(col) {
+          case "sno": return idx + 1;
+          case "status": return s.displayStatus;
+          default: return s[col] || "--";
+        }
+      })
+    );
+
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Sessions");
+    XLSX.writeFile(wb, `${fileName}.xlsx`);
+  };
 
   const toggleColumn = (key) => {
-  if (selectedColumns.includes(key)) {
-    setSelectedColumns(selectedColumns.filter(k => k !== key));
-  } else {
-    // original order maintain karne ke liye
-    setSelectedColumns(
-      allColumns
+    if (selectedColumns.includes(key)) {
+      setSelectedColumns(selectedColumns.filter(k => k !== key));
+    } else {
+      const newSelection = allColumns
         .filter(c => selectedColumns.includes(c.key) || c.key === key)
-        .map(c => c.key)
-    );
-  }
-};
+        .map(c => c.key);
+      setSelectedColumns(newSelection);
+    }
+  };
 
+  // --- PAGINATION ---
+  const totalPages = rowsPerPage === "All" ? 1 : Math.ceil(filtered.length / rowsPerPage);
+  const displayed = rowsPerPage === "All" ? filtered : filtered.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+  const handlePrev = () => currentPage > 1 && setCurrentPage(currentPage - 1);
+  const handleNext = () => currentPage < totalPages && setCurrentPage(currentPage + 1);
 
-  const renderCell = (col, s, index) => {
+  // Unique Lists
+  const uniqueEmployees = [...new Set(sessions.map(s => s.employeeName))].sort();
+  const uniqueShifts = [...new Set(sessions.map(s => s.assignedShift))].sort();
+
+  // --- RENDER CELL ---
+  const renderCell = (col, s, idx) => {
     switch (col) {
-      case "sno": {
-        const base = rowsPerPage === "All" ? 0 : (currentPage - 1) * Number(rowsPerPage);
-        return base + index + 1;
-      }
-      case "employeeName": return s.employeeName;
-      case "date": return s.date;
-      case "clockIn": return s.clockIn;
-      case "clockOut": return s.clockOut;
-      case "totalHours": return s.totalHours;
-      case "workingHours": return s.workingHours;
-      case "breakHours": return s.breakHours;
+      case "sno": return rowsPerPage === "All" ? idx + 1 : (currentPage - 1) * rowsPerPage + idx + 1;
+      case "employeeName": return <span className="fw-bold">{s.employeeName}</span>;
+      case "assignedShift": return <span bg="info" text="dark" className="fw-normal">{s.assignedShift}</span>;
       case "status":
-        return (
-          <Badge
-            bg={
-              s.displayStatus === "Completed" ? "success"
-              : s.displayStatus === "Working" ? "primary"
-              : s.displayStatus === "On Break" ? "warning"
-              : s.displayStatus === "Invalid Clocked Out" ? "danger"
-              : s.displayStatus === "Auto Clocked Out" ? "info"
-              : s.displayStatus === "Early Clocked Out" ? "secondary"
-              : "secondary"
-            }
-          >
-            {s.displayStatus}
-          </Badge>
-        );
-      default: return "--";
+        const statusMap = {
+          "Completed": "success",
+          "Working": "primary",
+          "On Break": "warning",
+          "Invalid Clocked Out": "danger",
+          "Auto Clocked Out": "info",
+          "Early Clocked Out": "secondary"
+        };
+        return <Badge bg={statusMap[s.displayStatus] || "secondary"}>{s.displayStatus}</Badge>;
+      default: return s[col];
     }
   };
 
   return (
     <div className="d-flex">
-      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} />
-      <div className="flex-grow-1">
-        <TopNavbar toggleSidebar={toggleSidebar} username={admin.name} role={admin.role} />
-        <div className="p-4 container">
+      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar} />
+      <div className="flex-grow-1" style={{ minWidth: 0 }}>
+        <TopNavbar toggleSidebar={toggleSidebar} username={admin.name} role={admin.role} onLogout={onLogout} />
+        
+        <div className="p-3 container-fluid">
           <PageHeading title="All Work Sessions" />
 
-          {/* Filters Row */}
+          {/* FILTERS */}
           <CardContainer>
-            <Row className="align-items-center g-2">
-              <Col md={2}>
-                <Form.Control
-                  type="text"
-                  placeholder="Search..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+            <Row className="g-2 align-items-center">
+              <Col lg={3} md={6}>
+                <InputGroup size="sm">
+                  <InputGroup.Text><i className="bi bi-search"></i></InputGroup.Text>
+                  <Form.Control placeholder="Search..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                </InputGroup>
               </Col>
-              <Col md={2}>
-                <Form.Select value={selectedEmployee} onChange={(e) => setSelectedEmployee(e.target.value)}>
+              <Col lg={2} md={4} sm={6}>
+                <Form.Select size="sm" value={selectedEmployee} onChange={e => setSelectedEmployee(e.target.value)}>
                   <option value="">All Employees</option>
-                  {uniqueEmployees.map((emp, idx) => (
-                    <option key={idx} value={emp}>{emp}</option>
-                  ))}
+                  {uniqueEmployees.map((emp, i) => <option key={i} value={emp}>{emp}</option>)}
                 </Form.Select>
               </Col>
-              <Col md={2}>
-                <Form.Select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}>
+              <Col lg={2} md={4} sm={6}>
+                <Form.Select size="sm" value={shiftFilter} onChange={e => setShiftFilter(e.target.value)}>
+                  <option value="">All Shifts</option>
+                  {uniqueShifts.map((s, i) => <option key={i} value={s}>{s}</option>)}
+                </Form.Select>
+              </Col>
+              <Col lg={2} md={4} sm={6}>
+                <Form.Select size="sm" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}>
                   <option value="">All Months</option>
-                  {["January","February","March","April","May","June","July","August","September","October","November","December"]
-                    .map((name,i) => <option key={i} value={i+1}>{name}</option>)}
+                  {["January","February","March","April","May","June","July","August","September","October","November","December"].map((m, i) => <option key={i} value={i+1}>{m}</option>)}
                 </Form.Select>
               </Col>
-              <Col md={2}>
-                <Form.Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <Col lg={2} md={4} sm={6}>
+                <Form.Select size="sm" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
                   <option value="">All Status</option>
                   <option value="Working">Working</option>
                   <option value="On Break">On Break</option>
                   <option value="Completed">Completed</option>
                   <option value="Auto Clocked Out">Auto Clocked Out</option>
                   <option value="Invalid Clocked Out">Invalid Clocked Out</option>
-                  <option value="Early Clocked Out">Early Clocked Out</option>
                 </Form.Select>
               </Col>
-              <Col md={2}>
-                <Form.Select value={rowsPerPage} onChange={(e) => setRowsPerPage(e.target.value)}>
-                  {[10, 25, 50, "All"].map((num) => <option key={num} value={num}>{num} per page</option>)}
+              <Col lg={1} md={4} sm={6}>
+                 <Form.Select size="sm" value={rowsPerPage} onChange={(e) => {setRowsPerPage(e.target.value); setCurrentPage(1);}}>
+                  {[10, 25, 50, "All"].map(n => <option key={n} value={n}>{n}</option>)}
                 </Form.Select>
-              </Col>
-              <Col md={2} className="d-flex gap-2 justify-content-end">
-                <Button variant="secondary" onClick={handleReset}>Reset</Button>
-                <Button variant="outline-primary" onClick={() => setShowColumnsModal(true)}><Gear /></Button>
-                <Button variant="success" onClick={handleExport}><FileEarmarkText /></Button>
               </Col>
             </Row>
+            
+            <div className="d-flex justify-content-end gap-2 mt-2">
+                <Button variant="secondary" size="sm" onClick={handleReset}>↻</Button>
+                <Button variant="outline-primary" size="sm" onClick={() => setShowColumnsModal(true)}><Gear /></Button>
+                <Button variant="success" size="sm" onClick={handleExport}><FileEarmarkText /></Button>
+            </div>
           </CardContainer>
 
-          {/* Table */}
-          <CardContainer className="mt-3">
+          {/* TABLE */}
+          <CardContainer className="mt-3" style={{ padding: "0" }}>
             {loading ? (
-              <div className="d-flex justify-content-center align-items-center" style={{ height: "50vh" }}>
-                <Spinner animation="border" variant="warning" />
-              </div>
+              <div className="text-center p-5"><Spinner animation="border" variant="warning" /></div>
+            ) : filtered.length === 0 ? (
+              <div className="text-center p-5 text-muted">No sessions found.</div>
             ) : (
               <>
-                <Table bordered hover responsive className="mt-2">
-                  <thead className="text-center" style={{ backgroundColor: "#FFA500", color: "white", textAlign: "center" }}>
-                    <tr>
-                      {selectedColumns.map(colKey => {
-                        const col = allColumns.find(c => c.key === colKey);
-                        return <th key={colKey}>{col ? col.label : colKey}</th>;
-                      })}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {displayed.map((s, idx) => (
-                      <tr key={s.id} style={{ textAlign: "center" }}>
-                        {selectedColumns.map(col => (
-                          <td key={col}>
-                            {renderCell(col, s, idx)}
-                          </td>
+                <div style={{ overflowX: "auto" }}>
+                  <Table bordered hover size="sm" className="mb-0 w-100">
+                    <thead style={{ backgroundColor: "#FFA500", color: "#fff", textAlign: "center" }}>
+                      <tr>
+                        {selectedColumns.map(colKey => (
+                          <th key={colKey} className="p-2" style={{whiteSpace: "nowrap"}}>
+                            {allColumns.find(c => c.key === colKey).label}
+                          </th>
                         ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </Table>
+                    </thead>
+                    <tbody>
+                      {displayed.map((s, idx) => (
+                        <tr key={s.id} style={{ textAlign: "center", verticalAlign: "middle" }}>
+                          {selectedColumns.map(col => (
+                            <td key={col} style={{padding: "6px", fontSize: "0.9rem"}}>{renderCell(col, s, idx)}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                </div>
 
-                {rowsPerPage !== "All" && (
-                  <div className="d-flex justify-content-between align-items-center mt-2">
-                    <Button variant="outline-primary" disabled={currentPage === 1} onClick={handlePrev}>Previous</Button>
-                    <span>Page {currentPage} of {totalPages}</span>
-                    <Button variant="outline-primary" disabled={currentPage === totalPages} onClick={handleNext}>Next</Button>
+                {/* PAGINATION */}
+                {rowsPerPage !== "All" && displayed.length > 0 && (
+                  <div className="d-flex justify-content-between align-items-center p-3">
+                    <Button variant="outline-primary" size="sm" disabled={currentPage === 1} onClick={handlePrev}>Previous</Button>
+                    <span className="small text-muted">Page {currentPage} of {totalPages}</span>
+                    <Button variant="outline-primary" size="sm" disabled={currentPage === totalPages} onClick={handleNext}>Next</Button>
                   </div>
                 )}
               </>
             )}
           </CardContainer>
 
-          {/* Column Modal */}
-          <Modal show={showColumnsModal} onHide={() => setShowColumnsModal(false)}>
-            <Modal.Header closeButton>
-              <Modal.Title>Select Columns to Display</Modal.Title>
-            </Modal.Header>
+          {/* COLUMN MODAL */}
+          <Modal show={showColumnsModal} onHide={() => setShowColumnsModal(false)} centered size="sm" scrollable>
+            <Modal.Header closeButton className="py-2"><Modal.Title className="fs-6">Show/Hide Columns</Modal.Title></Modal.Header>
             <Modal.Body>
               {allColumns.map(col => (
-                <Form.Check
-                  key={col.key}
-                  type="checkbox"
-                  label={col.label}
-                  checked={selectedColumns.includes(col.key)}
-                  onChange={() => toggleColumn(col.key)}
-                />
+                <Form.Check key={col.key} type="switch" label={col.label} checked={selectedColumns.includes(col.key)} onChange={() => toggleColumn(col.key)} className="mb-2" />
               ))}
             </Modal.Body>
-            <Modal.Footer>
-              <Button variant="secondary" onClick={() => setShowColumnsModal(false)}>Close</Button>
-            </Modal.Footer>
           </Modal>
+
         </div>
       </div>
     </div>

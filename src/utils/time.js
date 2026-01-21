@@ -69,16 +69,17 @@ export const formatTimeAMPM = (value) => {
 
 // ✅ display date in Pakistan
 export const formatPakistanDateLabel = (value) => {
-  const d = parseApiDate(value);
+  const d = parseApiDate(value); // Assuming you have parseApiDate
   if (!d) return "--";
 
+  // New Format: "Jan 19, 2026"
   return new Intl.DateTimeFormat("en-US", {
-    timeZone: PK_TZ,
-    weekday: "short",
-    year: "numeric",
     month: "short",
     day: "numeric",
+    year: "numeric",
   }).format(d);
 };
 
 export const getNowUTC = () => new Date();
+
+

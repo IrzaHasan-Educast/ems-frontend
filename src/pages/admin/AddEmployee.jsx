@@ -149,8 +149,8 @@ useEffect(() => {
       <div className="flex-grow-1">
       <TopNavbar 
         toggleSidebar={toggleSidebar}
-        username={admin.name}
-        role={admin.role}
+        username={localStorage.getItem("name")}
+        role={localStorage.getItem("role")}
       />
         <div className="p-4 d-flex justify-content-center">
           <div className="w-75">

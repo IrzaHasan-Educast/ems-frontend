@@ -42,10 +42,29 @@ const LeaveHistory = ({ onLogout }) => {
   const navigate = useNavigate();
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-  // --- HELPERS ---
-  const formatDate = (dateStr) => (dateStr ? dayjs(dateStr).format("DD-MM-YYYY") : "--");
-  const formatDateTime = (dateStr) => (dateStr ? dayjs(dateStr).format("DD-MM-YYYY hh:mm A") : "--");
-  const getMonthName = (dateStr) => (dateStr ? dayjs(dateStr).format("MMMM") : "");
+   // --- HELPERS ---
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "--";
+    const d = new Date(dateStr);
+    const day = d.getDate().toString().padStart(2, '0');
+    const month = d.toLocaleString('en-US', { month: 'short' });
+    const year = d.getFullYear().toString().slice(-2);
+    return `${day}-${month}-${year}`; // 19-Jan-26
+  };
+
+  const formatDateTime = (dateStr) => {
+    if (!dateStr) return "--";
+    const d = new Date(dateStr);
+    return d.toLocaleString("en-US", { 
+        day: "numeric", month: "short", year: "numeric", 
+        hour: "numeric", minute: "2-digit", hour12: true 
+    });
+  };
+
+  const getMonthName = (dateStr) => {
+    const d = new Date(dateStr);
+    return d.toLocaleString("en-US", { month: "long" });
+  };
 
   // --- DATA FETCHING ---
   const fetchLeaves = useCallback(async (employeeId) => {
@@ -174,11 +193,10 @@ const LeaveHistory = ({ onLogout }) => {
 
       <div className="flex-grow-1">
         <TopNavbar 
-            toggleSidebar={toggleSidebar} 
-            username={employee.fullName} 
-            role={role} 
-            onLogout={onLogout}
-        />
+                toggleSidebar={toggleSidebar}
+                username={localStorage.getItem("name")}
+                role={localStorage.getItem("role")}
+              />
 
         <div className="p-3 container-fluid">
           <PageHeading
@@ -224,7 +242,7 @@ const LeaveHistory = ({ onLogout }) => {
               </Col>
 
               <Col lg={3} md={12} className="d-flex justify-content-end">
-                <Button variant="secondary" size="sm" onClick={handleReset}>Reset Filters</Button>
+                <Button variant="secondary" size="sm" onClick={handleReset}>↻</Button>
               </Col>
             </Row>
           </CardContainer>

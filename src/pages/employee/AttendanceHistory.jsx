@@ -144,7 +144,7 @@ const AttendanceHistory = ({ onLogout }) => {
                 </Form.Select>
               </Col>
               <Col md={2}>
-                <Button variant="secondary" onClick={handleReset}>Reset</Button>
+                <Button variant="secondary" onClick={handleReset}>↻</Button>
               </Col>
             </Row>
           </CardContainer>
