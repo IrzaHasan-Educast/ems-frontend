@@ -66,7 +66,7 @@ const ViewEmployeeShifts = ({ onLogout }) => {
                   {data.map((es, idx) => (
                     <tr key={es.id}>
                       <td>{idx + 1}</td>
-                      <td>{es.employeeName}</td>
+                      <td>{es.empName}</td>
                       <td>{es.shiftName}</td>
                       <td>
                         {es.startsAt} - {es.endsAt}

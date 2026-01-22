@@ -1,267 +1,285 @@
-// src/pages/admin/AdminDashboard.jsx
-import React, { useEffect, useState } from "react";
-import Sidebar from "../../components/Sidebar";
-import TopNavbar from "../../components/Navbar";
-import CardContainer from "../../components/CardContainer";
-import PageHeading from "../../components/PageHeading";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { getAllEmployees } from "../../api/employeeApi";
-import { getAllAttendance } from "../../api/attendanceApi";
-import { getCurrentUser } from "../../api/userApi";
-
+import { Row, Col, Card, Button, Table, Badge, Spinner } from "react-bootstrap";
 import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
   BarChart,
   Bar,
   XAxis,
   YAxis,
-  Tooltip,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-  ResponsiveContainer,
+  CartesianGrid
 } from "recharts";
 
+import Sidebar from "../../components/Sidebar";
+import Navbar from "../../components/Navbar";
+import CardContainer from "../../components/CardContainer";
+
+import { getAllEmployees } from "../../api/employeeApi";
+import { getAllAttendance } from "../../api/attendanceApi";
+import { getAllShifts } from "../../api/shiftApi";
+import { getCurrentUser } from "../../api/userApi";
+import { formatPakistanDateLabel } from "../../utils/time";
+
 const AdminDashboard = ({ onLogout }) => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const navigate = useNavigate();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-  const [employees, setEmployees] = useState([]);
-  const [deptStats, setDeptStats] = useState([]);
-  const [admin, setAdmin] = useState({ name: "Admin", role: "Admin" });
-
-  const [attendanceStats, setAttendanceStats] = useState({
+  // --- State ---
+  const [adminUser, setAdminUser] = useState({ name: "Admin", role: "ADMIN" });
+  
+  const [stats, setStats] = useState({
     totalEmployees: 0,
     presentToday: 0,
+    totalDepts: 0,
+    totalShifts: 0
   });
 
-  const [leaves, setLeaves] = useState([]);
+  const [recentEmployees, setRecentEmployees] = useState([]);
+  const [attendanceChartData, setAttendanceChartData] = useState([]); 
+  const [roleDistribution, setRoleDistribution] = useState([]);
+  const [pageLoading, setPageLoading] = useState(true);
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+  
+  // --- Fetch Logic ---
+  const fetchDashboardData = useCallback(async () => {
+    try {
+      setPageLoading(true);
+      
+      const [userRes, empRes, attRes, shiftRes] = await Promise.all([
+        getCurrentUser(),
+        getAllEmployees(),
+        getAllAttendance(),
+        getAllShifts()
+      ]);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const userRes = await getCurrentUser();
-        localStorage.setItem("name",userRes.data.fullName);
-        localStorage.setItem("role",userRes.data.role);
+      setAdminUser({ name: userRes.data.fullName, role: userRes.data.role });
 
-        setAdmin({
-          name: localStorage.getItem("name"),
-          role: localStorage.getItem("role"),
-        });
+      const allEmployees = empRes.data || [];
+      const allAttendance = attRes.data || [];
+      const allShifts = shiftRes.data || [];
 
-        const empRes = await getAllEmployees();
-        const allEmployees = empRes.data;
-        setEmployees(allEmployees);
+      // Stats
+      const uniqueDepts = new Set(allEmployees.map(e => e.department).filter(Boolean)).size;
+      const todayStr = new Date().toISOString().split("T")[0];
+      const presentToday = allAttendance.filter(a => a.attendanceDate === todayStr && a.present).length;
 
-        // Department stats
-        const depts = {};
-        allEmployees.forEach((emp) => {
-          const dep = emp.department || "Others";
-          depts[dep] = (depts[dep] || 0) + 1;
-        });
-        setDeptStats(
-          Object.keys(depts).map((key) => ({
-            name: key,
-            value: depts[key],
-          }))
-        );
+      setStats({
+        totalEmployees: allEmployees.length,
+        presentToday: presentToday,
+        totalDepts: uniqueDepts,
+        totalShifts: allShifts.length
+      });
 
-        // Attendance
-        const attendanceRes = await getAllAttendance();
-        const todayStr = new Date().toISOString().split("T")[0];
+      // Pie Chart Data
+      setAttendanceChartData([
+        { name: "Present", value: presentToday },
+        { name: "Absent", value: allEmployees.length - presentToday }
+      ]);
 
-        const employeeList = allEmployees.filter(
-          (emp) => emp.role.toLowerCase() === "employee"
-        );
+      // Bar Chart Data (Role Distribution)
+      const roles = {};
+      allEmployees.forEach(emp => {
+        const r = emp.role || "UNKNOWN";
+        roles[r] = (roles[r] || 0) + 1;
+      });
+      setRoleDistribution(Object.keys(roles).map(key => ({ name: key, count: roles[key] })));
 
-        const totalEmployees = employeeList.length;
+      // Recent Employees
+      setRecentEmployees([...allEmployees].reverse().slice(0, 5));
 
-        const presentToday = attendanceRes.data.filter(
-          (a) =>
-            employeeList.some((emp) => emp.id === a.employeeId) &&
-            a.attendanceDate === todayStr &&
-            a.present
-        ).length;
-
-        setAttendanceStats({ totalEmployees, presentToday });
-        setLeaves([
-          { name: "Present", value: presentToday },
-          { name: "Absent", value: totalEmployees - presentToday },
-        ]);
-      } catch (err) {
-        console.error("Error fetching data:", err);
-      }
-    };
-
-    fetchData();
+    } catch (err) {
+      console.error("Admin Dashboard Error:", err);
+    } finally {
+      setPageLoading(false);
+    }
   }, []);
 
-  const stats = [
-    {
-      title: "Total Employees",
-      value: attendanceStats.totalEmployees,
-      description: "Active Employees",
-      color: "#055993",
-      icon: "bi-people-fill",
-    },
-    {
-      title: "Attendance Today",
-      value: attendanceStats.presentToday,
-      description: "Present today",
-      color: "#FFA500",
-      icon: "bi-calendar-check",
-    },
-    {
-      title: "Departments",
-      value: deptStats.length,
-      description: "Total Departments",
-      color: "#6F42C1",
-      icon: "bi-building",
-    },
-  ];
+  useEffect(() => { fetchDashboardData(); }, [fetchDashboardData]);
 
-  const COLORS = [
-    "#FF8042",
-    "#0088FE",
-    "#00C49F",
-    "#FFBB28",
-    "#6F42C1",
-    "#FFA500",
-  ];
+  // --- Helper Components ---
+  const StatCard = ({ title, value, icon, color }) => (
+    <Card className="border-0 shadow-sm h-100">
+        <Card.Body className="d-flex align-items-center p-3">
+            <div className={`rounded-circle d-flex align-items-center justify-content-center text-white flex-shrink-0`} 
+                 style={{ width: 50, height: 50, backgroundColor: color, fontSize: "1.25rem" }}>
+                <i className={`bi ${icon}`}></i>
+            </div>
+            <div className="ms-3 overflow-hidden">
+                <h3 className="mb-0 fw-bold">{value}</h3>
+                <div className="small text-muted fw-bold text-truncate">{title}</div>
+            </div>
+        </Card.Body>
+    </Card>
+  );
+
+  const QuickActionBtn = ({ label, path, icon, color }) => (
+    <Button 
+        variant="white" 
+        className="w-100 border shadow-sm py-3 px-3 text-start d-flex align-items-center gap-3 hover-shadow mb-2"
+        onClick={() => navigate(path)}
+        style={{ transition: "all 0.2s", whiteSpace: "normal" }} // Text wrap
+    >
+        <div className={`text-${color} fs-3`}><i className={`bi ${icon}`}></i></div>
+        <div style={{ lineHeight: "1.2" }}>
+            <div className="fw-bold text-dark">{label}</div>
+            <small className="text-muted">System Action</small>
+        </div>
+    </Button>
+  );
 
   return (
     <div className="d-flex">
       <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} />
+      <div className="flex-grow-1 bg-light d-flex flex-column" style={{ minHeight: "100vh" }}>
+        <Navbar toggleSidebar={toggleSidebar} username={adminUser.name} role={adminUser.role} />
 
-      <div className="flex-grow-1">
-        <TopNavbar
-          toggleSidebar={toggleSidebar}
-          username={admin.name}
-          role={admin.role}
-        />
-
-        <div className="container-fluid p-3">
-          <PageHeading title="Admin Dashboard" />
-
-          {/* ===== Stats Cards ===== */}
-          <div className="row g-3 mb-4">
-            {stats.map((stat, idx) => (
-              <div key={idx} className="col-12 col-sm-6 col-lg-4">
-                <CardContainer>
-                  <div className="d-flex align-items-center">
-                    <div
-                      className="me-3 rounded-circle text-white d-flex align-items-center justify-content-center"
-                      style={{
-                        backgroundColor: stat.color,
-                        width: 60,
-                        height: 60,
-                        fontSize: "1.5rem",
-                      }}
-                    >
-                      <i className={`bi ${stat.icon}`}></i>
-                    </div>
-                    <div>
-                      <h3 className="mb-0">{stat.value}</h3>
-                      <p className="mb-0 text-muted">
-                        {stat.description}
-                      </p>
-                    </div>
-                  </div>
-                </CardContainer>
-              </div>
-            ))}
-          </div>
-
-          {/* ===== Charts Row ===== */}
-          <div className="row g-3 mb-4">
-            <div className="col-12 col-lg-6">
-              <CardContainer title="Attendance Overview Today">
-                <ResponsiveContainer width="100%" height={250}>
-                  <PieChart>
-                    <Pie
-                      data={leaves}
-                      dataKey="value"
-                      nameKey="name"
-                      outerRadius={80}
-                      label
-                    >
-                      {leaves.map((_, index) => (
-                        <Cell
-                          key={index}
-                          fill={COLORS[index % COLORS.length]}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </CardContainer>
-            </div>
-
-            <div className="col-12 col-lg-6">
-              <CardContainer title="Quick Actions">
-                <div className="d-grid gap-3">
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => navigate("/admin/employees")}
-                  >
-                    <i className="bi bi-people-fill me-2"></i>
-                    Manage Employees
-                  </button>
-
-                  <button
-                    className="btn btn-warning text-white"
-                    onClick={() => navigate("/admin/attendance")}
-                  >
-                    <i className="bi bi-calendar-check me-2"></i>
-                    Attendance
-                  </button>
-
-                  <button
-                    className="btn btn-success"
-                    onClick={() => navigate("/admin/employees/add")}
-                  >
-                    <i className="bi bi-person-plus me-2"></i>
-                    Add Employee
-                  </button>
-
-                  <button
-                    className="btn btn-danger text-white"
-                    onClick={() => navigate("/admin/leaves")}
-                  >
-                    <i className="bi bi-calendar2-event me-2"></i>
-                    Leave Management
-                  </button>
+        <div className="container-fluid p-4">
+          {pageLoading ? (
+             <div className="d-flex justify-content-center align-items-center" style={{height: "60vh"}}>
+                 <Spinner animation="border" variant="primary" />
+             </div>
+          ) : (
+            <>
+              {/* Header */}
+              <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+                <div>
+                    <h4 className="fw-bold text-dark mb-0">Admin Dashboard</h4>
+                    <p className="text-muted mb-0">System Overview & Controls</p>
                 </div>
-              </CardContainer>
-            </div>
-          </div>
+                <Badge bg="dark" className="px-3 py-2 shadow-sm fw-normal">
+                    {formatPakistanDateLabel(new Date().toISOString())}
+                </Badge>
+              </div>
 
-          {/* ===== Department Bar Chart ===== */}
-          <div className="row">
-            <div className="col-12">
-              <CardContainer title="Employees by Department">
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={deptStats}>
-                    <XAxis dataKey="name" />
-                    <YAxis allowDecimals={false} />
-                    <Tooltip />
-                    <Bar dataKey="value">
-                      {deptStats.map((_, index) => (
-                        <Cell
-                          key={index}
-                          fill={COLORS[index % COLORS.length]}
-                        />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContainer>
-            </div>
-          </div>
+              {/* ROW 1: Stats */}
+              <Row className="g-3 mb-4">
+                <Col xs={12} sm={6} lg={3}>
+                    <StatCard title="Total Employees" value={stats.totalEmployees} icon="bi-people-fill" color="#4e73df" />
+                </Col>
+                <Col xs={12} sm={6} lg={3}>
+                    <StatCard title="Departments" value={stats.totalDepts} icon="bi-building" color="#1cc88a" />
+                </Col>
+                <Col xs={12} sm={6} lg={3}>
+                    <StatCard title="Active Shifts" value={stats.totalShifts} icon="bi-calendar-range" color="#36b9cc" />
+                </Col>
+                <Col xs={12} sm={6} lg={3}>
+                    <StatCard title="Attendance Today" value={stats.presentToday} icon="bi-check-circle-fill" color="#f6c23e" />
+                </Col>
+              </Row>
+
+              {/* ROW 2: Layouts */}
+              <Row className="g-4 mb-4">
+                
+                {/* 1. Quick Actions */}
+                <Col xs={12} md={6} lg={4} xl={3}>
+                    <CardContainer title="System Controls">
+                        <div className="d-flex flex-column pt-2">
+                            <QuickActionBtn label="Manage Employees" path="/admin/employees" icon="bi-people" color="primary" />
+                            <QuickActionBtn label="Shift Management" path="/admin/shifts" icon="bi-clock" color="info" />
+                            <QuickActionBtn label="Assign Shifts" path="/admin/employee-shifts/assign" icon="bi-person-badge" color="warning" />
+                            <QuickActionBtn label="Work Sessions" path="/admin/work-sessions" icon="bi-display" color="success" />
+                        </div>
+                    </CardContainer>
+                </Col>
+
+                 {/* 2. Employee Roles Distribution */}
+                 <Col xs={12} md={12} lg={8} xl={5}>
+                    <Card className="border-0 shadow-sm h-100">
+                        <Card.Header className="bg-white fw-bold py-3">Employee Role Distribution</Card.Header>
+                        <Card.Body>
+                            <div style={{ width: "100%", height: "280px" }}> {/* FIXED HEIGHT WRAPPER */}
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={roleDistribution}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                        <XAxis dataKey="name" tick={{fontSize: 10}} />
+                                        <YAxis allowDecimals={false} />
+                                        <Tooltip cursor={{fill: 'transparent'}} />
+                                        <Bar dataKey="count" fill="#4e73df" radius={[4, 4, 0, 0]} barSize={40} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </Card.Body>
+                    </Card>
+                </Col>
+
+                {/* 3. Attendance Pie Chart */}
+                <Col xs={12} md={6} lg={12} xl={4}>
+                     <Card className="border-0 shadow-sm h-100">
+                        <Card.Header className="bg-white fw-bold py-3">Today's Status</Card.Header>
+                        <Card.Body>
+                             <div style={{ width: "100%", height: "280px" }}> {/* FIXED HEIGHT WRAPPER */}
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={attendanceChartData}
+                                            cx="50%" cy="50%"
+                                            innerRadius={60} outerRadius={80}
+                                            paddingAngle={5} dataKey="value"
+                                        >
+                                            <Cell fill="#1cc88a" />
+                                            <Cell fill="#e74a3b" />
+                                        </Pie>
+                                        <Tooltip />
+                                        <Legend verticalAlign="bottom" />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </Card.Body>
+                    </Card>
+                </Col>
+              </Row>
+
+              {/* ROW 3: Recent Employees Table */}
+              <Row>
+                <Col xs={12}>
+                    <Card className="border-0 shadow-sm">
+                        <Card.Header className="bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
+                            <span>Newest Employees</span>
+                            <Button variant="outline-primary" size="sm" onClick={() => navigate("/admin/employees/add")}>
+                                <i className="bi bi-plus"></i> Add New
+                            </Button>
+                        </Card.Header>
+                        <Card.Body className="p-0">
+                            {recentEmployees.length > 0 ? (
+                                <Table hover responsive className="mb-0 align-middle">
+                                    <thead className="bg-light text-muted small">
+                                        <tr>
+                                            <th className="ps-4">Full Name</th>
+                                            <th>Department</th>
+                                            <th>Role</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {recentEmployees.map((emp, i) => (
+                                            <tr key={i}>
+                                                <td className="ps-4 fw-bold text-dark text-nowrap">{emp.fullName}</td>
+                                                <td>{emp.department || "N/A"}</td>
+                                                <td><Badge bg="light" text="dark" className="border">{emp.role}</Badge></td>
+                                                <td>
+                                                    <Badge bg={emp.isActive ? "success" : "danger"}>
+                                                        {emp.isActive ? "Active" : "Inactive"}
+                                                    </Badge>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </Table>
+                            ) : (
+                                <div className="text-center py-5 text-muted">No employees found.</div>
+                            )}
+                        </Card.Body>
+                    </Card>
+                </Col>
+              </Row>
+            </>
+          )}
         </div>
       </div>
     </div>

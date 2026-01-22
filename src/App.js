@@ -206,7 +206,6 @@ function App() {
         <Route path="/manager/team" element={<ManagerTeam onLogout={handleLogout} />} />
         <Route path="/manager/team-sessions" element={<TeamWorkSessions onLogout={handleLogout} />} />
         <Route path="/manager/team-attendance" element={<TeamAttendance onLogout={handleLogout} />} />
-        <Route path="/manager/team-attendance" element={<TeamAttendance onLogout={handleLogout} />} />
         <Route
           path="/manager/team-leave"
           element={

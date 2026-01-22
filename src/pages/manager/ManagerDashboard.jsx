@@ -335,8 +335,8 @@ const ManagerDashboard = ({ onLogout }) => {
                         <div className="d-grid gap-3">
                             <QuickActionBtn label="Attendance" path="/manager/team-attendance" icon="bi-calendar-check" color="success" />
                             <QuickActionBtn label="Work Sessions" path="/manager/team-sessions" icon="bi-clock-history" color="primary" />
-                            <QuickActionBtn label="Leave Requests" path="/manager/leave-requests" icon="bi-envelope-paper" color="warning" />
-                            <QuickActionBtn label="My History" path="/manager/my-work-history" icon="bi-journal-text" color="info" />
+                            <QuickActionBtn label="Leave Requests" path="/manager/team-leave" icon="bi-envelope-paper" color="warning" />
+                            <QuickActionBtn label="My History" path="/manager/work-history" icon="bi-journal-text" color="info" />
                         </div>
                     </CardContainer>
                 </Col>

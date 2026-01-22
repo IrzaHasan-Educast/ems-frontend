@@ -231,7 +231,7 @@ const EmployeeDashboard = ({ onLogout }) => {
       <div className="flex-grow-1 bg-light d-flex flex-column" style={{ minHeight: "100vh" }}>
         <TopNavbar 
           toggleSidebar={toggleSidebar} 
-          username={employee?.fullName || localStorage.getItem("name")} 
+          username={localStorage.getItem("name")} 
           role={localStorage.getItem("role")} 
         />
 
