@@ -1,28 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import ManagerSidebar from "../../components/Sidebar";
-import Navbar from "../../components/Navbar";
-import CardContainer from "../../components/CardContainer";
-import CurrentSessionCard from "../../components/CurrentSessionCard";
-import PageHeading from "../../components/PageHeading";
-import { Button, Table, Badge, Spinner } from "react-bootstrap";
+import { Row, Col, Card, Button, Table, Badge, Spinner } from "react-bootstrap";
 import Swal from "sweetalert2";
-
-import {
-  getEmployeeListByManager,
-  getEmployeeShiftCountByManager,
-} from "../../api/employeeShiftApi";
-import * as attendanceApi from "../../api/attendanceApi";
-import * as workSessionApi from "../../api/workSessionApi";
-import * as breakApi from "../../api/breakApi";
-
-import {
-  formatTimeAMPM,
-  getNowUTC,
-  formatPakistanDateLabel,
-  parseApiDate,
-} from "../../utils/time";
-
 import {
   PieChart,
   Pie,
@@ -32,770 +11,479 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
+// Components
+import ManagerSidebar from "../../components/Sidebar";
+import Navbar from "../../components/Navbar";
+import CurrentSessionCard from "../../components/CurrentSessionCard";
+import CardContainer from "../../components/CardContainer";
+
+// APIs
+import { getEmployeeShiftCountByManager } from "../../api/employeeShiftApi";
+import * as attendanceApi from "../../api/attendanceApi";
+import * as workSessionApi from "../../api/workSessionApi";
+import * as breakApi from "../../api/breakApi";
+
+// Utils
+import {
+  formatTimeAMPM,
+  getNowUTC,
+  formatPakistanDateLabel,
+  parseApiDate,
+} from "../../utils/time";
+
 const ManagerDashboard = ({ onLogout }) => {
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-  // Manager's own data
+  // --- State ---
+  // Manager's Personal State
   const [manager, setManager] = useState({ fullName: "Manager", id: null });
   const [currentSession, setCurrentSession] = useState(null);
   const [myHistory, setMyHistory] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [sessionLoading, setSessionLoading] = useState(true);
 
-  // Team data
-  const [teamAttendance, setTeamAttendance] = useState([]);
-  const [teamSessions, setTeamSessions] = useState([]);
-  const [teamEmployees, setTeamEmployees] = useState([]); // Team employees list
+  // Team State
   const [teamStats, setTeamStats] = useState({
-    totalTeamMembers: 0,
-    presentToday: 0,
+    totalMembers: 0,
+    present: 0,
+    active: 0,
     onBreak: 0,
-    absentToday: 0,
-    activeNow: 0,
+    absent: 0,
   });
-  const [teamLoading, setTeamLoading] = useState(true);
+  const [recentTeamSessions, setRecentTeamSessions] = useState([]);
+  const [activeTeamMembers, setActiveTeamMembers] = useState([]);
+
+  // Loading States
+  const [pageLoading, setPageLoading] = useState(true); // Initial Load
+  const [actionLoading, setActionLoading] = useState(false); // Button Clicks
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+  const COLORS = ["#28a745", "#dc3545"]; // Green (Present), Red (Absent)
 
-  const COLORS = ["#28a745", "#dc3545", "#ffc107", "#17a2b8", "#6f42c1"];
-
-  // ========== UTILITY FUNCTIONS ==========
+  // --- Helpers ---
   const formatDuration = (hoursDecimal) => {
-    if (isNaN(hoursDecimal) || hoursDecimal < 0) return "0h 0m";
+    if (isNaN(hoursDecimal) || hoursDecimal <= 0) return "0h 0m";
     const totalMinutes = Math.round(hoursDecimal * 60);
     const hrs = Math.floor(totalMinutes / 60);
     const mins = totalMinutes % 60;
     return `${hrs}h ${mins}m`;
   };
 
-  // ========== FETCH MANAGER'S OWN DATA ==========
-  const fetchCurrentUser = useCallback(async () => {
+  const calculateDuration = (startStr, endStr = null, breaks = []) => {
+    const start = parseApiDate(startStr);
+    const end = parseApiDate(endStr) || getNowUTC();
+    if (!start) return 0;
+
+    const totalBreakMillis = breaks.reduce((sum, b) => {
+      const bStart = parseApiDate(b.startTime);
+      const bEnd = parseApiDate(b.endTime) || getNowUTC();
+      return bStart ? sum + (bEnd.getTime() - bStart.getTime()) : sum;
+    }, 0);
+
+    return (end.getTime() - start.getTime() - totalBreakMillis) / 1000 / 3600;
+  };
+
+  // --- Core Fetching Logic (Parallelized) ---
+  const fetchDashboardData = useCallback(async () => {
     try {
-      const res = await workSessionApi.getMe();
+      // Fetch everything in parallel to reduce load time
+      const [
+        meRes,
+        sessionRes,
+        countRes,
+        teamSessionsRes,
+        attendanceRes
+      ] = await Promise.all([
+        workSessionApi.getMe(),
+        workSessionApi.getActiveSession(),
+        getEmployeeShiftCountByManager(),
+        workSessionApi.getManagerWorkSessionHistory(), // Assuming this gets history
+        attendanceApi.getManagerAttendanceHistory()
+      ]);
+
+      // 1. Setup Manager Data
+      const empId = meRes.data.employeeId;
       setManager({
-        fullName: res.data.fullName,
-        id: res.data.employeeId,
-        role: res.data.role || "Manager",
+        fullName: meRes.data.fullName,
+        id: empId,
+        role: meRes.data.role
       });
-      localStorage.setItem("name", res.data.fullName);
-      localStorage.setItem("role", res.data.role || "Manager");
-      fetchMyHistory(res.data.employeeId);
-    } catch (err) {
-      console.error("Error fetching current user:", err);
-    }
-  }, []);
+      localStorage.setItem("name", meRes.data.fullName);
 
-  const fetchMyHistory = useCallback(async (employeeId) => {
-    try {
-      const res = await workSessionApi.getFirst3WorkSessions(employeeId);
-      if (res.data && Array.isArray(res.data)) {
-        const sorted = res.data.sort(
-          (a, b) => parseApiDate(b.clockInTime) - parseApiDate(a.clockInTime)
-        );
-
-        const formatted = sorted.map((s) => {
-          const clockIn = parseApiDate(s.clockInTime);
-          const clockOut = parseApiDate(s.clockOutTime);
-
-          const totalBreakMillis =
-            s.breaks?.reduce((sum, b) => {
-              const start = parseApiDate(b.startTime);
-              const end = parseApiDate(b.endTime) || getNowUTC();
-              if (!start) return sum;
-              return sum + (end.getTime() - start.getTime());
-            }, 0) || 0;
-
-          const totalMillis =
-            (clockOut || getNowUTC()).getTime() - (clockIn?.getTime() || 0);
-          const netMillis = totalMillis - totalBreakMillis;
-
-          return {
-            id: s.id,
-            clockInTime: s.clockInTime,
-            clockOutTime: s.clockOutTime,
-            clockInFormatted: formatTimeAMPM(s.clockInTime),
-            clockOutFormatted: s.clockOutTime
-              ? formatTimeAMPM(s.clockOutTime)
-              : "--",
-            totalHours: formatDuration(totalMillis / 1000 / 3600),
-            workingHours: formatDuration(netMillis / 1000 / 3600),
-            breakHours: formatDuration(totalBreakMillis / 1000 / 3600),
-          };
-        });
-
-        setMyHistory(formatted);
-      }
-    } catch (err) {
-      console.error("Failed to fetch my history:", err);
-    }
-  }, []);
-
-  const fetchActiveSession = useCallback(async () => {
-    setSessionLoading(true);
-    try {
-      const res = await workSessionApi.getActiveSession();
-      if (res.data) {
+      // 2. Setup Manager Session
+      if (sessionRes.data) {
+        const sData = sessionRes.data;
         setCurrentSession({
-          ...res.data,
-          clockInTime: res.data.clockInTime,
-          clockOutTime: res.data.clockOutTime || null,
-          breaks: res.data.breaks || [],
-          onBreak: res.data.breaks?.some((b) => !b.endTime) || false,
-          currentBreakId: res.data.breaks?.find((b) => !b.endTime)?.id || null,
-          sessionId: res.data.id,
+          ...sData,
+          sessionId: sData.id,
+          onBreak: sData.breaks?.some((b) => !b.endTime) || false,
+          currentBreakId: sData.breaks?.find((b) => !b.endTime)?.id || null,
         });
       } else {
         setCurrentSession(null);
       }
-    } catch (err) {
-      console.error("Error fetching active session:", err);
-      setCurrentSession(null);
-    }
-    setSessionLoading(false);
-  }, []);
 
-  // ========== FETCH TEAM DATA ==========
-  const fetchTeamData = useCallback(async () => {
-    setTeamLoading(true);
-    try {
-      // 1. Get total team members count using the new API
-      const countRes = await getEmployeeShiftCountByManager();
-      const totalTeamMembers = countRes.data || 0;
-
-      // 2. Get team employees list (optional - for more details)
-      let teamEmployeesList = [];
-      try {
-        const employeesRes = await getEmployeeListByManager();
-        teamEmployeesList = employeesRes.data || [];
-        setTeamEmployees(teamEmployeesList);
-      } catch (err) {
-        console.error("Error fetching team employees:", err);
+      // 3. Fetch Manager History (Separate call as it's specific)
+      if (empId) {
+        workSessionApi.getFirst3WorkSessions(empId).then(res => {
+             if(res.data) setMyHistory(res.data);
+        }).catch(err => console.error("My history failed", err));
       }
 
-      // 3. Fetch team work sessions
-      const sessionsRes = await workSessionApi.getManagerWorkSessionHistory();
-      const allSessions = sessionsRes.data || [];
-      setTeamSessions(allSessions);
-
-      // 4. Fetch team attendance
-      const attendanceRes = await attendanceApi.getManagerAttendanceHistory();
+      // 4. Calculate Team Stats
+      const totalMembers = countRes.data || 0;
+      const allSessions = teamSessionsRes.data || [];
       const allAttendance = attendanceRes.data || [];
-      setTeamAttendance(allAttendance);
-
-      // 5. Calculate stats
       const todayStr = new Date().toISOString().split("T")[0];
 
-      // Today's attendance - count present employees
-      const todayAttendance = allAttendance.filter(
-        (a) => a.attendanceDate === todayStr
-      );
-      const presentToday = todayAttendance.filter((a) => a.present).length;
-
-      // Active sessions today (currently working)
-      const activeSessions = allSessions.filter(
-        (s) => !s.clockOutTime && s.clockInTime?.startsWith(todayStr)
-      );
-      const activeNow = activeSessions.length;
-
-      // Currently on break (active sessions with ongoing break)
-      const onBreak = activeSessions.filter((s) =>
-        s.breaks?.some((b) => !b.endTime)
-      ).length;
-
-      // Absent = Total team members - Present today
-      const absentToday = Math.max(0, totalTeamMembers - presentToday);
+      // Present Today
+      const presentCount = allAttendance.filter(a => a.attendanceDate === todayStr && a.present).length;
+      
+      // Active & Break Status
+      const activeSessions = allSessions.filter(s => !s.clockOutTime && s.clockInTime?.startsWith(todayStr));
+      const onBreakCount = activeSessions.filter(s => s.breaks?.some(b => !b.endTime)).length;
+      const activeCount = activeSessions.length;
 
       setTeamStats({
-        totalTeamMembers,
-        presentToday,
-        onBreak,
-        absentToday,
-        activeNow,
+        totalMembers,
+        present: presentCount,
+        absent: Math.max(0, totalMembers - presentCount),
+        active: activeCount,
+        onBreak: onBreakCount
       });
+
+      setActiveTeamMembers(activeSessions);
+      
+      // Recent Completed Sessions
+      const recent = allSessions
+        .filter(s => s.clockOutTime)
+        .sort((a, b) => parseApiDate(b.clockInTime) - parseApiDate(a.clockInTime))
+        .slice(0, 5);
+      setRecentTeamSessions(recent);
+
     } catch (err) {
-      console.error("Error fetching team data:", err);
+      console.error("Dashboard Load Error:", err);
+      // Fallback for session if main fetch fails
+      try {
+        const fallbackSession = await workSessionApi.getActiveSession();
+        setCurrentSession(fallbackSession.data || null);
+      } catch (e) { /* ignore */ }
+    } finally {
+      setPageLoading(false);
     }
-    setTeamLoading(false);
   }, []);
 
-  // ========== CLOCK IN/OUT/BREAK HANDLERS ==========
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  // --- Manager Actions (Clock In/Out) ---
+  const refreshManagerSession = async () => {
+    const res = await workSessionApi.getActiveSession();
+    setCurrentSession(res.data ? {
+      ...res.data,
+      sessionId: res.data.id,
+      onBreak: res.data.breaks?.some(b => !b.endTime),
+      currentBreakId: res.data.breaks?.find(b => !b.endTime)?.id
+    } : null);
+    if(manager.id) {
+       const hRes = await workSessionApi.getFirst3WorkSessions(manager.id);
+       setMyHistory(hRes.data || []);
+    }
+  };
+
   const handleClockIn = async () => {
-    setLoading(true);
+    setActionLoading(true);
     try {
       await workSessionApi.clockIn();
-
       try {
         await attendanceApi.markAttendance();
-        Swal.fire({
-          icon: "success",
-          title: "Attendance Marked",
-          text: "You are present today!",
-          timer: 2000,
-          showConfirmButton: false,
-        });
+        Swal.fire({ icon: "success", title: "Attendance Marked", timer: 1500, showConfirmButton: false });
       } catch (err) {
-        if (err.response?.status === 400) {
-          console.log("Attendance already marked for today.");
-        } else {
-          console.error("Attendance API error:", err);
-        }
+         // Silently handle 400 (already marked)
+         const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
+         Toast.fire({ icon: 'success', title: 'Session Started' });
       }
-
-      await fetchActiveSession();
-      if (manager?.id) await fetchMyHistory(manager.id);
+      await refreshManagerSession();
     } catch (err) {
-      console.error(err);
-      Swal.fire("Error", "Clock in failed.", "error");
+      Swal.fire("Error", "Clock in failed", "error");
+    } finally {
+      setActionLoading(false);
     }
-    setLoading(false);
   };
 
   const handleClockOut = async () => {
-    if (!currentSession?.sessionId) return;
-
+    if(!currentSession) return;
     const result = await Swal.fire({
-      title: "Clock Out",
-      text: "Do you want to clock out now?",
+      title: "End Shift?",
+      text: "Clock out now?",
       icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: "#3085d6",
-      cancelButtonColor: "#d33",
-      confirmButtonText: "Yes, clock out!",
-      cancelButtonText: "Cancel",
+      confirmButtonColor: "#d33",
+      confirmButtonText: "Yes",
     });
-
     if (!result.isConfirmed) return;
 
-    setLoading(true);
+    setActionLoading(true);
     try {
       await workSessionApi.clockOut(currentSession.sessionId);
-      await fetchActiveSession();
-      if (manager?.id) await fetchMyHistory(manager.id);
-
-      Swal.fire({
-        icon: "success",
-        title: "Clocked Out!",
-        toast: true,
-        position: "top-end",
-        showConfirmButton: false,
-        timer: 2000,
-        timerProgressBar: true,
-      });
+      await refreshManagerSession();
+      Swal.fire({ icon: "success", title: "Clocked Out", timer: 1500, showConfirmButton: false });
     } catch (err) {
-      console.error(err);
-      Swal.fire({
-        icon: "error",
-        title: "Clock out failed.",
-        toast: true,
-        position: "top-end",
-        showConfirmButton: false,
-        timer: 2000,
-        timerProgressBar: true,
-      });
+      Swal.fire("Error", "Failed to clock out", "error");
+    } finally {
+      setActionLoading(false);
     }
-    setLoading(false);
   };
 
   const handleTakeBreak = async () => {
-    if (!currentSession?.sessionId) return;
-    setLoading(true);
+    if(!currentSession) return;
+    setActionLoading(true);
     try {
-      if (!currentSession.onBreak) {
-        await breakApi.startBreak(currentSession.sessionId);
-      } else {
-        await breakApi.endBreak(currentSession.currentBreakId);
-      }
-      await fetchActiveSession();
-      if (manager?.id) await fetchMyHistory(manager.id);
+      currentSession.onBreak 
+        ? await breakApi.endBreak(currentSession.currentBreakId)
+        : await breakApi.startBreak(currentSession.sessionId);
+      await refreshManagerSession();
     } catch (err) {
-      console.error(err);
-      Swal.fire("Error", "Break operation failed.", "error");
+      Swal.fire("Error", "Break action failed", "error");
+    } finally {
+      setActionLoading(false);
     }
-    setLoading(false);
   };
 
-  // ========== USE EFFECT ==========
-  useEffect(() => {
-    fetchCurrentUser();
-    fetchActiveSession();
-    fetchTeamData();
-  }, [fetchCurrentUser, fetchActiveSession, fetchTeamData]);
+  // --- Components ---
+  const StatCard = ({ title, value, icon, color, subtext }) => (
+    <Card className="border-1 shadow-sm h-100">
+        <Card.Body className="d-flex align-items-center">
+            <div className={`rounded-circle p-3 d-flex align-items-center justify-content-center text-white`} 
+                 style={{ width: 50, height: 50, backgroundColor: color }}>
+                <i className={`bi ${icon} fs-4`}></i>
+            </div>
+            <div className="ms-3">
+                <h3 className="mb-0 fw-bold">{value}</h3>
+                <div className="small text-muted fw-bold">{title}</div>
+                {subtext && <div className="text-muted" style={{fontSize: "0.7rem"}}>{subtext}</div>}
+            </div>
+        </Card.Body>
+    </Card>
+  );
 
-  // ========== STATS CARDS DATA ==========
-  const statsCards = [
-    {
-      title: "Team Members",
-      value: teamStats.totalTeamMembers,
-      description: "Total team size",
-      color: "#055993",
-      icon: "bi-people-fill",
-    },
-    {
-      title: "Present Today",
-      value: teamStats.presentToday,
-      description: "Marked attendance",
-      color: "#28a745",
-      icon: "bi-person-check-fill",
-    },
-    // {
-    //   title: "Active Now",
-    //   value: teamStats.activeNow,
-    //   description: "Currently working",
-    //   color: "#17a2b8",
-    //   icon: "bi-activity",
-    // },
-    {
-      title: "On Break",
-      value: teamStats.onBreak,
-      description: "Taking break",
-      color: "#ffc107",
-      icon: "bi-cup-hot-fill",
-    },
-    {
-      title: "Absent Today",
-      value: teamStats.absentToday,
-      description: "Not present",
-      color: "#dc3545",
-      icon: "bi-person-x-fill",
-    },
-  ];
-
-  // Chart data
-  const attendanceChartData = [
-    { name: "Present", value: teamStats.presentToday },
-    { name: "Absent", value: teamStats.absentToday },
-  ];
-
-  // Working status chart
-  // const workingStatusChartData = [
-  //   { name: "Working", value: teamStats.activeNow - teamStats.onBreak },
-  //   { name: "On Break", value: teamStats.onBreak },
-  //   { name: "Not Active", value: teamStats.presentToday - teamStats.activeNow },
-  // ].filter((item) => item.value > 0);
-
-  // Get recent team sessions (last 5)
-  const recentTeamSessions = teamSessions
-    .filter((s) => s.clockOutTime) // completed sessions
-    .sort((a, b) => parseApiDate(b.clockInTime) - parseApiDate(a.clockInTime))
-    .slice(0, 5);
-
-  // Get currently active team members
-  const activeTeamMembers = teamSessions.filter(
-    (s) =>
-      !s.clockOutTime &&
-      s.clockInTime?.startsWith(new Date().toISOString().split("T")[0])
+  const QuickActionBtn = ({ label, path, icon, color }) => (
+    <Button 
+        variant="white" 
+        className="w-100 h-100 border shadow-sm py-3 text-start d-flex align-items-center gap-3 hover-shadow"
+        onClick={() => navigate(path)}
+    >
+        <div className={`text-${color} fs-4`}><i className={`bi ${icon}`}></i></div>
+        <div className="fw-bold text-dark lh-1">{label}</div>
+    </Button>
   );
 
   return (
     <div className="d-flex">
       <ManagerSidebar isOpen={isSidebarOpen} onLogout={onLogout} />
+      <div className="flex-grow-1 bg-light d-flex flex-column" style={{ minHeight: "100vh" }}>
+        <Navbar toggleSidebar={toggleSidebar} username={manager.fullName} role="Manager" />
 
-      <div className="flex-grow-1">
-        <Navbar
-          toggleSidebar={toggleSidebar}
-          username={manager.fullName}
-          role={manager.role || "Manager"}
-        />
-
-        <div className="container-fluid p-3">
-          <PageHeading title="Manager Dashboard" />
-
-          <h4 className="mb-4" style={{ color: "#055993" }}>
-            Welcome, {manager.fullName}!
-          </h4>
-
-          {/* ========== MY SESSION SECTION ========== */}
-          <div className="row mb-4">
-            <div className="col-12 col-lg-6">
-              <CardContainer title="My Current Session">
-                {sessionLoading ? (
-                  <div className="text-center p-4">
-                    <Spinner animation="border" variant="primary" />
-                    <p className="mt-2">Loading session...</p>
-                  </div>
-                ) : currentSession ? (
-                  <CurrentSessionCard
-                    currentSession={currentSession}
-                    handleClockIn={handleClockIn}
-                    handleClockOut={handleClockOut}
-                    handleTakeBreak={handleTakeBreak}
-                    loading={loading}
-                  />
-                ) : (
-                  <div className="text-center p-4">
-                    <p>No active session. Start your work now!</p>
-                    <div
-                      className="clock-in-circle mx-auto"
-                      onClick={!loading ? handleClockIn : undefined}
-                      style={{
-                        width: "120px",
-                        height: "120px",
-                        borderRadius: "50%",
-                        backgroundColor: loading ? "#6c757d" : "#28a745",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "white",
-                        fontSize: "1.2rem",
-                        cursor: loading ? "not-allowed" : "pointer",
-                        userSelect: "none",
-                        boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
-                        transition: "transform 0.2s",
-                      }}
-                      onMouseOver={(e) => {
-                        if (!loading)
-                          e.currentTarget.style.transform = "scale(1.05)";
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.transform = "scale(1)";
-                      }}
-                    >
-                      {loading ? (
-                        <Spinner animation="border" size="sm" />
-                      ) : (
-                        "Clock In"
-                      )}
-                    </div>
-                  </div>
-                )}
-              </CardContainer>
-            </div>
-
-            <div className="col-12 col-lg-6">
-              <CardContainer title="Quick Actions">
-                <div className="d-grid gap-3">
-                  <Button
-                    variant="primary"
-                    onClick={() => navigate("/manager/team-sessions")}
-                  >
-                    <i className="bi bi-people-fill me-2"></i>
-                    View Team Work Sessions
-                  </Button>
-
-                  <Button
-                    variant="success"
-                    onClick={() => navigate("/manager/team-attendance")}
-                  >
-                    <i className="bi bi-calendar-check me-2"></i>
-                    View Team Attendance
-                  </Button>
-
-                  <Button
-                    variant="warning"
-                    className="text-white"
-                    onClick={() => navigate("/manager/leave-requests")}
-                  >
-                    <i className="bi bi-envelope-paper me-2"></i>
-                    Manage Leave Requests
-                  </Button>
-
-                  <Button
-                    variant="info"
-                    className="text-white"
-                    onClick={() => navigate("/manager/my-work-history")}
-                  >
-                    <i className="bi bi-clock-history me-2"></i>
-                    My Work History
-                  </Button>
+        <div className="container-fluid p-4">
+          
+          {pageLoading ? (
+             <div className="d-flex justify-content-center align-items-center" style={{height: "60vh"}}>
+                 <Spinner animation="border" variant="primary" />
+             </div>
+          ) : (
+            <>
+              <div className="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h4 className="fw-bold text-dark mb-0">Manager Dashboard</h4>
+                    <p className="text-muted mb-0">Overview for <span className="text-primary fw-bold">{manager.fullName}</span></p>
                 </div>
-              </CardContainer>
-            </div>
-          </div>
-
-          {/* ========== TEAM STATS CARDS ========== */}
-          <div className="row g-3 mb-4">
-            {statsCards.map((stat, idx) => (
-              <div key={idx} className="col-6 col-sm-4 col-lg-3">
-                <CardContainer>
-                  <div className="text-center">
-                    <div
-                      className="mx-auto mb-2 rounded-circle text-white d-flex align-items-center justify-content-center"
-                      style={{
-                        backgroundColor: stat.color,
-                        width: 50,
-                        height: 50,
-                        fontSize: "1.3rem",
-                      }}
-                    >
-                      <i className={`bi ${stat.icon}`}></i>
-                    </div>
-                    <h3 className="mb-0">
-                      {teamLoading ? (
-                        <Spinner animation="border" size="sm" />
-                      ) : (
-                        stat.value
-                      )}
-                    </h3>
-                    <p className="mb-0 text-muted small">{stat.title}</p>
-                  </div>
-                </CardContainer>
+                <Badge bg="white" text="dark" className="border px-3 py-2 shadow-sm fw-normal">
+                    {formatPakistanDateLabel(new Date().toISOString())}
+                </Badge>
               </div>
-            ))}
-          </div>
 
-          {/* ========== CHARTS ROW ========== */}
-          <div className="row g-3 mb-4">
-            {/* Attendance Pie Chart */}
-            <div className="col-12 col-lg-6">
-              <CardContainer title="Team Attendance Today">
-                {teamLoading ? (
-                  <div className="text-center p-4">
-                    <Spinner animation="border" variant="primary" />
-                  </div>
-                ) : teamStats.totalTeamMembers > 0 ? (
-                  <ResponsiveContainer width="100%" height={220}>
-                    <PieChart>
-                      <Pie
-                        data={attendanceChartData}
-                        dataKey="value"
-                        nameKey="name"
-                        outerRadius={70}
-                        label={({ name, value }) => `${name}: ${value}`}
-                      >
-                        {attendanceChartData.map((_, index) => (
-                          <Cell
-                            key={index}
-                            fill={COLORS[index % COLORS.length]}
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <p className="text-center text-muted">No team members</p>
-                )}
-              </CardContainer>
-            </div>
+              {/* ROW 1: My Session & Quick Actions */}
+              <Row className="g-4 mb-4">
+                <Col lg={7} xl={8}>
+                    <CardContainer title="My Workspace">
+                        {currentSession ? (
+                            <CurrentSessionCard 
+                                currentSession={currentSession}
+                                handleClockIn={handleClockIn}
+                                handleClockOut={handleClockOut}
+                                handleTakeBreak={handleTakeBreak}
+                                loading={actionLoading}
+                            />
+                        ) : (
+                            // Minimal Clock In for Manager
+                            <div className="text-center py-4 d-flex align-items-center justify-content-center flex-column">
+                                <Button 
+                                    onClick={handleClockIn}
+                                    variant="success" 
+                                    className="rounded-pill px-5 py-3 fw-bold shadow-lg d-flex align-items-center gap-2"
+                                    disabled={actionLoading}
+                                >
+                                    {actionLoading ? <Spinner size="sm"/> : <><i className="bi bi-fingerprint"></i> CLOCK IN</>}
+                                </Button>
+                                <p className="text-muted mt-2 small">Start your own session to track hours</p>
+                            </div>
+                        )}
+                    </CardContainer>
+                </Col>
+                <Col lg={5} xl={4}>
+                    <CardContainer title="Team Actions">
+                        <div className="d-grid gap-3">
+                            <QuickActionBtn label="Attendance" path="/manager/team-attendance" icon="bi-calendar-check" color="success" />
+                            <QuickActionBtn label="Work Sessions" path="/manager/team-sessions" icon="bi-clock-history" color="primary" />
+                            <QuickActionBtn label="Leave Requests" path="/manager/leave-requests" icon="bi-envelope-paper" color="warning" />
+                            <QuickActionBtn label="My History" path="/manager/my-work-history" icon="bi-journal-text" color="info" />
+                        </div>
+                    </CardContainer>
+                </Col>
+              </Row>
 
-            {/* Working Status Pie Chart */}
-            {/* <div className="col-12 col-lg-4">
-              <CardContainer title="Current Working Status">
-                {teamLoading ? (
-                  <div className="text-center p-4">
-                    <Spinner animation="border" variant="primary" />
-                  </div>
-                ) : workingStatusChartData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={220}>
-                    <PieChart>
-                      <Pie
-                        data={workingStatusChartData}
-                        dataKey="value"
-                        nameKey="name"
-                        outerRadius={70}
-                        label={({ name, value }) => `${name}: ${value}`}
-                      >
-                        {workingStatusChartData.map((_, index) => (
-                          <Cell
-                            key={index}
-                            fill={
-                              ["#17a2b8", "#ffc107", "#6c757d"][index % 3]
-                            }
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <p className="text-center text-muted">No active employees</p>
-                )}
-              </CardContainer>
-            </div> */}
+              {/* ROW 2: Team Stats */}
+              <h5 className="fw-bold text-dark mb-3">Team Overview</h5>
+              <Row className="g-3 mb-4">
+                <Col sm={6} lg={3}>
+                    <StatCard title="Total Team" value={teamStats.totalMembers} icon="bi-people-fill" color="#055993" />
+                </Col>
+                <Col sm={6} lg={3}>
+                    <StatCard title="Present" value={teamStats.present} icon="bi-person-check-fill" color="#28a745" subtext={`${teamStats.absent} Absent`} />
+                </Col>
+                <Col sm={6} lg={3}>
+                    <StatCard title="Active Now" value={teamStats.active} icon="bi-activity" color="#17a2b8" />
+                </Col>
+                <Col sm={6} lg={3}>
+                    <StatCard title="On Break" value={teamStats.onBreak} icon="bi-cup-hot-fill" color="#ffc107" />
+                </Col>
+              </Row>
 
-            {/* My Recent Sessions */}
-            <div className="col-12 col-lg-6">
-              <CardContainer title="My Recent Sessions">
-                <div className="d-flex flex-column gap-2">
-                  {myHistory.slice(0, 3).map((h, idx) => (
-                    <div
-                      key={idx}
-                      className="p-2 border rounded bg-light d-flex justify-content-between align-items-center"
-                    >
-                      <div>
-                        <strong style={{ fontSize: "0.85rem" }}>
-                          {formatPakistanDateLabel(h.clockInTime)}
-                        </strong>
-                        <br />
-                        <small className="text-muted">
-                          {h.clockInFormatted} - {h.clockOutFormatted}
-                        </small>
-                      </div>
-                      <Badge bg="primary">{h.workingHours}</Badge>
-                    </div>
-                  ))}
-                  {myHistory.length === 0 && (
-                    <p className="text-muted text-center">No sessions yet</p>
-                  )}
-                </div>
-              </CardContainer>
-            </div>
-          </div>
+              {/* ROW 3: Charts & Tables */}
+              <Row className="g-4">
+                {/* Charts */}
+                <Col lg={4}>
+                    <Card className="border-0 shadow-sm h-100">
+                        <Card.Header className="bg-white fw-bold py-3">Attendance Ratio</Card.Header>
+                        <Card.Body>
+                            {teamStats.totalMembers > 0 ? (
+                                <ResponsiveContainer width="100%" height={200}>
+                                    <PieChart>
+                                        <Pie
+                                            data={[
+                                                { name: "Present", value: teamStats.present },
+                                                { name: "Absent", value: teamStats.absent }
+                                            ]}
+                                            cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value"
+                                        >
+                                            <Cell fill={COLORS[0]} />
+                                            <Cell fill={COLORS[1]} />
+                                        </Pie>
+                                        <Tooltip />
+                                        <Legend verticalAlign="bottom" height={36}/>
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            ) : <div className="text-center py-5 text-muted">No Data</div>}
+                        </Card.Body>
+                    </Card>
+                </Col>
 
-          {/* ========== CURRENTLY ACTIVE TEAM MEMBERS ========== */}
-          {activeTeamMembers.length > 0 && (
-            <div className="row mb-4">
-              <div className="col-12">
-                <CardContainer title="Currently Active Team Members">
-                  <div className="table-responsive">
-                    <Table striped bordered hover size="sm">
-                      <thead className="table-success">
-                        <tr>
-                          <th>Employee</th>
-                          <th>Clock In Time</th>
-                          <th>Working Since</th>
-                          <th>Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {activeTeamMembers.map((session, idx) => {
-                          const clockIn = parseApiDate(session.clockInTime);
-                          const isOnBreak = session.breaks?.some(
-                            (b) => !b.endTime
-                          );
+                {/* Active Members Table */}
+                <Col lg={8}>
+                    <Card className="border-0 shadow-sm h-100">
+                        <Card.Header className="bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
+                            <span>Active Team Members</span>
+                            <Badge bg="success">{activeTeamMembers.length} Online</Badge>
+                        </Card.Header>
+                        <Card.Body className="p-0">
+                            {activeTeamMembers.length > 0 ? (
+                                <Table hover responsive className="mb-0 align-middle">
+                                    <thead className="bg-light text-muted small">
+                                        <tr>
+                                            <th className="ps-4">Employee</th>
+                                            <th>Clock In</th>
+                                            <th>Duration</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {activeTeamMembers.map((s, i) => {
+                                            const duration = calculateDuration(s.clockInTime, null, s.breaks);
+                                            const isOnBreak = s.breaks?.some(b => !b.endTime);
+                                            return (
+                                                <tr key={i}>
+                                                    <td className="ps-4 fw-bold text-dark">{s.employeeName}</td>
+                                                    <td>{formatTimeAMPM(s.clockInTime)}</td>
+                                                    <td>{formatDuration(duration)}</td>
+                                                    <td>
+                                                        <Badge bg={isOnBreak ? 'warning' : 'success'}>
+                                                            {isOnBreak ? 'On Break' : 'Working'}
+                                                        </Badge>
+                                                    </td>
+                                                </tr>
+                                            )
+                                        })}
+                                    </tbody>
+                                </Table>
+                            ) : (
+                                <div className="text-center py-5 text-muted">No team members currently active.</div>
+                            )}
+                        </Card.Body>
+                    </Card>
+                </Col>
+              </Row>
 
-                          // Calculate working time
-                          const totalBreakMillis =
-                            session.breaks?.reduce((sum, b) => {
-                              const start = parseApiDate(b.startTime);
-                              const end = parseApiDate(b.endTime) || getNowUTC();
-                              if (!start) return sum;
-                              return sum + (end.getTime() - start.getTime());
-                            }, 0) || 0;
+              {/* ROW 4: Recent Completed Sessions */}
+              <Row className="mt-4">
+                <Col>
+                    <CardContainer title="Recently Completed Sessions">
+                        {recentTeamSessions.length > 0 ? (
+                            <div className="table-responsive">
+                                <Table hover className="align-middle">
+                                    <thead className="table-light">
+                                        <tr>
+                                            <th>Employee</th>
+                                            <th>Date</th>
+                                            <th>Shift Time</th>
+                                            <th>Working Hours</th>
+                                            <th>Break Hours</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {recentTeamSessions.map((s, i) => {
+                                            const workHrs = calculateDuration(s.clockInTime, s.clockOutTime, s.breaks);
+                                            const breakHrs = s.breaks?.reduce((sum, b) => {
+                                                const start = parseApiDate(b.startTime);
+                                                const end = parseApiDate(b.endTime) || getNowUTC();
+                                                return start ? sum + (end - start) : sum;
+                                            }, 0) / 1000 / 3600 || 0;
 
-                          const totalMillis =
-                            getNowUTC().getTime() - (clockIn?.getTime() || 0);
-                          const netMillis = totalMillis - totalBreakMillis;
-
-                          return (
-                            <tr key={idx}>
-                              <td>
-                                <strong>
-                                  {session.employeeName || "Unknown"}
-                                </strong>
-                              </td>
-                              <td>{formatTimeAMPM(session.clockInTime)}</td>
-                              <td>{formatDuration(netMillis / 1000 / 3600)}</td>
-                              <td>
-                                {isOnBreak ? (
-                                  <Badge bg="warning" className="text-dark">
-                                    <i className="bi bi-cup-hot me-1"></i>
-                                    On Break
-                                  </Badge>
-                                ) : (
-                                  <Badge bg="success">
-                                    <i className="bi bi-activity me-1"></i>
-                                    Working
-                                  </Badge>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </Table>
-                  </div>
-                </CardContainer>
-              </div>
-            </div>
+                                            return (
+                                                <tr key={i}>
+                                                    <td className="fw-bold">{s.employeeName}</td>
+                                                    <td>{formatPakistanDateLabel(s.clockInTime)}</td>
+                                                    <td>
+                                                        <span className="badge bg-light text-dark border">
+                                                            {formatTimeAMPM(s.clockInTime)} - {formatTimeAMPM(s.clockOutTime)}
+                                                        </span>
+                                                    </td>
+                                                    <td className="fw-bold text-success">{formatDuration(workHrs)}</td>
+                                                    <td className="text-muted">{formatDuration(breakHrs)}</td>
+                                                </tr>
+                                            )
+                                        })}
+                                    </tbody>
+                                </Table>
+                            </div>
+                        ) : <div className="p-3 text-center text-muted">No recent completed sessions found.</div>}
+                        <div className="text-end mt-2">
+                             <Button variant="link" onClick={() => navigate("/manager/team-sessions")}>View All Activity &rarr;</Button>
+                        </div>
+                    </CardContainer>
+                </Col>
+              </Row>
+            </>
           )}
-
-          {/* ========== RECENT TEAM SESSIONS TABLE ========== */}
-          <div className="row">
-            <div className="col-12">
-              <CardContainer title="Recent Team Work Sessions (Completed)">
-                {teamLoading ? (
-                  <div className="text-center p-4">
-                    <Spinner animation="border" variant="primary" />
-                    <p className="mt-2">Loading team data...</p>
-                  </div>
-                ) : recentTeamSessions.length > 0 ? (
-                  <>
-                    <div className="table-responsive">
-                      <Table striped bordered hover>
-                        <thead className="table-dark">
-                          <tr>
-                            <th>Employee</th>
-                            <th>Date</th>
-                            <th>Clock In</th>
-                            <th>Clock Out</th>
-                            <th>Working Hours</th>
-                            <th>Break Hours</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {recentTeamSessions.map((session, idx) => {
-                            const clockIn = parseApiDate(session.clockInTime);
-                            const clockOut = parseApiDate(session.clockOutTime);
-
-                            const totalBreakMillis =
-                              session.breaks?.reduce((sum, b) => {
-                                const start = parseApiDate(b.startTime);
-                                const end =
-                                  parseApiDate(b.endTime) || getNowUTC();
-                                if (!start) return sum;
-                                return sum + (end.getTime() - start.getTime());
-                              }, 0) || 0;
-
-                            const totalMillis =
-                              (clockOut || getNowUTC()).getTime() -
-                              (clockIn?.getTime() || 0);
-                            const netMillis = totalMillis - totalBreakMillis;
-
-                            return (
-                              <tr key={idx}>
-                                <td>
-                                  <strong>
-                                    {session.employeeName || "Unknown"}
-                                  </strong>
-                                </td>
-                                <td>
-                                  {formatPakistanDateLabel(session.clockInTime)}
-                                </td>
-                                <td>{formatTimeAMPM(session.clockInTime)}</td>
-                                <td>
-                                  {session.clockOutTime
-                                    ? formatTimeAMPM(session.clockOutTime)
-                                    : "--"}
-                                </td>
-                                <td>
-                                  <Badge bg="primary">
-                                    {formatDuration(netMillis / 1000 / 3600)}
-                                  </Badge>
-                                </td>
-                                <td>
-                                  <Badge bg="secondary">
-                                    {formatDuration(
-                                      totalBreakMillis / 1000 / 3600
-                                    )}
-                                  </Badge>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </Table>
-                    </div>
-                    <div className="text-end">
-                      <Button
-                        variant="primary"
-                        onClick={() => navigate("/manager/team-sessions")}
-                      >
-                        View All Team Sessions →
-                      </Button>
-                    </div>
-                  </>
-                ) : (
-                  <p className="text-center text-muted">
-                    No completed team sessions found
-                  </p>
-                )}
-              </CardContainer>
-            </div>
-          </div>
         </div>
       </div>
     </div>

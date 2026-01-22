@@ -197,7 +197,7 @@ const WorkSessionHistory = ({ onLogout }) => {
       <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar} />
 
       <div className="flex-grow-1" style={{ minWidth: 0 }}>
-        <TopNavbar toggleSidebar={toggleSidebar} username={employee?.fullName} role={role} onLogout={onLogout} />
+        <TopNavbar toggleSidebar={toggleSidebar} username={localStorage.getItem("name")} role={localStorage.getItem("role")} onLogout={onLogout} />
 
         <div className="p-3 container-fluid">
           <PageHeading title="Work Session History" />

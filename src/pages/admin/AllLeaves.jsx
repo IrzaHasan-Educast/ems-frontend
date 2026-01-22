@@ -217,7 +217,7 @@ const AllLeaves = ({ onLogout }) => {
     <div className="d-flex">
       <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar} />
       <div className="flex-grow-1" style={{ minWidth: 0 }}>
-        <TopNavbar toggleSidebar={toggleSidebar} username={admin.name} role={admin.role} onLogout={onLogout} />
+        <TopNavbar toggleSidebar={toggleSidebar} username={localStorage.getItem("name")} role={localStorage.getItem("role")} onLogout={onLogout} />
         
         <div className="p-3 container-fluid">
           <PageHeading title="All Leave Requests" />
