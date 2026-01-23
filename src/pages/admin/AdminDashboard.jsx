@@ -137,7 +137,7 @@ const AdminDashboard = ({ onLogout }) => {
     <div className="d-flex">
       <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} />
       <div className="flex-grow-1 bg-light d-flex flex-column" style={{ minHeight: "100vh" }}>
-        <Navbar toggleSidebar={toggleSidebar} username={adminUser.name} role={adminUser.role} />
+        <Navbar toggleSidebar={toggleSidebar} username={localStorage.getItem("name")} role={localStorage.getItem("role")} />
 
         <div className="container-fluid p-4">
           {pageLoading ? (
@@ -177,7 +177,7 @@ const AdminDashboard = ({ onLogout }) => {
               <Row className="g-4 mb-4">
                 
                 {/* 1. Quick Actions */}
-                <Col xs={12} md={6} lg={4} xl={3}>
+                <Col xs={12} md={6} lg={5} xl={4}>
                     <CardContainer title="System Controls">
                         <div className="d-flex flex-column pt-2">
                             <QuickActionBtn label="Manage Employees" path="/admin/employees" icon="bi-people" color="primary" />
@@ -189,7 +189,7 @@ const AdminDashboard = ({ onLogout }) => {
                 </Col>
 
                  {/* 2. Employee Roles Distribution */}
-                 <Col xs={12} md={12} lg={8} xl={5}>
+                 <Col xs={12} md={12} lg={7} xl={4}>
                     <Card className="border-0 shadow-sm h-100">
                         <Card.Header className="bg-white fw-bold py-3">Employee Role Distribution</Card.Header>
                         <Card.Body>
