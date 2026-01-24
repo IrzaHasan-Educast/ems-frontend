@@ -67,12 +67,12 @@ const EmployeeProfile = ({ onLogout }) => {
       <div className="flex-grow-1" style={{ minWidth: 0 }}>
         <TopNavbar 
             toggleSidebar={toggleSidebar}
-            username={userName}
-            role={role}
+            username={localStorage.getItem("name")}
+            role={localStorage.getItem("role")}
             onLogout={onLogout}
         />
         
-        <div className="p-3 container-fluid">
+        <div className="p-3 container">
           <PageHeading title="My Profile" />
 
           {loading ? (
@@ -107,7 +107,7 @@ const EmployeeProfile = ({ onLogout }) => {
                 <Col lg={8} md={7} className="ps-md-4">
                   <h5 className="fw-bold text-primary mb-3 border-bottom pb-2">Personal & Work Information</h5>
                   
-                  <Row className="g-3">
+                  <Row className="g-2">
                     <Col md={6}>
                       <InfoItem icon={<Envelope />} label="Email Address" value={employee.email} />
                     </Col>
