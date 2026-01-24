@@ -176,19 +176,7 @@ const AdminDashboard = ({ onLogout }) => {
               {/* ROW 2: Layouts */}
               <Row className="g-4 mb-4">
                 
-                {/* 1. Quick Actions */}
-                <Col xs={12} md={6} lg={5} xl={4}>
-                    <CardContainer title="System Controls">
-                        <div className="d-flex flex-column pt-2">
-                            <QuickActionBtn label="Manage Employees" path="/admin/employees" icon="bi-people" color="primary" />
-                            <QuickActionBtn label="Shift Management" path="/admin/shifts" icon="bi-clock" color="info" />
-                            <QuickActionBtn label="Assign Shifts" path="/admin/employee-shifts/assign" icon="bi-person-badge" color="warning" />
-                            <QuickActionBtn label="Work Sessions" path="/admin/work-sessions" icon="bi-display" color="success" />
-                        </div>
-                    </CardContainer>
-                </Col>
-
-                 {/* 2. Employee Roles Distribution */}
+                {/* 1. Employee Roles Distribution */}
                  <Col xs={12} md={12} lg={7} xl={4}>
                     <Card className="border-0 shadow-sm h-100">
                         <Card.Header className="bg-white fw-bold py-3">Employee Role Distribution</Card.Header>
@@ -208,7 +196,7 @@ const AdminDashboard = ({ onLogout }) => {
                     </Card>
                 </Col>
 
-                {/* 3. Attendance Pie Chart */}
+                {/* 2. Attendance Pie Chart */}
                 <Col xs={12} md={6} lg={12} xl={4}>
                      <Card className="border-0 shadow-sm h-100">
                         <Card.Header className="bg-white fw-bold py-3">Today's Status</Card.Header>
@@ -232,6 +220,18 @@ const AdminDashboard = ({ onLogout }) => {
                             </div>
                         </Card.Body>
                     </Card>
+                </Col>
+
+                {/* 3. Quick Actions */}
+                <Col xs={12} md={6} lg={5} xl={4}>
+                    <CardContainer title="System Controls">
+                        <div className="d-flex flex-column pt-2">
+                            <QuickActionBtn label="Manage Employees" path="/admin/employees" icon="bi-people" color="primary" />
+                            <QuickActionBtn label="Shift Management" path="/admin/shifts" icon="bi-clock" color="info" />
+                            <QuickActionBtn label="Assign Shifts" path="/admin/employee-shifts/assign" icon="bi-person-badge" color="warning" />
+                            <QuickActionBtn label="Work Sessions" path="/admin/work-sessions" icon="bi-display" color="success" />
+                        </div>
+                    </CardContainer>
                 </Col>
               </Row>
 

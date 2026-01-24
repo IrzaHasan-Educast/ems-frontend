@@ -18,8 +18,7 @@ const allColumns = [
   { key: "date", label: "Date" },
   { key: "time", label: "Time" },
   { key: "present", label: "Present" },
-  { key: "shift", label: "Shift" },
-  { key: "assignedShift", label: "Assigned Shift" },
+  { key: "assignedShift", label: "Shift" },
 ];
 
 const Attendance = ({ onLogout }) => {
@@ -106,7 +105,7 @@ const Attendance = ({ onLogout }) => {
           date: a.attendanceDate,
           time: a.attendanceTime,
           present: a.present ? "Present" : "Absent",
-          shift: a.shift,
+          // shift: a.shift,
           assignedShift: a.assignedShift,
           rawDate: a.attendanceDate,
         }));
@@ -128,7 +127,7 @@ const Attendance = ({ onLogout }) => {
 
     const f = records.filter((r) => {
       const matchesSearch =
-        [r.employeeName, r.date, r.time, r.present, r.shift, r.assignedShift]
+        [r.employeeName, r.date, r.time, r.present, r.assignedShift]
           .join(" ")
           .toLowerCase()
           .includes(term);
@@ -170,7 +169,7 @@ const Attendance = ({ onLogout }) => {
           case "date": return formatDate(r.date);
           case "time": return formatTime(r.time);
           case "present": return r.present;
-          case "shift": return beautifyShift(r.shift);
+          // case "shift": return beautifyShift(r.shift);
           case "assignedShift": return r.assignedShift;
           default: return "";
         }
@@ -209,8 +208,8 @@ const Attendance = ({ onLogout }) => {
             {r.present}
           </Badge>
         );
-      case "shift":
-      return beautifyShift(r.shift);
+      // case "shift":
+      // return beautifyShift(r.shift);
       case "assignedShift":
       return beautifyShift(r.assignedShift);
       default:
