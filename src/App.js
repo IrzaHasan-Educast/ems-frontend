@@ -1,10 +1,10 @@
 // src/App.js
 import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { Spinner } from "react-bootstrap"; // Import Spinner
+import { Spinner } from "react-bootstrap"; 
 
 // Images
-import Logo from "./assets/images/Educast-Logo.png"; // Ensure this path is correct
+import Logo from "./assets/images/Educast-Logo.png"; 
 
 // Components
 import LoginForm from "./components/LoginForm";
@@ -43,13 +43,13 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
 
   // ------------------------------------------------
-  // 🔥 AUTH CHECK ON LOAD
+  // 🔥 AUTH CHECK WITH DELAY (SPLASH SCREEN)
   // ------------------------------------------------
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    // Artificial Delay of 2 Seconds (2000ms)
+    const timer = setTimeout(() => {
+        const token = localStorage.getItem("token");
 
-    // Thoda sa artificial delay taake loading screen flicker na kare (optional)
-    const checkAuth = () => {
         if (token && !isTokenExpired(token)) {
             const role = jwtHelper.getRoleFromToken(token);
             if (role) setUserRole(role.toUpperCase());
@@ -57,10 +57,11 @@ function App() {
             localStorage.clear();
             setUserRole(null);
         }
-        setIsLoading(false);
-    };
+        
+        setIsLoading(false); // Stop loading after 2 seconds
+    }, 2000);
 
-    checkAuth();
+    return () => clearTimeout(timer); // Cleanup
   }, []);
 
   // ------------------------------------------------
@@ -95,26 +96,27 @@ function App() {
       >
         <div className="text-center">
             {/* Logo Animation */}
-            <img 
-                src={Logo} 
-                alt="EduCast Logo" 
-                style={{ width: "80px", marginBottom: "20px" }} 
-                className="mb-3"
-            />
-            
-            <h3 className="fw-bold mb-4" style={{ letterSpacing: "1px" }}>
-                <span style={{ color: "#f58a29" }}>Edu</span>
-                <span style={{ color: "#055993" }}>Cast</span>
-            </h3>
-
-            {/* Bootstrap Spinner */}
-            <div className="d-flex justify-content-center gap-2">
-                <Spinner animation="grow" variant="warning" size="sm" />
-                <Spinner animation="grow" variant="primary" size="sm" />
-                <Spinner animation="grow" variant="warning" size="sm" />
+            <div className="mb-4">
+                <img 
+                    src={Logo} 
+                    alt="EduCast Logo" 
+                    style={{ width: "90px", animation: "fadeIn 1.5s ease-in-out" }} 
+                />
             </div>
             
-            <p className="mt-3 text-muted small fw-semibold">Loading Portal...</p>
+            <h2 className="fw-bold mb-4" style={{ letterSpacing: "1px", fontFamily: "sans-serif" }}>
+                <span style={{ color: "#f58a29" }}>Edu</span>
+                <span style={{ color: "#055993" }}>Cast</span>
+            </h2>
+
+            {/* Bootstrap Spinners */}
+            <div className="d-flex justify-content-center gap-2 mt-2">
+                <Spinner animation="grow" variant="warning" size="sm" style={{animationDuration: "1s"}} />
+                <Spinner animation="grow" variant="primary" size="sm" style={{animationDuration: "1.2s"}} />
+                <Spinner animation="grow" variant="warning" size="sm" style={{animationDuration: "1.4s"}} />
+            </div>
+            
+            <p className="mt-3 text-muted small fw-semibold">Securely Loading...</p>
         </div>
       </div>
     );
@@ -176,14 +178,29 @@ function App() {
           }
         />
 
-        <Route path="/admin/shifts" element={<ViewShifts />} />
-        <Route path="/admin/shifts/add" element={<AddShift />} />
-        <Route path="/admin/shifts/edit/:id" element={<EditShift />} />
+        <Route path="/admin/shifts" element={
+          <ProtectedRoute allowedRoles={["ADMIN", "HR"]}>
+              <ViewShifts onLogout={handleLogout}/>
+            </ProtectedRoute>
+            } />
+        <Route path="/admin/shifts/add" element={
+          <ProtectedRoute allowedRoles={["ADMIN", "HR"]}>
+              <AddShift onLogout={handleLogout}/>
+            </ProtectedRoute>} />
+        <Route path="/admin/shifts/edit/:id" element={
+          <ProtectedRoute allowedRoles={["ADMIN", "HR"]}>
+              <EditShift onLogout={handleLogout}/>
+            </ProtectedRoute>
+          } />
 
         {/* ===== EMPLOYEE ↔ SHIFT ===== */}
         <Route
             path="/admin/employee-shifts/assign"
-            element={<ViewEmployeeShifts onLogout={handleLogout} />}
+            element={
+            <ProtectedRoute allowedRoles={["ADMIN", "HR"]}>
+              <ViewEmployeeShifts onLogout={handleLogout} />
+            </ProtectedRoute>
+            }
         />
 
         <Route
@@ -232,15 +249,15 @@ function App() {
             </ProtectedRoute>
           }
         />
-{/* Manager Dashboard */}
-        <Route path="/manager/team" element={<ManagerTeam onLogout={handleLogout} />} />
-        <Route path="/manager/team-sessions" element={<TeamWorkSessions onLogout={handleLogout} />} />
-        <Route path="/manager/team-attendance" element={<TeamAttendance onLogout={handleLogout} />} />
+
+        <Route path="/manager/team" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerTeam onLogout={handleLogout} /></ProtectedRoute>} />
+        <Route path="/manager/team-sessions" element={
+          <ProtectedRoute allowedRoles={["MANAGER"]}><TeamWorkSessions onLogout={handleLogout} /></ProtectedRoute>} />
+        <Route path="/manager/team-attendance" element={<ProtectedRoute allowedRoles={["MANAGER"]}><TeamAttendance onLogout={handleLogout} /></ProtectedRoute>} />
         <Route
           path="/manager/team-leave"
           element={
-            <ProtectedRoute allowedRoles={["MANAGER"]}>
-              <ManagerLeaveRequests onLogout={handleLogout} />
+            <ProtectedRoute allowedRoles={["MANAGER"]}><ManagerLeaveRequests onLogout={handleLogout} />
             </ProtectedRoute>
           }
         />
