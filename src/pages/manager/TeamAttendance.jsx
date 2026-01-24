@@ -16,8 +16,8 @@ const allColumns = [
   { key: "date", label: "Date" },
   { key: "time", label: "Time" },
   { key: "present", label: "Status" },
-  { key: "shift", label: "Shift" },
-  { key: "assignedShift", label: "Assigned Shift" },
+  // { key: "shift", label: "Shift" },
+  { key: "assignedShift", label: "Shift" },
 ];
 
 const TeamAttendance = ({ onLogout }) => {
@@ -87,7 +87,7 @@ const TeamAttendance = ({ onLogout }) => {
           time: a.attendanceTime, 
           createdAt: a.createdAt,
           present: a.present ? "Present" : "Absent",
-          shift: a.shift,
+          // shift: a.shift,
           rawDate: a.attendanceDate,
           assignedShift: a.assignedShift,
         }));
@@ -164,7 +164,7 @@ const TeamAttendance = ({ onLogout }) => {
           case "date": return formatDateDDMMYYYY(r.date);
           case "time": return formatTime(r.time, r.createdAt);
           case "present": return r.present;
-          case "shift": return beautifyShift(r.shift);
+          // case "shift": return beautifyShift(r.shift);
           case "assignedShift": return beautifyShift(r.assignedShift);
           default: return "";
         }
@@ -202,7 +202,7 @@ const TeamAttendance = ({ onLogout }) => {
       case "date": return formatDateDDMMYYYY(r.date);
       case "time": return formatTime(r.time, r.createdAt);
       case "present": return <Badge bg={r.present === "Present" ? "success" : "danger"} style={{fontSize: "0.75rem"}}>{r.present}</Badge>;
-      case "shift": return beautifyShift(r.shift);
+      // case "shift": return beautifyShift(r.shift);
       case "assignedShift": return beautifyShift(r.assignedShift);
       default: return "--";
     }
