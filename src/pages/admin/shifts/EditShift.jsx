@@ -11,6 +11,7 @@ import { getManagers } from "../../../api/employeeApi";
 const EditShift = ({ onLogout }) => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   const [shift, setShift] = useState({
     shiftName: "",
@@ -69,10 +70,10 @@ useEffect(() => {
 
   return (
     <div className="d-flex">
-      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} />
+      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar}/>
       <div className="flex-grow-1">
         <TopNavbar
-          toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+          toggleSidebar={toggleSidebar}
           username={localStorage.getItem("name")}
           role={localStorage.getItem("role")}
         />

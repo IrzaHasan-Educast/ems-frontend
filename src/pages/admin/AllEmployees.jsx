@@ -221,7 +221,7 @@ const AllEmployees = ({ onLogout }) => {
 
   return (
     <div className="d-flex">
-      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} />
+      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar}/>
       {/* Main Content Area */}
       <div className="flex-grow-1" style={{ minWidth: 0 }}> {/* minWidth: 0 prevents flex child from overflowing */}
         <TopNavbar 

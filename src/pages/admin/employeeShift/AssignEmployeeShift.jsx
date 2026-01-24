@@ -11,6 +11,8 @@ import { assignShift } from "../../../api/employeeShiftApi";
 
 const AssignEmployeeShift = ({ onLogout }) => {
   const navigate = useNavigate();
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
 
   const [employees, setEmployees] = useState([]);
   const [shifts, setShifts] = useState([]);
@@ -50,10 +52,10 @@ const AssignEmployeeShift = ({ onLogout }) => {
 
   return (
     <div className="d-flex">
-      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} />
+      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar} />
       <div className="flex-grow-1">
         <TopNavbar
-          toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+          toggleSidebar={toggleSidebar}
           username={localStorage.getItem("name")}
           role={localStorage.getItem("role")}
         />

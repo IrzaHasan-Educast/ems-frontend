@@ -1,7 +1,12 @@
 // src/App.js
 import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { Spinner } from "react-bootstrap"; // Import Spinner
 
+// Images
+import Logo from "./assets/images/Educast-Logo.png"; // Ensure this path is correct
+
+// Components
 import LoginForm from "./components/LoginForm";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import HrDashboard from "./pages/hr/HrDashboard";
@@ -32,28 +37,30 @@ import EditShift from "./pages/admin/shifts/EditShift";
 import ViewEmployeeShifts from "./pages/admin/employeeShift/ViewEmployeeShifts";
 import EmployeeProfile from "./pages/employee/EmployeeProfile";
 
-// import AssignEmployeeShift from "./pages/admin/employeeShift/AssignEmployeeShift";
-
 function App() {
 
   const [userRole, setUserRole] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // ------------------------------------------------
-  // 🔥 FIXED useEffect — no redirects here
+  // 🔥 AUTH CHECK ON LOAD
   // ------------------------------------------------
   useEffect(() => {
     const token = localStorage.getItem("token");
 
-    if (token && !isTokenExpired(token)) {
-      const role = jwtHelper.getRoleFromToken(token);
-      if (role) setUserRole(role.toUpperCase());
-    } else {
-      localStorage.clear();
-      setUserRole(null);
-    }
+    // Thoda sa artificial delay taake loading screen flicker na kare (optional)
+    const checkAuth = () => {
+        if (token && !isTokenExpired(token)) {
+            const role = jwtHelper.getRoleFromToken(token);
+            if (role) setUserRole(role.toUpperCase());
+        } else {
+            localStorage.clear();
+            setUserRole(null);
+        }
+        setIsLoading(false);
+    };
 
-    setIsLoading(false);
+    checkAuth();
   }, []);
 
   // ------------------------------------------------
@@ -65,7 +72,7 @@ function App() {
   };
 
   // ------------------------------------------------
-  // 🔐 Protected Route
+  // 🔐 Protected Route Component
   // ------------------------------------------------
   const ProtectedRoute = ({ children, allowedRoles }) => {
     if (!userRole) {
@@ -77,7 +84,41 @@ function App() {
     return children;
   };
 
-  if (isLoading) return <div>Loading...</div>;
+  // ------------------------------------------------
+  // ✨ IMPROVED LOADING SCREEN
+  // ------------------------------------------------
+  if (isLoading) {
+    return (
+      <div 
+        className="d-flex flex-column justify-content-center align-items-center vh-100" 
+        style={{ backgroundColor: "#f8f9fa" }}
+      >
+        <div className="text-center">
+            {/* Logo Animation */}
+            <img 
+                src={Logo} 
+                alt="EduCast Logo" 
+                style={{ width: "80px", marginBottom: "20px" }} 
+                className="mb-3"
+            />
+            
+            <h3 className="fw-bold mb-4" style={{ letterSpacing: "1px" }}>
+                <span style={{ color: "#f58a29" }}>Edu</span>
+                <span style={{ color: "#055993" }}>Cast</span>
+            </h3>
+
+            {/* Bootstrap Spinner */}
+            <div className="d-flex justify-content-center gap-2">
+                <Spinner animation="grow" variant="warning" size="sm" />
+                <Spinner animation="grow" variant="primary" size="sm" />
+                <Spinner animation="grow" variant="warning" size="sm" />
+            </div>
+            
+            <p className="mt-3 text-muted small fw-semibold">Loading Portal...</p>
+        </div>
+      </div>
+    );
+  }
 
   // ------------------------------------------------
   // 🔥 ROUTES
@@ -139,19 +180,11 @@ function App() {
         <Route path="/admin/shifts/add" element={<AddShift />} />
         <Route path="/admin/shifts/edit/:id" element={<EditShift />} />
 
-{/* ===== EMPLOYEE ↔ SHIFT ===== */}
-      <Route
-        path="/admin/employee-shifts/assign"
-        element={<ViewEmployeeShifts onLogout={handleLogout} />}
-      />
-      {/* <Route
-        path="/admin/shifts/assign"
-        element={<AssignEmployeeShift onLogout={handleLogout} />}
-      /> */}
-      {/* <Route
-        path="/admin/employee-shifts/edit/:id"
-        element={<EditEmployeeShift onLogout={handleLogout} />}
-      /> */}
+        {/* ===== EMPLOYEE ↔ SHIFT ===== */}
+        <Route
+            path="/admin/employee-shifts/assign"
+            element={<ViewEmployeeShifts onLogout={handleLogout} />}
+        />
 
         <Route
           path="/admin/work-sessions"
@@ -180,8 +213,6 @@ function App() {
           }
         />
 
-
-
         {/* HR ROUTES */}
         <Route
           path="/hr"
@@ -192,7 +223,7 @@ function App() {
           }
         /> 
 
-        {/* ADMIN ROUTES */}
+        {/* MANAGER ROUTES */}
         <Route
           path="/manager"
           element={
@@ -201,8 +232,7 @@ function App() {
             </ProtectedRoute>
           }
         />
-
-        {/* Manager Dashboard */}
+{/* Manager Dashboard */}
         <Route path="/manager/team" element={<ManagerTeam onLogout={handleLogout} />} />
         <Route path="/manager/team-sessions" element={<TeamWorkSessions onLogout={handleLogout} />} />
         <Route path="/manager/team-attendance" element={<TeamAttendance onLogout={handleLogout} />} />
@@ -214,8 +244,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-        {/* <Route path="/manager/my-work-history" element={<EmployeeWorkHistory onLogout={handleLogout} />} />
-        <Route path="/manager/my-attendance" element={<EmployeeAttendance onLogout={handleLogout} />} /> */}
 
         {/* EMPLOYEE ROUTES */}
         <Route
@@ -268,6 +296,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+        
         {/* DEFAULT */}
         <Route
           path="*"

@@ -12,6 +12,124 @@
     animation: App-logo-spin infinite 20s linear;
   }
 }
+.hover-bg:hover {
+  background-color: rgba(255, 255, 255, 0.2) !important;
+  border-radius: 8px;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+@media (max-width: 991.98px) {
+  .sidebar {
+    position: fixed !important;
+    z-index: 1050;
+  }
+}
+/* Sidebar Layout */
+.sidebar {
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  color: white;
+}
+
+.sidebar-open { width: 260px; }
+.sidebar-closed { width: 80px; }
+
+/* Custom Nav Links */
+.nav-link-custom {
+  color: rgba(255,255,255,0.9);
+  padding: 12px 15px;
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  border-radius: 8px;
+  margin-bottom: 5px;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.nav-link-custom:hover, .nav-link-custom.active {
+  background: rgba(255,255,255,0.2);
+  color: white;
+}
+
+.nav-link-sub {
+  color: rgba(255,255,255,0.8);
+  padding: 8px 15px;
+  display: block;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.nav-link-sub:hover { color: white; }
+
+/* Logout Button */
+.logout-btn {
+  background: rgba(0,0,0,0.1);
+  border: none;
+  color: white;
+  padding: 10px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: 0.3s;
+}
+
+.logout-btn:hover { background: rgba(0,0,0,0.2); }
+
+/* TopNavbar Profile Circle */
+.profile-circle {
+  width: 40px;
+  height: 40px;
+  background: #f58a29;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  border: 2px solid #fff;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 991px) {
+  .sidebar {
+    position: fixed !important;
+    left: -260px;
+  }
+  .sidebar-open {
+    left: 0;
+    width: 260px;
+  }
+  .sidebar-closed {
+    left: -260px; /* Hide completely on mobile when closed */
+  }
+  .sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0,0,0,0.5);
+    z-index: 1040;
+  }
+}
+
+/* Extra small text */
+.extra-small { font-size: 0.75rem; }
+
+/* Animations */
+.animate-fade-down {
+  animation: fadeDown 0.3s ease-out;
+}
+@keyframes fadeDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
 .App-header {
   background-color: #282c34;

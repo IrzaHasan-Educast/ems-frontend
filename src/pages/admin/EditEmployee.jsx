@@ -240,7 +240,7 @@ const handleSubmit = async (e) => {
 
   return (
     <div className="d-flex">
-      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} />
+      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar}/>
       <div className="flex-grow-1">
         <TopNavbar toggleSidebar={toggleSidebar}
         username={localStorage.getItem("name")}

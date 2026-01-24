@@ -1,21 +1,18 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Sidebar from "../../components/Sidebar";
-import TopNavbar from "../../components/Navbar"; // Consistent Navbar
+import TopNavbar from "../../components/Navbar";
 import CardContainer from "../../components/CardContainer";
 import PageHeading from "../../components/PageHeading";
-import { Trash, FileEarmarkText, Eye, Image as ImageIcon } from "react-bootstrap-icons";
-// import { FileEarmarkText, Eye, Image as ImageIcon } from "react-bootstrap-icons";
+import { Trash, FileEarmarkText, Image as ImageIcon, Search, ArrowClockwise, InfoCircle } from "react-bootstrap-icons";
 import { useNavigate } from "react-router-dom";
 import { Table, Form, Button, InputGroup, FormControl, Badge, Modal, Spinner, Row, Col } from "react-bootstrap";
 import { getCurrentUser } from "../../api/workSessionApi";
 import { getLeavesByEmployee, deleteLeaveById } from "../../api/leaveApi";
-import dayjs from "dayjs";
 import jwtHelper from "../../utils/jwtHelper";
 
 const LeaveHistory = ({ onLogout }) => {
   // 1. JWT & User Info
-  const token = localStorage.getItem("token");
-  const role = jwtHelper.getRoleFromToken(token);
+  const token = localStorage.getItem("token"); // Kept for consistency if needed
   
   // UI States
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -24,7 +21,6 @@ const LeaveHistory = ({ onLogout }) => {
   const [modalDescription, setModalDescription] = useState("");
 
   // Data States
-  const [employee, setEmployee] = useState({ fullName: "", id: null });
   const [leaves, setLeaves] = useState([]);
   const [filteredLeaves, setFilteredLeaves] = useState([]);
 
@@ -35,9 +31,9 @@ const LeaveHistory = ({ onLogout }) => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // modals
-    const [showImageModal, setShowImageModal] = useState(false);
-    const [selectedImage, setSelectedImage] = useState(null);
+  // Modals
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
   
   const navigate = useNavigate();
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
@@ -80,7 +76,7 @@ const LeaveHistory = ({ onLogout }) => {
           duration: lv.duration,
           description: lv.description || "--",
           appliedOn: formatDateTime(lv.appliedOn),
-          rawAppliedOn: lv.appliedOn, // Sorting ke liye
+          rawAppliedOn: lv.appliedOn, // For sorting
           prescriptionImg: lv.prescriptionImg,
           monthName: getMonthName(lv.startDate),
         }));
@@ -94,7 +90,7 @@ const LeaveHistory = ({ onLogout }) => {
     } catch (err) {
       console.error("Failed to fetch leaves", err);
     } finally {
-      setLoading(false); // Stop loading here
+      setLoading(false);
     }
   }, []);
 
@@ -103,7 +99,7 @@ const LeaveHistory = ({ onLogout }) => {
       setLoading(true);
       try {
         const res = await getCurrentUser();
-        setEmployee({ fullName: res.data.fullName, id: res.data.employeeId });
+        // setEmployee({ fullName: res.data.fullName, id: res.data.employeeId }); // Not strictly needed unless displaying name
         await fetchLeaves(res.data.employeeId);
       } catch (err) {
         console.error("Failed fetching user", err);
@@ -145,10 +141,12 @@ const LeaveHistory = ({ onLogout }) => {
     setCurrentPage(1);
     setFilteredLeaves(leaves);
   };
+
   const handleViewImage = (url) => {
     setSelectedImage(url);
     setShowImageModal(true);
   };
+
   const handleDelete = async (leaveId) => {
     if (window.confirm("Are you sure you want to delete this pending leave request?")) {
       try {
@@ -188,17 +186,17 @@ const LeaveHistory = ({ onLogout }) => {
   const uniqueMonths = [...new Set(leaves.map((lv) => lv.monthName))];
 
   return (
-    <div className="d-flex">
+    <div className="d-flex" style={{ minHeight: "100vh", overflow: "hidden" }}>
       <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar} />
 
-      <div className="flex-grow-1">
+      <div className="flex-grow-1 d-flex flex-column" style={{ minWidth: 0 }}>
         <TopNavbar 
-                toggleSidebar={toggleSidebar}
-                username={localStorage.getItem("name")}
-                role={localStorage.getItem("role")}
-              />
+            toggleSidebar={toggleSidebar}
+            username={localStorage.getItem("name")}
+            role={localStorage.getItem("role")}
+        />
 
-        <div className="p-3 container-fluid">
+        <div className="p-3 container-fluid flex-grow-1 overflow-auto">
           <PageHeading
             title="My Leave History"
             buttonText="Apply Leave"
@@ -208,25 +206,26 @@ const LeaveHistory = ({ onLogout }) => {
           {/* FILTERS CARD */}
           <CardContainer>
             <Row className="g-2 align-items-center">
-              <Col lg={3} md={6}>
+              <Col lg={3} md={6} xs={12}>
                 <InputGroup size="sm">
-                  <InputGroup.Text><i className="bi bi-search"></i></InputGroup.Text>
+                  <InputGroup.Text className="bg-white border-end-0 text-muted"><Search /></InputGroup.Text>
                   <FormControl
                     placeholder="Search type, date..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    className="border-start-0 ps-0"
                   />
                 </InputGroup>
               </Col>
 
-              <Col lg={2} md={6}>
+              <Col lg={2} md={6} xs={6}>
                 <Form.Select size="sm" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}>
                   <option value="">All Months</option>
                   {uniqueMonths.map((m) => <option key={m}>{m}</option>)}
                 </Form.Select>
               </Col>
 
-              <Col lg={2} md={6}>
+              <Col lg={2} md={6} xs={6}>
                 <Form.Select size="sm" value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>
                   <option value="">All Status</option>
                   <option value="PENDING">Pending</option>
@@ -235,28 +234,30 @@ const LeaveHistory = ({ onLogout }) => {
                 </Form.Select>
               </Col>
 
-               <Col lg={2} md={6}>
+               <Col lg={2} md={6} xs={6}>
                 <Form.Select size="sm" value={rowsPerPage} onChange={(e) => {setRowsPerPage(e.target.value); setCurrentPage(1);}}>
-                   {[10, 25, 50, "All"].map(n => <option key={n} value={n}>{n} per page</option>)}
+                   {[10, 25, 50, "All"].map(n => <option key={n} value={n}>{n} rows</option>)}
                 </Form.Select>
               </Col>
 
-              <Col lg={3} md={12} className="d-flex justify-content-end">
-                <Button variant="secondary" size="sm" onClick={handleReset}>↻</Button>
+              <Col lg={3} md={6} xs={6} className="d-flex justify-content-end">
+                <Button variant="outline-secondary" size="sm" onClick={handleReset} title="Reset Filters">
+                    <ArrowClockwise className="me-1"/> Reset
+                </Button>
               </Col>
             </Row>
           </CardContainer>
 
           {/* TABLE SECTION */}
-          <CardContainer className="mt-3">
+          <CardContainer className="mt-3 p-0 overflow-hidden">
             {loading ? (
                <div className="text-center p-5">
                  <Spinner animation="border" variant="warning" />
-                 <p className="mt-2 text-muted">Loading your leave records...</p>
+                 <p className="mt-2 text-muted small">Loading your records...</p>
                </div>
             ) : filteredLeaves.length === 0 ? (
                <div className="text-center p-5">
-                  <div className="text-muted mb-3" style={{fontSize: "2rem"}}><i className="bi bi-inbox"></i></div>
+                  <div className="text-muted mb-3 fs-1"><i className="bi bi-inbox"></i></div>
                   <h6 className="text-muted">No Leave Records Found</h6>
                   {searchQuery || selectedStatus ? (
                     <Button variant="link" onClick={handleReset}>Clear Filters</Button>
@@ -268,70 +269,66 @@ const LeaveHistory = ({ onLogout }) => {
                </div>
             ) : (
               <>
-                <div className="table-responsive">
-                  <Table bordered hover size="sm" className="mb-0">
-                    <thead style={{ backgroundColor: "#FFA500", color: "white", textAlign: "center" }}>
+                <div style={{ overflowX: "auto" }}>
+                  <Table hover size="sm" className="mb-0 w-100 text-nowrap align-middle">
+                    <thead style={{ backgroundColor: "#f8f9fa", color: "#6c757d" }}>
                       <tr>
-                        <th style={{padding: "8px"}}>#</th>
-                        <th style={{padding: "8px"}}>Type</th>
-                        <th style={{padding: "8px"}}>Description</th>
-                        <th style={{padding: "8px"}}>Applied On</th>
-                        <th style={{padding: "8px"}}>Duration</th>
-                        <th style={{padding: "8px"}}>Period</th>
-                        <th style={{padding: "8px"}}>Status</th>
-                        <th style={{padding: "8px"}}>Proof</th>
-                        <th style={{padding: "8px"}}>Action</th>
+                        <th className="px-3 py-2 fw-bold" style={{fontSize: "0.85rem"}}>#</th>
+                        <th className="px-3 py-2 fw-bold" style={{fontSize: "0.85rem"}}>Type</th>
+                        <th className="px-3 py-2 fw-bold" style={{fontSize: "0.85rem"}}>Description</th>
+                        <th className="px-3 py-2 fw-bold" style={{fontSize: "0.85rem"}}>Applied On</th>
+                        <th className="px-3 py-2 fw-bold text-center" style={{fontSize: "0.85rem"}}>Duration</th>
+                        <th className="px-3 py-2 fw-bold" style={{fontSize: "0.85rem"}}>Period</th>
+                        <th className="px-3 py-2 fw-bold text-center" style={{fontSize: "0.85rem"}}>Status</th>
+                        <th className="px-3 py-2 fw-bold text-center" style={{fontSize: "0.85rem"}}>Proof</th>
+                        <th className="px-3 py-2 fw-bold text-center" style={{fontSize: "0.85rem"}}>Action</th>
                       </tr>
                     </thead>
                     <tbody>
                       {paginatedData.map((lv, idx) => (
-                        <tr key={lv.id} style={{ textAlign: "center", verticalAlign: "middle" }}>
-                          <td>{rowsPerPage === "All" ? idx + 1 : (currentPage - 1) * rowsPerPage + idx + 1}</td>
-                          <td className="fw-semibold">{lv.type}</td>
-                          <td className="text-start" style={{maxWidth: "200px"}}>
-                            {lv.description.length > 25 ? (
-                                <span>
-                                  {lv.description.substring(0, 25)}... 
-                                  <i className="bi bi-info-circle text-primary ms-1" style={{cursor: "pointer"}} onClick={() => openDescriptionModal(lv.description)}></i>
-                                </span>
-                            ) : lv.description}
+                        <tr key={lv.id}>
+                          <td className="px-3 text-muted" style={{fontSize: "0.85rem"}}>
+                              {rowsPerPage === "All" ? idx + 1 : (currentPage - 1) * rowsPerPage + idx + 1}
                           </td>
-                          <td className="small">{lv.appliedOn}</td>
-                          <td>{lv.duration} Day(s)</td>
-                          <td className="small">
+                          <td className="px-3 fw-semibold text-dark">{lv.type}</td>
+                          <td className="px-3 text-start" style={{maxWidth: "200px", whiteSpace: "normal"}}>
+                            <div className="d-flex align-items-center">
+                                <span className="text-truncate d-inline-block" style={{maxWidth: "150px"}}>
+                                    {lv.description}
+                                </span>
+                                {lv.description.length > 20 && (
+                                     <InfoCircle className="text-primary ms-2 flex-shrink-0" style={{cursor: "pointer", fontSize: "0.9rem"}} onClick={() => openDescriptionModal(lv.description)} />
+                                )}
+                            </div>
+                          </td>
+                          <td className="px-3 text-muted small">{lv.appliedOn}</td>
+                          <td className="px-3 text-center">{lv.duration} Day(s)</td>
+                          <td className="px-3 small">
                             {lv.startDate} <i className="bi bi-arrow-right-short text-muted"></i> {lv.endDate}
                           </td>
-                          <td>{getStatusBadge(lv.status)}</td>
-                          {/* <td>
+                          <td className="px-3 text-center">{getStatusBadge(lv.status)}</td>
+                          <td className="px-3 text-center">
                             {lv.prescriptionImg ? (
-                              <a href={lv.prescriptionImg} target="_blank" rel="noreferrer" className="btn btn-outline-info btn-sm py-0 px-2">
-                                <i className="bi bi-file-earmark-image"></i>
-                              </a>
+                            <Button 
+                                variant="light" size="sm" 
+                                className="border text-primary"
+                                style={{padding: "2px 6px"}} 
+                                onClick={() => handleViewImage(lv.prescriptionImg)}
+                                title="View Prescription"
+                            >
+                                <ImageIcon />
+                            </Button>
                             ) : (
-                              <span className="text-muted">-</span>
+                            <span className="text-muted small">--</span>
                             )}
-                          </td> */}
-                          <td>
-                                                      {lv.prescriptionImg ? (
-                                                        <Button 
-                                                          variant="outline-primary" size="sm" 
-                                                          style={{padding: "2px 6px"}} 
-                                                          onClick={() => handleViewImage(lv.prescriptionImg)}
-                                                          title="View Prescription"
-                                                        >
-                                                          <ImageIcon />
-                                                        </Button>
-                                                      ) : (
-                                                        <span className="text-muted small">--</span>
-                                                      )}
-                                                    </td>
-                          <td>
+                          </td>
+                          <td className="px-3 text-center">
                             {lv.status.toUpperCase() === "PENDING" ? (
                               <Button variant="outline-danger" size="sm" style={{padding: "2px 6px"}} onClick={() => handleDelete(lv.id)} title="Delete Request">
                                 <Trash />
                               </Button>
                             ) : (
-                              <span className="text-muted" style={{fontSize: "0.8rem"}}>Locked</span>
+                              <span className="text-muted small"><i className="bi bi-lock-fill"></i></span>
                             )}
                           </td>
                         </tr>
@@ -341,8 +338,8 @@ const LeaveHistory = ({ onLogout }) => {
                 </div>
 
                 {/* PAGINATION */}
-                {rowsPerPage !== "All" && (
-                  <div className="d-flex justify-content-between align-items-center mt-3">
+                {rowsPerPage !== "All" && paginatedData.length > 0 && (
+                  <div className="d-flex justify-content-between align-items-center p-3 border-top bg-light">
                     <Button variant="outline-primary" size="sm" disabled={currentPage === 1} onClick={handlePrevious}>Previous</Button>
                     <span className="small text-muted">Page {currentPage} of {totalPages}</span>
                     <Button variant="outline-primary" size="sm" disabled={currentPage === totalPages} onClick={handleNext}>Next</Button>
@@ -351,12 +348,13 @@ const LeaveHistory = ({ onLogout }) => {
               </>
             )}
           </CardContainer>
+
           {/* PRESCRIPTION MODAL */}
           <Modal show={showImageModal} onHide={() => setShowImageModal(false)} centered size="lg">
-            <Modal.Header closeButton className="py-2"><Modal.Title className="fs-6">Medical Proof</Modal.Title></Modal.Header>
-            <Modal.Body className="text-center p-4 bg-light">
+            <Modal.Header closeButton className="py-2 bg-light"><Modal.Title className="fs-6">Medical Proof</Modal.Title></Modal.Header>
+            <Modal.Body className="text-center p-4 bg-dark">
                {selectedImage && (
-                 <img src={selectedImage} alt="Prescription" className="img-fluid rounded shadow-sm" style={{maxHeight: "70vh"}} />
+                 <img src={selectedImage} alt="Prescription" className="img-fluid rounded shadow" style={{maxHeight: "80vh"}} />
                )}
             </Modal.Body>
           </Modal>
@@ -367,8 +365,8 @@ const LeaveHistory = ({ onLogout }) => {
             <Modal.Header closeButton className="py-2">
               <Modal.Title className="fs-6 fw-bold">Leave Reason</Modal.Title>
             </Modal.Header>
-            <Modal.Body className="p-3">
-              <p className="mb-0 text-break">{modalDescription}</p>
+            <Modal.Body className="p-4 bg-light">
+              <p className="mb-0 text-break text-dark">{modalDescription}</p>
             </Modal.Body>
             <Modal.Footer className="py-1 border-0">
               <Button variant="secondary" size="sm" onClick={() => setShowModal(false)}>Close</Button>

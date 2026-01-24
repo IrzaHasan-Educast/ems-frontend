@@ -1,4 +1,3 @@
-// src/pages/manager/TeamWorkSessions.jsx
 import React, { useEffect, useState } from "react";
 import { Table, Spinner, Form, Row, Col, Button, Modal, Badge } from "react-bootstrap";
 import Sidebar from "../../components/Sidebar"; 
@@ -6,7 +5,7 @@ import TopNavbar from "../../components/Navbar";
 import PageHeading from "../../components/PageHeading";
 import CardContainer from "../../components/CardContainer";
 import { getManagerWorkSessionHistory } from "../../api/workSessionApi"; 
-import { FileEarmarkText, Gear } from "react-bootstrap-icons";
+import { FileEarmarkText, Gear, ArrowCounterclockwise } from "react-bootstrap-icons";
 import * as XLSX from "xlsx";
 import jwtHelper from "../../utils/jwtHelper";
 
@@ -45,22 +44,16 @@ const TeamWorkSessions = ({ onLogout }) => {
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   // --- TIME & DATE HELPERS ---
-
-  // Date Format: 14-01-2026
   const formatDateDDMMYYYY = (isoDate) => {
     if (!isoDate) return "--";
     const d = new Date(isoDate);
-    // 'en-GB' format gives DD/MM/YYYY, we just replace / with -
     return d.toLocaleDateString("en-GB").replace(/\//g, "-");
   };
 
   const formatTime = (d) => {
     if (!d) return "--";
     return new Date(d).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: true,
+      hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true,
     });
   };
 
@@ -139,7 +132,7 @@ const TeamWorkSessions = ({ onLogout }) => {
 
           return {
             ...s,
-            date: formatDateDDMMYYYY(s.clockInTime), // Applied New Date Format Here
+            date: formatDateDDMMYYYY(s.clockInTime),
             clockIn: formatTime(s.clockInTime),
             clockOut: formatTime(s.clockOutTime),
             totalHours,
@@ -149,9 +142,7 @@ const TeamWorkSessions = ({ onLogout }) => {
           };
         });
 
-        // Sort by Date Descending (Latest first)
         formatted.sort((a, b) => new Date(b.clockInTime) - new Date(a.clockInTime));
-
         setSessions(formatted);
         setFiltered(formatted);
       } catch (err) {
@@ -171,12 +162,10 @@ const TeamWorkSessions = ({ onLogout }) => {
     const status = statusFilter;
 
     let f = sessions.filter((s) => {
-      const matchesSearch =
-        [s.employeeName, s.status, s.date, s.clockIn, s.clockOut].join(" ").toLowerCase().includes(term);
+      const matchesSearch = [s.employeeName, s.status, s.date, s.clockIn, s.clockOut].join(" ").toLowerCase().includes(term);
       const matchesEmployee = empFilter ? s.employeeName === empFilter : true;
       const matchesMonth = monthFilter ? new Date(s.clockInTime).getMonth() + 1 === parseInt(monthFilter) : true;
       const matchesStatus = status ? s.displayStatus === status : true;
-
       return matchesSearch && matchesEmployee && matchesMonth && matchesStatus;
     });
 
@@ -232,32 +221,21 @@ const TeamWorkSessions = ({ onLogout }) => {
     if (selectedColumns.includes(key)) {
       setSelectedColumns(selectedColumns.filter(k => k !== key));
     } else {
-      setSelectedColumns(
-        allColumns
-          .filter(c => selectedColumns.includes(c.key) || c.key === key)
-          .map(c => c.key)
-      );
+      setSelectedColumns(allColumns.filter(c => selectedColumns.includes(c.key) || c.key === key).map(c => c.key));
     }
   };
 
   const totalPages = rowsPerPage === "All" ? 1 : Math.ceil(filtered.length / rowsPerPage);
-  const displayed =
-    rowsPerPage === "All"
-      ? filtered
-      : filtered.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+  const displayed = rowsPerPage === "All" ? filtered : filtered.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
   const handlePrev = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
   const handleNext = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages));
 
   const uniqueEmployees = [...new Set(sessions.map((s) => s.employeeName))];
 
-  // Render Cell Logic with Compact Styling
   const renderCell = (col, s, index) => {
     switch (col) {
-      case "sno": {
-        const base = rowsPerPage === "All" ? 0 : (currentPage - 1) * Number(rowsPerPage);
-        return base + index + 1;
-      }
+      case "sno": return rowsPerPage === "All" ? index + 1 : (currentPage - 1) * Number(rowsPerPage) + index + 1;
       case "employeeName": return <span className="fw-semibold text-dark">{s.employeeName}</span>;
       case "date": return s.date;
       case "clockIn": return s.clockIn;
@@ -267,17 +245,13 @@ const TeamWorkSessions = ({ onLogout }) => {
       case "breakHours": return s.breakHours;
       case "status":
         return (
-          <Badge
-            bg={
+          <Badge bg={
               s.displayStatus === "Completed" ? "success"
               : s.displayStatus === "Working" ? "primary"
               : s.displayStatus === "On Break" ? "warning"
               : s.displayStatus === "Invalid Clocked Out" ? "danger"
-              : s.displayStatus === "Auto Clocked Out" ? "info"
               : "secondary"
-            }
-            style={{ fontSize: "0.75rem", padding: "4px 6px" }}
-          >
+            } style={{ fontSize: "0.75rem", padding: "4px 6px" }}>
             {s.displayStatus}
           </Badge>
         );
@@ -285,55 +259,40 @@ const TeamWorkSessions = ({ onLogout }) => {
     }
   };
 
-  // Compact Cell Style Object
-  const cellStyle = {
-    padding: "6px 8px", // Reduced Padding
-    verticalAlign: "middle",
-    fontSize: "0.9rem", // Slightly smaller font
-    whiteSpace: "nowrap" // Prevents breaking
-  };
+  const cellStyle = { padding: "6px 8px", verticalAlign: "middle", fontSize: "0.9rem", whiteSpace: "nowrap" };
 
   return (
-    <div className="d-flex">
-      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} />
+    <div className="d-flex" style={{ minHeight: "100vh", overflow: "hidden" }}>
+      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar} />
 
-      <div className="flex-grow-1">
+      <div className="flex-grow-1 d-flex flex-column" style={{ minWidth: 0 }}>
         <TopNavbar
           toggleSidebar={toggleSidebar}
           username={localStorage.getItem("name")}
           role={localStorage.getItem("role") || "Manager"}
         />
-        <div className="p-3 container-fluid">
+        <div className="p-3 container-fluid overflow-auto">
           <PageHeading title="Team Work Sessions" />
 
           {/* Filters Row */}
           <CardContainer>
             <Row className="align-items-center g-2">
-              <Col lg={2} md={4} sm={6}>
-                <Form.Control
-                  size="sm"
-                  type="text"
-                  placeholder="Search..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+              <Col lg={2} md={4} sm={6} xs={12}>
+                <Form.Control size="sm" type="text" placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
               </Col>
-              <Col lg={2} md={4} sm={6}>
+              <Col lg={2} md={4} sm={6} xs={12}>
                 <Form.Select size="sm" value={selectedEmployee} onChange={(e) => setSelectedEmployee(e.target.value)}>
                   <option value="">All Employees</option>
-                  {uniqueEmployees.map((emp, idx) => (
-                    <option key={idx} value={emp}>{emp}</option>
-                  ))}
+                  {uniqueEmployees.map((emp, idx) => <option key={idx} value={emp}>{emp}</option>)}
                 </Form.Select>
               </Col>
-              <Col lg={2} md={4} sm={6}>
+              <Col lg={2} md={4} sm={6} xs={6}>
                 <Form.Select size="sm" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}>
                   <option value="">All Months</option>
-                  {["January","February","March","April","May","June","July","August","September","October","November","December"]
-                    .map((name,i) => <option key={i} value={i+1}>{name}</option>)}
+                  {["January","February","March","April","May","June","July","August","September","October","November","December"].map((name,i) => <option key={i} value={i+1}>{name}</option>)}
                 </Form.Select>
               </Col>
-              <Col lg={2} md={4} sm={6}>
+              <Col lg={2} md={4} sm={6} xs={6}>
                 <Form.Select size="sm" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
                   <option value="">All Status</option>
                   <option value="Working">Working</option>
@@ -342,49 +301,42 @@ const TeamWorkSessions = ({ onLogout }) => {
                   <option value="Auto Clocked Out">Auto Clocked Out</option>
                 </Form.Select>
               </Col>
-              <Col lg={2} md={4} sm={6}>
-                <Form.Select size="sm" value={rowsPerPage} onChange={(e) => setRowsPerPage(e.target.value)}>
+              <Col lg={2} md={4} sm={6} xs={6}>
+                <Form.Select size="sm" value={rowsPerPage} onChange={(e) => {setRowsPerPage(e.target.value); setCurrentPage(1);}}>
                   {[10, 25, 50, "All"].map((num) => <option key={num} value={num}>{num} per page</option>)}
                 </Form.Select>
               </Col>
-              <Col lg={2} md={12} className="d-flex gap-2 justify-content-end">
-                <Button variant="secondary" size="sm" onClick={handleReset}>Reset</Button>
-                <Button variant="outline-primary" size="sm" onClick={() => setShowColumnsModal(true)}><Gear /></Button>
-                <Button variant="success" size="sm" onClick={handleExport}><FileEarmarkText /></Button>
+              <Col lg={2} md={12} xs={12} className="d-flex gap-2 justify-content-lg-end justify-content-start">
+                <Button variant="outline-secondary" size="sm" onClick={handleReset} title="Reset"><ArrowCounterclockwise /></Button>
+                <Button variant="outline-primary" size="sm" onClick={() => setShowColumnsModal(true)} title="Columns"><Gear /></Button>
+                <Button variant="success" size="sm" onClick={handleExport} title="Export"><FileEarmarkText /></Button>
               </Col>
             </Row>
           </CardContainer>
 
           {/* Table Container */}
-          <CardContainer className="mt-3">
+          <CardContainer className="mt-3 p-0 overflow-hidden">
             {loading ? (
               <div className="d-flex justify-content-center align-items-center" style={{ height: "40vh" }}>
                 <Spinner animation="border" variant="warning" />
               </div>
             ) : filtered.length > 0 ? (
               <>
-                <div className="table-responsive">
-                  <Table bordered hover size="sm" className="mt-2 mb-0">
+                <div style={{ overflowX: "auto" }}>
+                  <Table bordered hover size="sm" className="mb-0 w-100 text-nowrap align-middle">
                     <thead className="text-center" style={{ backgroundColor: "#FFA500", color: "white" }}>
                       <tr>
-                        {selectedColumns.map(colKey => {
-                          const col = allColumns.find(c => c.key === colKey);
-                          return (
-                            <th key={colKey} style={{ padding: "8px", whiteSpace: "nowrap" }}>
-                              {col ? col.label : colKey}
-                            </th>
-                          );
-                        })}
+                        {selectedColumns.map(colKey => (
+                          <th key={colKey} style={{ padding: "8px", fontSize: "0.85rem" }}>
+                            {allColumns.find(c => c.key === colKey)?.label || colKey}
+                          </th>
+                        ))}
                       </tr>
                     </thead>
                     <tbody>
                       {displayed.map((s, idx) => (
                         <tr key={idx} style={{ textAlign: "center" }}>
-                          {selectedColumns.map(col => (
-                            <td key={col} style={cellStyle}>
-                              {renderCell(col, s, idx)}
-                            </td>
-                          ))}
+                          {selectedColumns.map(col => <td key={col} style={cellStyle}>{renderCell(col, s, idx)}</td>)}
                         </tr>
                       ))}
                     </tbody>
@@ -393,44 +345,32 @@ const TeamWorkSessions = ({ onLogout }) => {
 
                 {/* Pagination */}
                 {rowsPerPage !== "All" && (
-                  <div className="d-flex justify-content-between align-items-center mt-3">
-                    <Button variant="outline-primary" size="sm" disabled={currentPage === 1} onClick={handlePrev}>
-                      Previous
-                    </Button>
+                  <div className="d-flex justify-content-between align-items-center p-3 border-top bg-light">
+                    <Button variant="outline-primary" size="sm" disabled={currentPage === 1} onClick={handlePrev}>Previous</Button>
                     <span className="small fw-semibold text-muted">Page {currentPage} of {totalPages}</span>
-                    <Button variant="outline-primary" size="sm" disabled={currentPage === totalPages} onClick={handleNext}>
-                      Next
-                    </Button>
+                    <Button variant="outline-primary" size="sm" disabled={currentPage === totalPages} onClick={handleNext}>Next</Button>
                   </div>
                 )}
               </>
             ) : (
-              <div className="text-center p-4 text-muted">No Work Sessions Found</div>
+              <div className="text-center p-5 text-muted">No Work Sessions Found</div>
             )}
           </CardContainer>
 
           {/* Column Toggle Modal */}
-          <Modal show={showColumnsModal} onHide={() => setShowColumnsModal(false)} centered>
+          <Modal show={showColumnsModal} onHide={() => setShowColumnsModal(false)} centered scrollable size="sm">
             <Modal.Header closeButton>
               <Modal.Title>Table Columns</Modal.Title>
             </Modal.Header>
             <Modal.Body>
               <Form>
                 {allColumns.map(col => (
-                  <Form.Check
-                    key={col.key}
-                    type="switch"
-                    id={`col-switch-${col.key}`}
-                    label={col.label}
-                    checked={selectedColumns.includes(col.key)}
-                    onChange={() => toggleColumn(col.key)}
-                    className="mb-2"
-                  />
+                  <Form.Check key={col.key} type="switch" id={`col-switch-${col.key}`} label={col.label} checked={selectedColumns.includes(col.key)} onChange={() => toggleColumn(col.key)} className="mb-2" />
                 ))}
               </Form>
             </Modal.Body>
             <Modal.Footer>
-              <Button variant="warning" size="sm" className="text-white" onClick={() => setShowColumnsModal(false)}>Done</Button>
+              <Button variant="secondary" size="sm" onClick={() => setShowColumnsModal(false)}>Close</Button>
             </Modal.Footer>
           </Modal>
 
