@@ -16,19 +16,18 @@ const allColumns = [
   { key: "date", label: "Date" },
   { key: "time", label: "Time" },
   { key: "present", label: "Status" },
-  // { key: "shift", label: "Shift" },
   { key: "assignedShift", label: "Shift" },
 ];
 
 const TeamAttendance = ({ onLogout }) => {
-  const token = localStorage.getItem("token"); 
-  
   // States
   const [records, setRecords] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [currentBusinessDate, setCurrentBusinessDate] = useState(null); 
+
+  // Calculated Window State
+  const [shiftWindow, setShiftWindow] = useState({ start: null, end: null, label: "Loading..." });
 
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -45,63 +44,91 @@ const TeamAttendance = ({ onLogout }) => {
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-  // --- LOGIC: CALCULATE BUSINESS DATE ---
-  const calculateBusinessDate = (shiftData) => {
-    const now = new Date();
-    if (!shiftData || !shiftData.startsAt || !shiftData.endsAt) {
-      return now.toISOString().split('T')[0];
-    }
-    const [startH] = shiftData.startsAt.split(':').map(Number);
-    const [endH] = shiftData.endsAt.split(':').map(Number);
-    const currentH = now.getHours();
-
-    if (startH > endH) {
-      if (currentH < 12) {
-        const yesterday = new Date(now);
-        yesterday.setDate(yesterday.getDate() - 1);
-        return yesterday.toISOString().split('T')[0];
-      }
-    }
-    return now.toISOString().split('T')[0];
-  };
-
-  // --- DATA FETCHING ---
+  // --- 1. DATA FETCHING & LOGIC ---
   useEffect(() => {
-    const fetchData = async () => {
+    const initData = async () => {
       setLoading(true);
       try {
-        let businessDate = new Date().toISOString().split('T')[0];
-        try {
-          const shiftRes = await getMyShift();
-          businessDate = calculateBusinessDate(shiftRes.data);
-        } catch (error) {
-          console.warn("Defaulting to calendar date.");
-        }
-        setCurrentBusinessDate(businessDate);
+        // A. Fetch Attendance & Shift in Parallel
+        const [attRes, shiftRes] = await Promise.all([
+          getManagerAttendanceHistory(),
+          getMyShift().catch(err => ({ data: null })) // Handle if shift api fails
+        ]);
 
-        const res = await getManagerAttendanceHistory();
-        const formatted = res.data.map((a, index) => ({
+        // --- B. Process Shift Logic (Start -1hr to End +1hr) ---
+        const now = new Date();
+        let wStart = new Date();
+        let wEnd = new Date();
+        let label = "Standard Day";
+
+        const shift = shiftRes.data;
+
+        if (shift && shift.startsAt && shift.endsAt) {
+          const [sH, sM] = shift.startsAt.split(':').map(Number);
+          const [eH, eM] = shift.endsAt.split(':').map(Number);
+          const PADDING_HOURS = 1;
+
+          // Check for Night Shift (Start > End, e.g., 22:00 to 06:00)
+          if (sH > eH) {
+            // Logic: If current time is before the "Late End" (e.g. 7 AM), 
+            // then we are in the shift that started Yesterday.
+            // Otherwise, we are in the shift that starts Today.
+            if (now.getHours() < (eH + PADDING_HOURS)) {
+               wStart.setDate(now.getDate() - 1); // Yesterday
+               wEnd = new Date(now); // Today
+            } else {
+               wStart = new Date(now); // Today
+               wEnd.setDate(now.getDate() + 1); // Tomorrow
+            }
+          } else {
+            // Day Shift (e.g., 10:00 to 18:00) -> Both are Today
+            wStart = new Date(now);
+            wEnd = new Date(now);
+          }
+
+          // Apply Time with Padding
+          wStart.setHours(sH - PADDING_HOURS, sM, 0, 0);
+          wEnd.setHours(eH + PADDING_HOURS, eM, 59, 999);
+
+          // Format Label for UI
+          const opts = { month: 'short', day: 'numeric', hour: 'numeric', minute:'2-digit', hour12: true };
+          label = `${wStart.toLocaleString('en-US', opts)} - ${wEnd.toLocaleString('en-US', opts)}`;
+        } else {
+          // Fallback if no shift assigned: 00:00 to 23:59 Today
+          wStart.setHours(0, 0, 0, 0);
+          wEnd.setHours(23, 59, 59, 999);
+          label = `Today (${new Date().toLocaleDateString()})`;
+        }
+
+        setShiftWindow({ start: wStart, end: wEnd, label });
+
+        // --- C. Process Attendance Records ---
+        const formatted = attRes.data.map((a, index) => ({
           id: index + 1,
           employeeName: a.employeeName || "Unknown",
           date: a.attendanceDate, 
           time: a.attendanceTime, 
           createdAt: a.createdAt,
           present: a.present ? "Present" : "Absent",
-          // shift: a.shift,
-          rawDate: a.attendanceDate,
           assignedShift: a.assignedShift,
+          // Create a full Date object for sorting & filtering
+          fullDateTime: new Date(`${a.attendanceDate}T${a.attendanceTime || "00:00:00"}`)
         }));
 
-        formatted.sort((a, b) => new Date(b.rawDate) - new Date(a.rawDate));
+        // Sort: Latest first
+        formatted.sort((a, b) => b.fullDateTime - a.fullDateTime);
+
         setRecords(formatted);
         setFiltered(formatted);
+        
       } catch (err) {
-        console.error("Error fetching data:", err);
+        console.error("Error loading data:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
-    fetchData();
+    initData();
   }, []);
 
   // --- HELPERS ---
@@ -130,12 +157,22 @@ const TeamAttendance = ({ onLogout }) => {
     const f = records.filter((r) => {
       const matchesSearch = [r.employeeName, r.date, r.present].join(" ").toLowerCase().includes(term);
       const matchesEmployee = selectedEmployee ? r.employeeName === selectedEmployee : true;
-      const matchesMonth = selectedMonth ? new Date(r.rawDate).getMonth() + 1 === parseInt(selectedMonth) : true;
+      const matchesMonth = selectedMonth ? r.fullDateTime.getMonth() + 1 === parseInt(selectedMonth) : true;
       return matchesSearch && matchesEmployee && matchesMonth;
     });
     setFiltered(f);
     setCurrentPage(1);
   }, [searchTerm, selectedEmployee, selectedMonth, records]);
+
+  // --- SEPARATE TODAY vs HISTORY ---
+  // Filter based on the calculated Shift Window
+  const todayRecords = filtered.filter(r => 
+    shiftWindow.start && shiftWindow.end && 
+    r.fullDateTime >= shiftWindow.start && 
+    r.fullDateTime <= shiftWindow.end
+  );
+
+  const historyRecords = filtered.filter(r => !todayRecords.includes(r));
 
   // --- HANDLERS ---
   const handleReset = () => {
@@ -164,7 +201,6 @@ const TeamAttendance = ({ onLogout }) => {
           case "date": return formatDateDDMMYYYY(r.date);
           case "time": return formatTime(r.time, r.createdAt);
           case "present": return r.present;
-          // case "shift": return beautifyShift(r.shift);
           case "assignedShift": return beautifyShift(r.assignedShift);
           default: return "";
         }
@@ -185,9 +221,9 @@ const TeamAttendance = ({ onLogout }) => {
     }
   };
 
-  const todayRecords = filtered.filter(r => r.rawDate === currentBusinessDate);
-  const paginatedRecords = rowsPerPage === "All" ? filtered : filtered.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
-  const totalPages = rowsPerPage === "All" ? 1 : Math.ceil(filtered.length / rowsPerPage);
+  // Pagination
+  const paginatedHistory = rowsPerPage === "All" ? historyRecords : historyRecords.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+  const totalPages = rowsPerPage === "All" ? 1 : Math.ceil(historyRecords.length / rowsPerPage);
   
   const handlePrevious = () => currentPage > 1 && setCurrentPage(currentPage - 1);
   const handleNext = () => currentPage < totalPages && setCurrentPage(currentPage + 1);
@@ -202,29 +238,21 @@ const TeamAttendance = ({ onLogout }) => {
       case "date": return formatDateDDMMYYYY(r.date);
       case "time": return formatTime(r.time, r.createdAt);
       case "present": return <Badge bg={r.present === "Present" ? "success" : "danger"} style={{fontSize: "0.75rem"}}>{r.present}</Badge>;
-      // case "shift": return beautifyShift(r.shift);
       case "assignedShift": return beautifyShift(r.assignedShift);
       default: return "--";
     }
   };
 
   return (
-    // ✅ FIX 1: Outer Container Height set to 100vh and overflow hidden
     <div className="d-flex" style={{ height: "100vh", overflow: "hidden" }}>
-      
-      {/* Sidebar handles its own scroll internally */}
       <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar}/>
       
-      {/* ✅ FIX 2: Main Content Container */}
-      <div className="d-flex flex-column flex-grow-1" style={{ height: "100vh", overflow: "hidden" }}>
-        
+      <div className="flex-grow-1 d-flex flex-column" style={{ minWidth: 0 }}>
         <TopNavbar
           toggleSidebar={toggleSidebar}
           username={localStorage.getItem("name")}
           role={localStorage.getItem("role") || "Manager"}
         />
-
-        {/* ✅ FIX 3: Content Area Scrolls here (overflow-auto) */}
         <div className="p-3 container-fluid" style={{ overflowY: "auto", flex: 1 }}>
           <PageHeading title="Team Attendance" />
 
@@ -261,49 +289,51 @@ const TeamAttendance = ({ onLogout }) => {
           </CardContainer>
 
           {/* TODAY'S ATTENDANCE */}
-          {todayRecords.length > 0 && (
-            <CardContainer className="mt-3 p-0 overflow-hidden">
-              <div className="p-3 bg-light border-bottom d-flex justify-content-between align-items-center">
-                <h6 className="fw-bold m-0 text-primary">
-                  <i className="bi bi-calendar-check me-2"></i>Today's Attendance 
-                  <small className="text-muted ms-2" style={{fontSize: "0.75rem"}}>
-                    ({formatDateDDMMYYYY(currentBusinessDate)})
-                  </small>
-                </h6>
-              </div>
-              
-              {loading ? (
-                <div className="text-center p-3"><Spinner animation="border" size="sm" /></div>
-              ) : (
-                <div style={{ overflowX: "auto" }}>
-                  <Table bordered hover size="sm" className="mb-0 w-100 text-nowrap align-middle">
-                    <thead style={{ backgroundColor: "#FFA500", color: "white", textAlign: "center" }}>
-                      <tr>
-                        {selectedColumns.map(col => (
-                          <th key={col} style={{padding: "8px", fontSize: "0.85rem"}}>
-                            {allColumns.find(c => c.key === col)?.label || col}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {todayRecords.map((r, idx) => (
-                        <tr key={idx} style={{ textAlign: "center", backgroundColor: "#e6f7ff" }}>
-                          {selectedColumns.map(col => <td key={col} style={cellStyle}>{renderCell(col, r, idx)}</td>)}
-                        </tr>
+          <CardContainer className="mt-3 p-0 overflow-hidden">
+            <div className="p-3 bg-light border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+              <h6 className="fw-bold m-0 text-primary">
+                <i className="bi bi-calendar-check me-2"></i>Today's Attendance 
+              </h6>
+              <Badge bg="info" className="text-dark border shadow-sm">
+                <i className="bi bi-clock me-1"></i> {shiftWindow.label}
+              </Badge>
+            </div>
+            
+            {loading ? (
+              <div className="text-center p-3"><Spinner animation="border" size="sm" /></div>
+            ) : todayRecords.length > 0 ? (
+              <div style={{ overflowX: "auto" }}>
+                <Table bordered hover size="sm" className="mb-0 w-100 text-nowrap align-middle">
+                  <thead style={{ backgroundColor: "#FFA500", color: "white", textAlign: "center" }}>
+                    <tr>
+                      {selectedColumns.map(col => (
+                        <th key={col} style={{padding: "8px", fontSize: "0.85rem"}}>
+                          {allColumns.find(c => c.key === col)?.label || col}
+                        </th>
                       ))}
-                    </tbody>
-                  </Table>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {todayRecords.map((r, idx) => (
+                      <tr key={idx} style={{ textAlign: "center", backgroundColor: "#e6f7ff" }}>
+                        {selectedColumns.map(col => <td key={col} style={cellStyle}>{renderCell(col, r, idx)}</td>)}
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </div>
+            ) : (
+                <div className="p-4 text-center text-muted small">
+                    <i className="bi bi-info-circle me-2"></i> No records found for the current shift cycle.
                 </div>
-              )}
-            </CardContainer>
-          )}
+            )}
+          </CardContainer>
 
           {/* ATTENDANCE HISTORY */}
           <CardContainer className="mt-3 p-0 overflow-hidden">
             <div className="p-3 bg-light border-bottom">
                 <h6 className="fw-bold m-0 text-primary">
-                  <i className="bi bi-clock-history me-2"></i>Attendance History
+                  <i className="bi bi-clock-history me-2"></i>History
                 </h6>
             </div>
 
@@ -311,7 +341,7 @@ const TeamAttendance = ({ onLogout }) => {
               <div className="d-flex justify-content-center align-items-center" style={{ height: "30vh" }}>
                 <Spinner animation="border" variant="warning" />
               </div>
-            ) : filtered.length > 0 ? (
+            ) : paginatedHistory.length > 0 ? (
               <>
                 <div style={{ overflowX: "auto" }}>
                   <Table bordered hover size="sm" className="mb-0 w-100 text-nowrap align-middle">
@@ -325,7 +355,7 @@ const TeamAttendance = ({ onLogout }) => {
                       </tr>
                     </thead>
                     <tbody>
-                      {paginatedRecords.map((r, idx) => (
+                      {paginatedHistory.map((r, idx) => (
                         <tr key={idx} style={{ textAlign: "center" }}>
                           {selectedColumns.map(col => <td key={col} style={cellStyle}>{renderCell(col, r, idx)}</td>)}
                         </tr>
@@ -342,7 +372,7 @@ const TeamAttendance = ({ onLogout }) => {
                 )}
               </>
             ) : (
-              <div className="text-center p-4 text-muted">No attendance records found</div>
+              <div className="text-center p-4 text-muted">No attendance history found</div>
             )}
           </CardContainer>
 

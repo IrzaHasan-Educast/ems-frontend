@@ -262,16 +262,22 @@ const TeamWorkSessions = ({ onLogout }) => {
   const cellStyle = { padding: "6px 8px", verticalAlign: "middle", fontSize: "0.9rem", whiteSpace: "nowrap" };
 
   return (
-    <div className="d-flex" style={{ minHeight: "100vh", overflow: "hidden" }}>
+    // ✅ FIX 1: Outer Container Height 100vh and overflow hidden
+    <div className="d-flex" style={{ height: "100vh", overflow: "hidden" }}>
+      
       <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar} />
 
-      <div className="flex-grow-1 d-flex flex-column" style={{ minWidth: 0 }}>
+      {/* ✅ FIX 2: Main Content Container (Flex Column) */}
+      <div className="d-flex flex-column flex-grow-1" style={{ minWidth: 0 }}>
+        
         <TopNavbar
           toggleSidebar={toggleSidebar}
           username={localStorage.getItem("name")}
           role={localStorage.getItem("role") || "Manager"}
         />
-        <div className="p-3 container-fluid overflow-auto">
+        
+        {/* ✅ FIX 3: Content Area Scrolls here (overflow-auto) */}
+        <div className="p-3 container-fluid" style={{ overflowY: "auto", flex: 1 }}>
           <PageHeading title="Team Work Sessions" />
 
           {/* Filters Row */}

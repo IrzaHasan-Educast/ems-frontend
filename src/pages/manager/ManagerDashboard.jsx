@@ -22,6 +22,7 @@ import { getEmployeeShiftCountByManager } from "../../api/employeeShiftApi";
 import * as attendanceApi from "../../api/attendanceApi";
 import * as workSessionApi from "../../api/workSessionApi";
 import * as breakApi from "../../api/breakApi";
+import { getMyShift } from "../../api/shiftApi"; // Ensure this is imported
 
 // Utils
 import {
@@ -38,6 +39,7 @@ const ManagerDashboard = ({ onLogout }) => {
   // --- State ---
   const [manager, setManager] = useState({ fullName: "Manager", id: null });
   const [currentSession, setCurrentSession] = useState(null);
+  const [myShift, setMyShift] = useState(null); // Store shift details
   
   // Team State
   const [teamStats, setTeamStats] = useState({
@@ -80,19 +82,33 @@ const ManagerDashboard = ({ onLogout }) => {
     return (end.getTime() - start.getTime() - totalBreakMillis) / 1000 / 3600;
   };
 
+  const formatShiftTime = (timeStr) => {
+    if (!timeStr) return "";
+    const [h, m] = timeStr.split(":");
+    const d = new Date();
+    d.setHours(h, m);
+    return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+  };
+
   // --- Fetch Logic ---
   const fetchDashboardData = useCallback(async () => {
     try {
-      const [meRes, sessionRes, countRes, teamSessionsRes, attendanceRes] = await Promise.all([
+      const [meRes, sessionRes, countRes, teamSessionsRes, attendanceRes, shiftRes] = await Promise.all([
         workSessionApi.getMe(),
         workSessionApi.getActiveSession(),
         getEmployeeShiftCountByManager(),
         workSessionApi.getManagerWorkSessionHistory(),
-        attendanceApi.getManagerAttendanceHistory()
+        attendanceApi.getManagerAttendanceHistory(),
+        getMyShift().catch(() => ({ data: null })) // Handle if no shift assigned
       ]);
 
       setManager({ fullName: meRes.data.fullName, id: meRes.data.employeeId, role: meRes.data.role });
       
+      // Store Shift Details
+      if (shiftRes.data) {
+        setMyShift(shiftRes.data);
+      }
+
       if (sessionRes.data) {
         const sData = sessionRes.data;
         setCurrentSession({
@@ -217,17 +233,12 @@ const ManagerDashboard = ({ onLogout }) => {
   );
 
   return (
-    // ✅ FIX 1: Outer Container Height 100vh and overflow hidden
     <div className="d-flex" style={{ height: "100vh", overflow: "hidden" }}>
-      
       <ManagerSidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar}/>
       
-      {/* ✅ FIX 2: Main Content Container (Flex Column) */}
-      <div className="d-flex flex-column flex-grow-1 bg-light" style={{ height: "100vh", overflow: "hidden" }}>
-        
+      <div className="flex-grow-1 d-flex flex-column bg-light" style={{ minWidth: 0 }}>
         <Navbar toggleSidebar={toggleSidebar} username={manager.fullName} role="Manager" />
 
-        {/* ✅ FIX 3: Scrollable Content Area */}
         <div className="p-3 p-md-4 container-fluid" style={{ overflowY: "auto", flex: 1 }}>
           
           {pageLoading ? (
@@ -236,11 +247,18 @@ const ManagerDashboard = ({ onLogout }) => {
              </div>
           ) : (
             <>
-              {/* Header */}
+              {/* Header with Shift Info */}
               <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
                 <div>
                     <h4 className="fw-bold text-dark mb-0">Manager Dashboard</h4>
-                    <p className="text-muted mb-0 small">Welcome back, <span className="text-primary fw-bold">{manager.fullName}</span></p>
+                    <div className="d-flex align-items-center gap-2 mt-1">
+                        <span className="text-muted small">Welcome back, <span className="text-primary fw-bold">{manager.fullName}</span></span>
+                        {myShift && (
+                            <Badge bg="info" className="text-dark border small fw-normal">
+                                Shift: {formatShiftTime(myShift.startsAt)} - {formatShiftTime(myShift.endsAt)}
+                            </Badge>
+                        )}
+                    </div>
                 </div>
                 <Badge bg="white" text="dark" className="border px-3 py-2 shadow-sm fw-normal align-self-md-center align-self-start">
                     {formatPakistanDateLabel(new Date().toISOString())}
@@ -280,7 +298,7 @@ const ManagerDashboard = ({ onLogout }) => {
                             <QuickActionBtn label="Attendance" path="/manager/team-attendance" icon="bi-calendar-check" color="success" />
                             <QuickActionBtn label="Work Sessions" path="/manager/team-sessions" icon="bi-clock-history" color="primary" />
                             <QuickActionBtn label="Leave Requests" path="/manager/team-leave" icon="bi-envelope-paper" color="warning" />
-                            <QuickActionBtn label="My History" path="/employee/work-history" icon="bi-journal-text" color="info" />
+                            {/* <QuickActionBtn label="My History" path="/employee/work-history" icon="bi-journal-text" color="info" /> */}
                         </div>
                     </CardContainer>
                 </Col>
