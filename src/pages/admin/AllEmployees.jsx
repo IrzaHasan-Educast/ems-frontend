@@ -27,6 +27,12 @@ const allColumns = [
   { key: "actions", label: "Actions" },
 ];
 
+// Helper function to clean up shift names
+const normalizeShift = (shiftName) => {
+  if (!shiftName) return "";
+  return shiftName.replace(/\s*\(.*?\)\s*/g, "").trim(); 
+};
+
 const AllEmployees = ({ onLogout }) => {
   // Default visible columns
   const defaultVisible = ["sno", "fullName", "department", "assignedShift", "role", "designation", "active", "actions"];
@@ -38,7 +44,7 @@ const AllEmployees = ({ onLogout }) => {
   // Filter Data Lists
   const [roles, setRoles] = useState([]);
   const [departments, setDepartments] = useState([]);
-  const [shifts, setShifts] = useState([]); // ✅ New State for Shifts
+  const [shifts, setShifts] = useState([]); 
   const [admin, setAdmin] = useState({ name: "", role: "" });
 
   // UI States
@@ -54,7 +60,7 @@ const AllEmployees = ({ onLogout }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [deptFilter, setDeptFilter] = useState("");
-  const [shiftFilter, setShiftFilter] = useState(""); // ✅ New Filter State
+  const [shiftFilter, setShiftFilter] = useState(""); 
   const [statusFilter, setStatusFilter] = useState("");
   const [rowsPerPage, setRowsPerPage] = useState(15);
   const [currentPage, setCurrentPage] = useState(1);
@@ -80,8 +86,13 @@ const AllEmployees = ({ onLogout }) => {
         const uniqueDepts = [...new Set(empRes.data.map(e => e.department).filter(Boolean))];
         setDepartments(uniqueDepts.sort());
 
-        // ✅ Extract Unique Shifts
-        const uniqueShifts = [...new Set(empRes.data.map(e => e.assignedShift).filter(Boolean))];
+        // Extract Unique Shifts using Normalization
+        const uniqueShifts = [...new Set(
+          empRes.data
+            .map(e => e.assignedShift)
+            .filter(Boolean)
+            .map(s => normalizeShift(s))
+        )];
         setShifts(uniqueShifts.sort());
 
       } catch (err) {
@@ -93,23 +104,38 @@ const AllEmployees = ({ onLogout }) => {
     initData();
   }, []);
 
-  // --- 2. FILTERING ---
+  // --- 2. FILTERING (Updated for Universal Search) ---
   useEffect(() => {
     let result = employees;
 
-    // Search
+    // Search Logic Updated: Checks ALL fields
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      result = result.filter(emp => 
-        [emp.fullName, emp.email, emp.username, emp.phone].some(val => val?.toLowerCase().includes(term))
-      );
+      result = result.filter(emp => {
+        const searchableText = [
+          emp.fullName,
+          emp.username,
+          emp.email,
+          emp.phone,
+          emp.department,
+          emp.designation,
+          emp.role,
+          emp.assignedShift,
+          emp.gender,
+          emp.active ? "active" : "inactive"
+        ].filter(Boolean).join(" ").toLowerCase(); // Join all valid fields into one string
+
+        return searchableText.includes(term);
+      });
     }
 
     if (roleFilter) result = result.filter(emp => emp.role === roleFilter);
     if (deptFilter) result = result.filter(emp => emp.department === deptFilter);
     
-    // ✅ Shift Filter Logic
-    if (shiftFilter) result = result.filter(emp => emp.assignedShift === shiftFilter);
+    // Shift Filter Logic
+    if (shiftFilter) {
+      result = result.filter(emp => normalizeShift(emp.assignedShift) === shiftFilter);
+    }
 
     if (statusFilter !== "") {
       const isActive = statusFilter === "active";
@@ -191,7 +217,7 @@ const AllEmployees = ({ onLogout }) => {
     padding: "4px 8px", 
     fontSize: "0.85rem", 
     verticalAlign: "middle",
-    whiteSpace: "nowrap" // Prevents wrapping
+    whiteSpace: "nowrap" 
   };
 
   const renderCell = (col, emp, index) => {
@@ -222,8 +248,7 @@ const AllEmployees = ({ onLogout }) => {
   return (
     <div className="d-flex">
       <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar}/>
-      {/* Main Content Area */}
-      <div className="flex-grow-1" style={{ minWidth: 0 }}> {/* minWidth: 0 prevents flex child from overflowing */}
+      <div className="flex-grow-1" style={{ minWidth: 0 }}>
         <TopNavbar 
           toggleSidebar={toggleSidebar}
           username={localStorage.getItem("name")}
@@ -232,12 +257,11 @@ const AllEmployees = ({ onLogout }) => {
         <div className="p-3 container-fluid">
           <PageHeading title="All Employees" buttonText="Add Employee" onButtonClick={() => navigate("/admin/employees/add")} />
 
-          {/* FILTERS CARD */}
           <CardContainer>
             <Row className="g-2 align-items-center">
-              {/* Filters are responsive: 12 on mobile, 6 on tablet, 2 or 3 on desktop */}
               <Col lg={2} md={4} sm={12}>
-                <Form.Control size="sm" type="text" placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                {/* Updated placeholder text */}
+                <Form.Control size="sm" type="text" placeholder="Search everything..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
               </Col>
               <Col lg={2} md={4} sm={6}>
                 <Form.Select size="sm" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
@@ -251,13 +275,14 @@ const AllEmployees = ({ onLogout }) => {
                   {departments.map(d => <option key={d} value={d}>{d}</option>)}
                 </Form.Select>
               </Col>
-              {/* ✅ Shift Filter */}
+              
               <Col lg={2} md={4} sm={6}>
                 <Form.Select size="sm" value={shiftFilter} onChange={(e) => setShiftFilter(e.target.value)}>
                   <option value="">All Shifts</option>
                   {shifts.map(s => <option key={s} value={s}>{s}</option>)}
                 </Form.Select>
               </Col>
+
               <Col lg={2} md={4} sm={6}>
                 <Form.Select size="sm" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
                   <option value="">All Status</option>
@@ -266,7 +291,6 @@ const AllEmployees = ({ onLogout }) => {
                 </Form.Select>
               </Col>
               
-              {/* Buttons Row */}
               <Col lg={2} md={4} sm={12} className="d-flex gap-2 justify-content-lg-end">
                  <Form.Select size="sm" value={rowsPerPage} onChange={(e) => {setRowsPerPage(e.target.value); setCurrentPage(1);}} style={{width: "70px"}}>
                   {[15, 25, 50, "All"].map(n => <option key={n} value={n}>{n}</option>)}
@@ -278,11 +302,9 @@ const AllEmployees = ({ onLogout }) => {
             </Row>
           </CardContainer>
 
-          {/* TABLE CONTAINER - Fixed for Horizontal Scroll */}
-          <CardContainer className="mt-3" style={{ padding: "0px" }}> {/* Remove padding from card to maximize space */}
+          <CardContainer className="mt-3" style={{ padding: "0px" }}>
              {loading ? <div className="text-center p-5"><Spinner animation="border" variant="warning" /></div> : (
               <>
-                {/* Wrapper for responsive table */}
                 <div style={{ overflowX: "auto", maxWidth: "100%", borderRadius: "8px" }}>
                   <Table bordered hover size="sm" className="mb-0 w-100">
                     <thead style={{ backgroundColor: "#FFA500", color: "#fff", textAlign: "center" }}>
@@ -316,7 +338,6 @@ const AllEmployees = ({ onLogout }) => {
              )}
           </CardContainer>
 
-          {/* COLUMN MODAL */}
           <Modal show={showColumnsModal} onHide={() => setShowColumnsModal(false)} centered scrollable size="sm">
             <Modal.Header closeButton className="py-2"><Modal.Title className="fs-6">Show/Hide Columns</Modal.Title></Modal.Header>
             <Modal.Body>

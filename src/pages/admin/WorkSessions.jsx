@@ -27,6 +27,12 @@ const allColumns = [
 
 const defaultVisibleColumns = ["sno", "employeeName", "assignedShift", "date", "clockIn", "clockOut", "totalHours", "workingHours", "status"];
 
+// Helper function to clean up shift names
+const normalizeShift = (shiftName) => {
+  if (!shiftName) return "";
+  return shiftName.replace(/\s*\(.*?\)\s*/g, "").trim(); 
+};
+
 const WorkSessions = ({ onLogout }) => {
   const token = localStorage.getItem("token");
   const initialRole = jwtHelper.getRoleFromToken(token);
@@ -51,16 +57,13 @@ const WorkSessions = ({ onLogout }) => {
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-  // ✅ UPDATED DATE FORMAT: 19-Jan-26
   const formatShortDate = (val) => {
      const d = parseApiDate(val);
      if(!d) return "--";
-     
      const day = d.getDate().toString().padStart(2, '0');
      const month = d.toLocaleString('en-US', { month: 'short' });
-     const year = d.getFullYear().toString().slice(-2); // Last 2 digits
-     
-     return `${day}-${month}-${year}`; // 19-Jan-26
+     const year = d.getFullYear().toString().slice(-2); 
+     return `${day}-${month}-${year}`; 
   };
 
   // --- HELPERS: Duration ---
@@ -141,7 +144,7 @@ const WorkSessions = ({ onLogout }) => {
           return {
             ...s,
             rawDate: dateObj,
-            date: formatShortDate(s.clockInTime), // ✅ New Format
+            date: formatShortDate(s.clockInTime), 
             day: dateObj.toLocaleDateString("en-US", { weekday: "long" }),
             clockIn: formatTimeAMPM(s.clockInTime),
             clockOut: formatTimeAMPM(s.clockOutTime),
@@ -166,16 +169,31 @@ const WorkSessions = ({ onLogout }) => {
     fetchData();
   }, []);
 
-  // --- FILTERING ---
+  // --- FILTERING (Updated for Universal Search) ---
   useEffect(() => {
     const term = searchTerm.toLowerCase();
     
     let f = sessions.filter((s) => {
-      const matchesSearch = [s.employeeName, s.displayStatus, s.date].join(" ").toLowerCase().includes(term);
+      // ✅ COMBINE ALL FIELDS FOR SEARCH
+      // Checks: Employee Name, Shift, Date, Day, ClockIn, ClockOut, Hours, Status
+      const searchableText = [
+        s.employeeName, 
+        s.assignedShift, 
+        s.date, 
+        s.day, 
+        s.clockIn, 
+        s.clockOut, 
+        s.totalHours, 
+        s.workingHours, 
+        s.displayStatus
+      ].join(" ").toLowerCase();
+
+      const matchesSearch = searchableText.includes(term);
+
       const matchesEmployee = selectedEmployee ? s.employeeName === selectedEmployee : true;
       const matchesMonth = selectedMonth ? (s.rawDate.getMonth() + 1) === parseInt(selectedMonth) : true;
       const matchesStatus = statusFilter ? s.displayStatus === statusFilter : true;
-      const matchesShift = shiftFilter ? s.assignedShift === shiftFilter : true;
+      const matchesShift = shiftFilter ? normalizeShift(s.assignedShift) === shiftFilter : true;
 
       return matchesSearch && matchesEmployee && matchesMonth && matchesStatus && matchesShift;
     });
@@ -236,7 +254,7 @@ const WorkSessions = ({ onLogout }) => {
 
   // Unique Lists
   const uniqueEmployees = [...new Set(sessions.map(s => s.employeeName))].sort();
-  const uniqueShifts = [...new Set(sessions.map(s => s.assignedShift))].sort();
+  const uniqueShifts = [...new Set(sessions.map(s => normalizeShift(s.assignedShift)).filter(Boolean))].sort();
 
   // --- RENDER CELL ---
   const renderCell = (col, s, idx) => {
@@ -273,7 +291,7 @@ const WorkSessions = ({ onLogout }) => {
               <Col lg={3} md={6}>
                 <InputGroup size="sm">
                   <InputGroup.Text><i className="bi bi-search"></i></InputGroup.Text>
-                  <Form.Control placeholder="Search..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                  <Form.Control placeholder="Search everything..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
                 </InputGroup>
               </Col>
               <Col lg={2} md={4} sm={6}>
@@ -282,12 +300,14 @@ const WorkSessions = ({ onLogout }) => {
                   {uniqueEmployees.map((emp, i) => <option key={i} value={emp}>{emp}</option>)}
                 </Form.Select>
               </Col>
+              
               <Col lg={2} md={4} sm={6}>
                 <Form.Select size="sm" value={shiftFilter} onChange={e => setShiftFilter(e.target.value)}>
                   <option value="">All Shifts</option>
                   {uniqueShifts.map((s, i) => <option key={i} value={s}>{s}</option>)}
                 </Form.Select>
               </Col>
+
               <Col lg={2} md={4} sm={6}>
                 <Form.Select size="sm" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}>
                   <option value="">All Months</option>
