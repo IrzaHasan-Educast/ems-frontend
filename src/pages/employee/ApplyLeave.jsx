@@ -281,14 +281,12 @@ const ApplyLeave = ({ onLogout }) => {
                         <div className="p-3 border rounded bg-light">
                           <Form.Group>
                             <Form.Label className="fw-semibold text-danger">
-                              <i className="bi bi-paperclip me-1"></i> Medical Prescription (Required for Sick Leave)
                             </Form.Label>
                             <Form.Control
                               type="file"
                               name="prescription"
                               onChange={handleChange}
                               accept="image/*,application/pdf"
-                              required
                             />
                             <Form.Text className="text-muted">
                                Allowed formats: JPG, PNG, PDF (Max 2MB)
