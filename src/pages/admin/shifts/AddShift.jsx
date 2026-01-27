@@ -76,7 +76,7 @@ const AddShift = ({ onLogout }) => {
                   <Row className="mb-3">
                     <Col>
                       <Form.Group>
-                        <Form.Label className="fw-bold">Shift Name</Form.Label>
+                        <Form.Label>Shift Name</Form.Label>
                         <Form.Control
                           name="shiftName"
                           value={shift.shiftName}
@@ -91,7 +91,7 @@ const AddShift = ({ onLogout }) => {
                   <Row className="mb-3">
                     <Col md={6} xs={12} className="mb-3 mb-md-0">
                       <Form.Group>
-                        <Form.Label className="fw-bold">Starts At</Form.Label>
+                        <Form.Label>Starts At</Form.Label>
                         <Form.Control
                           type="time"
                           name="startsAt"
@@ -104,7 +104,7 @@ const AddShift = ({ onLogout }) => {
 
                     <Col md={6} xs={12}>
                       <Form.Group>
-                        <Form.Label className="fw-bold">Ends At</Form.Label>
+                        <Form.Label>Ends At</Form.Label>
                         <Form.Control
                           type="time"
                           name="endsAt"
@@ -119,7 +119,7 @@ const AddShift = ({ onLogout }) => {
                   <Row className="mb-4">
                     <Col>
                       <Form.Group>
-                        <Form.Label className="fw-bold">Assign Manager</Form.Label>
+                        <Form.Label>Assign Manager</Form.Label>
                         <Form.Select
                           value={selectedManagerId}
                           onChange={(e) => setSelectedManagerId(e.target.value)}
@@ -136,13 +136,13 @@ const AddShift = ({ onLogout }) => {
                     </Col>
                   </Row>
 
-                  <div className="d-flex gap-2 justify-content-end">
+                  <div className="d-flex gap-2 mt-3">
+                    <AppButton text="Save Shift" type="submit" />
                     <AppButton
                       text="Cancel"
                       variant="secondary"
                       onClick={() => navigate("/admin/shifts")}
                     />
-                    <AppButton text="Save Shift" type="submit" />
                   </div>
                 </Form>
               </CardContainer>
