@@ -242,6 +242,7 @@ const Attendance = ({ onLogout }) => {
           toggleSidebar={toggleSidebar}
           username={localStorage.getItem("name")}
           role={localStorage.getItem("role")}
+          onLogout={onLogout}
         />
         
         {/* Scrollable Content Area */}

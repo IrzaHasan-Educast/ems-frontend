@@ -252,6 +252,7 @@ const TeamAttendance = ({ onLogout }) => {
           toggleSidebar={toggleSidebar}
           username={localStorage.getItem("name")}
           role={localStorage.getItem("role") || "Manager"}
+          onLogout={onLogout}
         />
         <div className="p-3 container-fluid" style={{ overflowY: "auto", flex: 1 }}>
           <PageHeading title="Team Attendance" />

@@ -22,6 +22,7 @@ import CardContainer from "../../components/CardContainer";
 import { getAllEmployees } from "../../api/employeeApi";
 import { getAllAttendance } from "../../api/attendanceApi";
 import { getAllShifts } from "../../api/shiftApi";
+import { getAllLeaves } from "../../api/leaveApi"; // ✅ Imported Leave API
 import { getCurrentUser } from "../../api/userApi";
 import { formatPakistanDateLabel } from "../../utils/time";
 
@@ -39,7 +40,8 @@ const AdminDashboard = ({ onLogout }) => {
     totalShifts: 0
   });
 
-  const [recentEmployees, setRecentEmployees] = useState([]);
+  // ✅ Changed State: From recentEmployees to recentLeaves
+  const [recentLeaves, setRecentLeaves] = useState([]); 
   const [attendanceChartData, setAttendanceChartData] = useState([]); 
   const [roleDistribution, setRoleDistribution] = useState([]);
   const [pageLoading, setPageLoading] = useState(true);
@@ -51,11 +53,13 @@ const AdminDashboard = ({ onLogout }) => {
     try {
       setPageLoading(true);
       
-      const [userRes, empRes, attRes, shiftRes] = await Promise.all([
+      // ✅ Added getAllLeaves() to Promise.all
+      const [userRes, empRes, attRes, shiftRes, leaveRes] = await Promise.all([
         getCurrentUser(),
         getAllEmployees(),
         getAllAttendance(),
-        getAllShifts()
+        getAllShifts(),
+        getAllLeaves()
       ]);
 
       setAdminUser({ name: userRes.data.fullName, role: userRes.data.role });
@@ -63,6 +67,7 @@ const AdminDashboard = ({ onLogout }) => {
       const allEmployees = empRes.data || [];
       const allAttendance = attRes.data || [];
       const allShifts = shiftRes.data || [];
+      const allLeaves = leaveRes.data || [];
 
       // Stats
       const uniqueDepts = new Set(allEmployees.map(e => e.department).filter(Boolean)).size;
@@ -90,8 +95,11 @@ const AdminDashboard = ({ onLogout }) => {
       });
       setRoleDistribution(Object.keys(roles).map(key => ({ name: key, count: roles[key] })));
 
-      // Recent Employees
-      setRecentEmployees([...allEmployees].reverse().slice(0, 5));
+      // ✅ Logic for Pending Leaves (Top 5)
+      const pendingLeavesList = allLeaves
+        .filter(l => l.status === "PENDING")
+        .slice(0, 5);
+      setRecentLeaves(pendingLeavesList);
 
     } catch (err) {
       console.error("Admin Dashboard Error:", err);
@@ -123,7 +131,7 @@ const AdminDashboard = ({ onLogout }) => {
         variant="white" 
         className="w-100 border shadow-sm py-3 px-3 text-start d-flex align-items-center gap-3 hover-shadow mb-2"
         onClick={() => navigate(path)}
-        style={{ transition: "all 0.2s", whiteSpace: "normal" }} // Text wrap
+        style={{ transition: "all 0.2s", whiteSpace: "normal" }}
     >
         <div className={`text-${color} fs-3`}><i className={`bi ${icon}`}></i></div>
         <div style={{ lineHeight: "1.2" }}>
@@ -134,10 +142,15 @@ const AdminDashboard = ({ onLogout }) => {
   );
 
   return (
-    <div className="d-flex">
+    // ✅ LAYOUT FIX: Main container fixed height, hidden overflow
+    <div className="d-flex" style={{ height: "100vh", overflow: "hidden" }}>
+      
+      {/* Sidebar stays as is (it should handle its own width) */}
       <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar}/>
-      <div className="flex-grow-1 bg-light d-flex flex-column" style={{ minHeight: "100vh" }}>
-        <Navbar toggleSidebar={toggleSidebar} username={localStorage.getItem("name")} role={localStorage.getItem("role")} />
+      
+      {/* ✅ LAYOUT FIX: Content area allows vertical scrolling */}
+      <div className="flex-grow-1 bg-light d-flex flex-column" style={{ overflowY: "auto" }}>
+        <Navbar toggleSidebar={toggleSidebar} username={localStorage.getItem("name")} role={localStorage.getItem("role")} onLogout={onLogout} />
 
         <div className="container-fluid p-4">
           {pageLoading ? (
@@ -181,7 +194,7 @@ const AdminDashboard = ({ onLogout }) => {
                     <Card className="border-0 shadow-sm h-100">
                         <Card.Header className="bg-white fw-bold py-3">Employee Role Distribution</Card.Header>
                         <Card.Body>
-                            <div style={{ width: "100%", height: "280px" }}> {/* FIXED HEIGHT WRAPPER */}
+                            <div style={{ width: "100%", height: "280px" }}>
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart data={roleDistribution}>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -201,7 +214,7 @@ const AdminDashboard = ({ onLogout }) => {
                      <Card className="border-0 shadow-sm h-100">
                         <Card.Header className="bg-white fw-bold py-3">Today's Status</Card.Header>
                         <Card.Body>
-                             <div style={{ width: "100%", height: "280px" }}> {/* FIXED HEIGHT WRAPPER */}
+                             <div style={{ width: "100%", height: "280px" }}>
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
                                         <Pie
@@ -235,44 +248,42 @@ const AdminDashboard = ({ onLogout }) => {
                 </Col>
               </Row>
 
-              {/* ROW 3: Recent Employees Table */}
+              {/* ✅ ROW 3: Replaced Recent Employees with Pending Leaves */}
               <Row>
                 <Col xs={12}>
                     <Card className="border-0 shadow-sm">
                         <Card.Header className="bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
-                            <span>Newest Employees</span>
-                            <Button variant="outline-primary" size="sm" onClick={() => navigate("/admin/employees/add")}>
-                                <i className="bi bi-plus"></i> Add New
+                            <span>Pending Leave Requests</span>
+                            <Button variant="outline-primary" size="sm" onClick={() => navigate("/admin/leaves")}>
+                                View All
                             </Button>
                         </Card.Header>
                         <Card.Body className="p-0">
-                            {recentEmployees.length > 0 ? (
+                            {recentLeaves.length > 0 ? (
                                 <Table hover responsive className="mb-0 align-middle">
                                     <thead className="bg-light text-muted small">
                                         <tr>
-                                            <th className="ps-4">Full Name</th>
-                                            <th>Department</th>
-                                            <th>Role</th>
+                                            <th className="ps-4">Employee</th>
+                                            <th>Type</th>
+                                            <th>Date</th>
                                             <th>Status</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {recentEmployees.map((emp, i) => (
+                                        {recentLeaves.map((leave, i) => (
                                             <tr key={i}>
-                                                <td className="ps-4 fw-bold text-dark text-nowrap">{emp.fullName}</td>
-                                                <td>{emp.department || "N/A"}</td>
-                                                <td><Badge bg="light" text="dark" className="border">{emp.role}</Badge></td>
-                                                <td>
-                                                    <Badge bg={emp.isActive ? "success" : "danger"}>
-                                                        {emp.isActive ? "Active" : "Inactive"}
-                                                    </Badge>
+                                                <td className="ps-4 fw-bold text-dark text-nowrap">
+                                                  {leave.employeeName || `ID: ${leave.employeeId}`}
                                                 </td>
+                                                <td><Badge bg="info" className="text-dark">{leave.leaveType}</Badge></td>
+                                                <td className="text-nowrap">{leave.startDate} to {leave.endDate}</td>
+                                                <td><Badge bg="warning" text="dark">Pending</Badge></td>
                                             </tr>
                                         ))}
                                     </tbody>
                                 </Table>
                             ) : (
-                                <div className="text-center py-5 text-muted">No employees found.</div>
+                                <div className="text-center py-5 text-muted">No pending leave requests.</div>
                             )}
                         </Card.Body>
                     </Card>

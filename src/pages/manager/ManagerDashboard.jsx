@@ -237,7 +237,7 @@ const ManagerDashboard = ({ onLogout }) => {
       <ManagerSidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar}/>
       
       <div className="flex-grow-1 d-flex flex-column bg-light" style={{ minWidth: 0 }}>
-        <Navbar toggleSidebar={toggleSidebar} username={manager.fullName} role="Manager" />
+        <Navbar toggleSidebar={toggleSidebar} username={localStorage.getItem("name")} role={localStorage.getItem("role")} onLogout={onLogout}/>
 
         <div className="p-3 p-md-4 container-fluid" style={{ overflowY: "auto", flex: 1 }}>
           

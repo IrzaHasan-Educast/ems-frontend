@@ -274,6 +274,7 @@ const TeamWorkSessions = ({ onLogout }) => {
           toggleSidebar={toggleSidebar}
           username={localStorage.getItem("name")}
           role={localStorage.getItem("role") || "Manager"}
+          onLogout={onLogout}
         />
         
         {/* ✅ FIX 3: Content Area Scrolls here (overflow-auto) */}

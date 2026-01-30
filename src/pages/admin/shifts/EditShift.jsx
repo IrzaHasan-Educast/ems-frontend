@@ -11,38 +11,42 @@ import { getManagers } from "../../../api/employeeApi";
 const EditShift = ({ onLogout }) => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   const [shift, setShift] = useState({
     shiftName: "",
     startsAt: "",
     endsAt: "",
-    managerId: "", // ✅ manager selected
+    managerId: "",
   });
 
   const [managers, setManagers] = useState([]);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // Fetch shift details
-useEffect(() => {
-  const fetchShift = async () => {
-    const res = await getShiftById(id);
-    setShift({
-      shiftName: res.data.shiftName,
-      startsAt: res.data.startsAt,
-      endsAt: res.data.endsAt,
-      managerId: res.data.managerId || "", // ✅ assign pehle se
-    });
-  };
-  fetchShift();
-}, [id]);
-
+  useEffect(() => {
+    const fetchShift = async () => {
+      try {
+        const res = await getShiftById(id);
+        setShift({
+          shiftName: res.data.shiftName,
+          startsAt: res.data.startsAt,
+          endsAt: res.data.endsAt,
+          managerId: res.data.managerId || "",
+        });
+      } catch (err) {
+        console.error("Error fetching shift:", err);
+      }
+    };
+    fetchShift();
+  }, [id]);
 
   // Fetch managers for dropdown
   useEffect(() => {
     const fetchManagers = async () => {
       try {
-        const res = await getManagers(); // GET /employees/role/MANAGER
+        const res = await getManagers();
         setManagers(res.data);
       } catch (err) {
         console.error("Failed to fetch managers", err);
@@ -58,7 +62,6 @@ useEffect(() => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     try {
       await updateShift(id, shift);
       navigate("/admin/shifts");
@@ -71,85 +74,96 @@ useEffect(() => {
   return (
     <div className="d-flex">
       <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar}/>
-      <div className="flex-grow-1">
+      <div className="flex-grow-1" style={{ minWidth: 0 }}>
         <TopNavbar
           toggleSidebar={toggleSidebar}
           username={localStorage.getItem("name")}
           role={localStorage.getItem("role")}
+          onLogout={onLogout}
         />
 
-        <div className="p-4 d-flex justify-content-center">
-          <div className="w-50">
-            <CardContainer title="Edit Shift">
-              <Form onSubmit={handleSubmit}>
-                <Row className="mb-3">
-                  <Col>
-                    <Form.Label>Shift Name</Form.Label>
-                    <Form.Control
-                      name="shiftName"
-                      value={shift.shiftName}
-                      onChange={handleChange}
-                      required
-                    />
-                  </Col>
-                </Row>
-
-                <Row className="mb-3">
-                  <Col md={6}>
-                    <Form.Label>Starts At</Form.Label>
-                    <Form.Control
-                      type="time"
-                      name="startsAt"
-                      value={shift.startsAt}
-                      onChange={handleChange}
-                      required
-                    />
-                  </Col>
-
-                  <Col md={6}>
-                    <Form.Label>Ends At</Form.Label>
-                    <Form.Control
-                      type="time"
-                      name="endsAt"
-                      value={shift.endsAt}
-                      onChange={handleChange}
-                      required
-                    />
-                  </Col>
-                </Row>
-
-                <Row className="mb-3">
-                  <Col>
-                    <Form.Group>
-                      <Form.Label>Assign Manager</Form.Label>
-                      <Form.Select
-                        name="managerId"
-                        value={shift.managerId}
+        <div className="container-fluid p-3 p-md-4">
+          <Row className="justify-content-center">
+            {/* Responsive Width: Full on mobile, centered & smaller on desktop */}
+            <Col xs={12} md={8} lg={6} xl={5}>
+              <CardContainer title="Edit Shift">
+                <Form onSubmit={handleSubmit}>
+                  
+                  {/* Shift Name */}
+                  <Row className="mb-3">
+                    <Col xs={12}>
+                      <Form.Label>Shift Name</Form.Label>
+                      <Form.Control
+                        name="shiftName"
+                        value={shift.shiftName}
                         onChange={handleChange}
                         required
-                      >
-                        <option value="">Select Manager</option>
-                        {managers.map((manager) => (
-                          <option key={manager.id} value={manager.id}>
-                            {manager.fullName}
-                          </option>
-                        ))}
-                      </Form.Select>
-                    </Form.Group>
-                  </Col>
-                </Row>
+                        placeholder="e.g. Morning Shift"
+                      />
+                    </Col>
+                  </Row>
 
-                <div className="d-flex gap-2">
-                  <AppButton text="Update Shift" type="submit" />
-                  <AppButton
-                    text="Cancel"
-                    variant="secondary"
-                    onClick={() => navigate("/admin/shifts")}
-                  />
-                </div>
-              </Form>
-            </CardContainer>
-          </div>
+                  {/* Times - Stack on Mobile, Side-by-Side on Desktop */}
+                  <Row className="mb-3">
+                    <Col xs={12} md={6} className="mb-3 mb-md-0">
+                      <Form.Label>Starts At</Form.Label>
+                      <Form.Control
+                        type="time"
+                        name="startsAt"
+                        value={shift.startsAt}
+                        onChange={handleChange}
+                        required
+                      />
+                    </Col>
+
+                    <Col xs={12} md={6}>
+                      <Form.Label>Ends At</Form.Label>
+                      <Form.Control
+                        type="time"
+                        name="endsAt"
+                        value={shift.endsAt}
+                        onChange={handleChange}
+                        required
+                      />
+                    </Col>
+                  </Row>
+
+                  {/* Manager Selection */}
+                  <Row className="mb-4">
+                    <Col xs={12}>
+                      <Form.Group>
+                        <Form.Label>Assign Manager</Form.Label>
+                        <Form.Select
+                          name="managerId"
+                          value={shift.managerId}
+                          onChange={handleChange}
+                          required
+                        >
+                          <option value="">Select Manager</option>
+                          {managers.map((manager) => (
+                            <option key={manager.id} value={manager.id}>
+                              {manager.fullName}
+                            </option>
+                          ))}
+                        </Form.Select>
+                      </Form.Group>
+                    </Col>
+                  </Row>
+
+                  {/* Buttons */}
+                  <div className="d-flex gap-2">
+                    <AppButton text="Update Shift" type="submit" />
+                    <AppButton
+                      text="Cancel"
+                      variant="secondary"
+                      onClick={() => navigate("/admin/shifts")}
+                    />
+                  </div>
+                  
+                </Form>
+              </CardContainer>
+            </Col>
+          </Row>
         </div>
       </div>
     </div>

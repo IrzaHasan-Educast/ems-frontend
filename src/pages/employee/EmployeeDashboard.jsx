@@ -233,6 +233,7 @@ const EmployeeDashboard = ({ onLogout }) => {
           toggleSidebar={toggleSidebar} 
           username={localStorage.getItem("name")} 
           role={localStorage.getItem("role")} 
+          onLogout={onLogout}
         />
 
         <div className="container-fluid p-4">

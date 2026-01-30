@@ -277,6 +277,7 @@ const ViewShifts = ({ onLogout }) => {
           toggleSidebar={toggleSidebar}
           username={localStorage.getItem("name")}
           role={localStorage.getItem("role")}
+          onLogout={onLogout}
         />
 
         <div className="p-3 container-fluid">

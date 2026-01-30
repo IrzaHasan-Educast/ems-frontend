@@ -232,7 +232,7 @@ const ManagerLeaveRequests = ({ onLogout }) => {
         <TopNavbar 
           toggleSidebar={toggleSidebar} 
           username={localStorage.getItem("name")} 
-          role={role} 
+          role={localStorage.getItem("role")} 
           onLogout={onLogout} 
         />
 

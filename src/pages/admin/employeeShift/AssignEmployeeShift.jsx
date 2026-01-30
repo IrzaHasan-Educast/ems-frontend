@@ -58,6 +58,7 @@ const AssignEmployeeShift = ({ onLogout }) => {
           toggleSidebar={toggleSidebar}
           username={localStorage.getItem("name")}
           role={localStorage.getItem("role")}
+          onLogout={onLogout}
         />
 
         <div className="p-4 d-flex justify-content-center">

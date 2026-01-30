@@ -244,7 +244,9 @@ const handleSubmit = async (e) => {
       <div className="flex-grow-1">
         <TopNavbar toggleSidebar={toggleSidebar}
         username={localStorage.getItem("name")}
-        role={localStorage.getItem("role")} />
+        role={localStorage.getItem("role")}
+        onLogout={onLogout}
+         />
         <div className="p-4 d-flex justify-content-center">
           <div className="w-75">
             <CardContainer title="Edit Employee">

@@ -158,7 +158,7 @@ const HRDashboard = ({ onLogout }) => {
     <div className="d-flex">
       <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar}/>
       <div className="flex-grow-1 bg-light d-flex flex-column" style={{ minHeight: "100vh" }}>
-        <Navbar toggleSidebar={toggleSidebar} username={hrUser.name} role={hrUser.role} />
+        <Navbar toggleSidebar={toggleSidebar} username={hrUser.name} role={hrUser.role} onLogout={onLogout}/>
 
         <div className="container-fluid p-4">
           {pageLoading ? (

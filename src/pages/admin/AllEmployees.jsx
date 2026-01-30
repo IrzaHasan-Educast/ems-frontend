@@ -253,6 +253,7 @@ const AllEmployees = ({ onLogout }) => {
           toggleSidebar={toggleSidebar}
           username={localStorage.getItem("name")}
           role={localStorage.getItem("role")}
+          onLogout={onLogout}
         />        
         <div className="p-3 container-fluid">
           <PageHeading title="All Employees" buttonText="Add Employee" onButtonClick={() => navigate("/admin/employees/add")} />

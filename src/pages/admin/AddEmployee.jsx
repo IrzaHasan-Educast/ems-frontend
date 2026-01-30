@@ -151,6 +151,7 @@ useEffect(() => {
         toggleSidebar={toggleSidebar}
         username={localStorage.getItem("name")}
         role={localStorage.getItem("role")}
+        onLogout={onLogout}
       />
         <div className="p-4 d-flex justify-content-center">
           <div className="w-75">
