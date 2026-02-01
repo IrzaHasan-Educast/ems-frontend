@@ -10,7 +10,7 @@ const CardContainer = ({ title, children, className = "" }) => {
       className={`mb-3 shadow-sm ${className}`}
       style={{
         border: "2px solid #FFA500", // Orange Border
-        borderRadius: "25px",
+        borderRadius: "10px",
         backgroundColor: "rgba(255, 255, 255, 0.95)",
         boxShadow: "15px 22px 23px -14px #ffa50026",
         // Removed fixed 'margin: 20px' to prevent overflow on mobile
