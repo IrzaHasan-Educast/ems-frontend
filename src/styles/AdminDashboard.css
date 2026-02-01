@@ -141,3 +141,20 @@ body {
 .nav-profile-dropdown .dropdown-toggle::after {
   display: none; /* Hide default arrow */
 }
+
+/* =============================================
+   FIX FOR NAVBAR PROFILE DROPDOWN MOBILE ISSUE
+   This will make sure dropdown stays on top of all other elements
+================================================ */
+.nav-profile-dropdown .dropdown-menu {
+  z-index: 1090 !important;
+  position: absolute !important;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.175) !important;
+  margin-top: 0.5rem !important;
+  background-color: white !important;
+}
+
+/* Fix to prevent dropdown from being pushed by other navbar elements */
+.navbar .dropdown {
+  position: relative !important;
+}

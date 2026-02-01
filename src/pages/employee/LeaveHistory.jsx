@@ -241,10 +241,9 @@ const LeaveHistory = ({ onLogout }) => {
                 </Form.Select>
               </Col>
 
-              <Col lg={3} md={6} xs={6} className="d-flex justify-content-end">
-                <Button variant="outline-secondary" size="sm" onClick={handleReset} title="Reset Filters">
-                    <ArrowClockwise className="me-1"/> Reset
-                </Button>
+              <Col lg={3} md={6} xs={6} className="d-flex justify-content-end gap-2">
+                <Button variant="secondary" size="sm" onClick={handleReset} title="Reset Filters">
+                ↻</Button>
               </Col>
             </Row>
           </CardContainer>

@@ -8,78 +8,76 @@ const TopNavbar = ({ toggleSidebar, username, role, onLogout }) => {
   const displayName = username || "User";
   const displayRole = role || "";
   
+  // Create Initials for Avatar
   const getInitials = (name) => {
     return name
       ? name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
       : "U";
   };
 
-  const handleLogoutClick = (e) => {
-    // Prevent any default link behavior
-    e.preventDefault(); 
-    
-    // 1. Clear Storage
-    localStorage.clear();
-    sessionStorage.clear();
-
-    // 2. Execute parent callback if exists
-    if (onLogout) {
-        onLogout();
+  const handleLogoutClick = () => {
+    if (onLogout) onLogout();
+    else {
+        localStorage.clear();
+        navigate("/login");
     }
-
-    // 3. Force Navigate to Login
-    // setTimeout ensure karta hai ki state update hone ke baad redirect ho
-    setTimeout(() => {
-        navigate("/login", { replace: true });
-    }, 100);
   };
 
   return (
     <Navbar
-      expand={false} // ✅ Changed to 'false' to prevent default collapse behavior
-      className="shadow-sm top-navbar px-2 px-md-3"
+      expand="lg"
+      className="shadow-sm top-navbar px-3"
       sticky="top"
-      style={{ backgroundColor: "#fff", height: "70px" }}
     >
-      {/* ✅ 'flex-nowrap' ensures Logo and Profile stay in one line */}
-      <Container fluid className="d-flex flex-nowrap align-items-center">
-        
-        {/* --- LEFT: Toggle + Brand --- */}
+      <Container fluid>
+        {/* Toggle Button + Brand (Brand hidden on desktop as Sidebar has it) */}
         <div className="d-flex align-items-center">
           <button
-            className="btn-toggle me-2 border-0 bg-transparent"
+            className="btn-toggle me-3"
             onClick={toggleSidebar}
             aria-label="Toggle Sidebar"
-            style={{ color: "#333", padding: 0 }}
           >
-            <List size={28} />
+            <List size={24} />
           </button>
-          
-          {/* ✅ 'whiteSpace: nowrap' prevents text from breaking */}
-          <div style={{ fontWeight: "bold", fontSize: "1.4rem", whiteSpace: "nowrap" }} className="ms-2">
+          <div style={{ fontWeight: "bold", fontSize: "1.5rem" }}>
             <span style={{ color: "#f58a29" }}>Edu</span>
             <span style={{ color: "#055993" }}>Cast</span>
           </div>
+          
+          {/* Mobile Only Brand Name (Optional)
+          <div className="d-lg-none fw-bold fs-4">
+            <span style={{ color: "#f58a29" }}>Edu</span>
+            <span style={{ color: "#055993" }}>Cast</span>
+          </div> */}
         </div>
 
-        {/* --- RIGHT: User Profile --- */}
-        {/* ✅ 'd-flex flex-row' forces horizontal layout even on mobile */}
-        <Nav className="ms-auto d-flex flex-row align-items-center">
+        {/* Right Side - User Profile Dropdown */}
+        <Nav className="ms-auto">
           <NavDropdown
             align="end"
+            flip={false}
+            popperConfig={{
+              strategy: "fixed",
+              modifiers: [
+                {
+                  name: "preventOverflow",
+                  options: {
+                    boundary: "window"
+                  }
+                }
+              ]
+            }}
             title={
               <div className="d-flex align-items-center">
                 <div className="d-none d-md-block text-end me-2">
                    <div className="fw-semibold text-dark" style={{lineHeight: "1.2"}}>{displayName}</div>
                    <small className="text-muted" style={{fontSize: "0.75rem"}}>{displayRole}</small>
                 </div>
-                
                 <div
                   className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold shadow-sm"
                   style={{
-                    width: "38px",
-                    height: "38px",
-                    minWidth: "38px", // Prevents shrinking
+                    width: "40px",
+                    height: "40px",
                     backgroundColor: "#f58a29",
                     border: "2px solid #fff"
                   }}
@@ -89,8 +87,7 @@ const TopNavbar = ({ toggleSidebar, username, role, onLogout }) => {
               </div>
             }
             id="user-nav-dropdown"
-            className="nav-profile-dropdown p-0" // Removed padding to save space
-            style={{ position: "static" }} // Helps with dropdown positioning
+            className="nav-profile-dropdown"
           >
             <NavDropdown.Header className="d-md-none text-center">
                <strong>{displayName}</strong><br/>

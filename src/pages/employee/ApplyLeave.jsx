@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { Form, Row, Col, Spinner } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
-import Swal from "sweetalert2"; // Ensure you have sweetalert2 installed
+import Swal from "sweetalert2"; 
 
 import Sidebar from "../../components/Sidebar";
-import TopNavbar from "../../components/Navbar"; // Using Unified Navbar
+import TopNavbar from "../../components/Navbar"; 
 import CardContainer from "../../components/CardContainer";
-import PageHeading from "../../components/PageHeading"; // Added PageHeading
-import AppButton from "../../components/AppButton"; // Assuming this is your custom button
+import PageHeading from "../../components/PageHeading"; 
+import AppButton from "../../components/AppButton"; 
 
 import { getCurrentUser } from "../../api/workSessionApi"; 
 import { applyLeave, getLeaveTypes, uploadPrescription } from "../../api/leaveApi";
@@ -34,7 +34,7 @@ const ApplyLeave = ({ onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showPrescription, setShowPrescription] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false); // For button loading
+  const [submitting, setSubmitting] = useState(false); 
 
   const navigate = useNavigate();
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
@@ -79,7 +79,7 @@ const ApplyLeave = ({ onLogout }) => {
     if (name === "startDate") {
       updated.startDate = value;
       if (leave.endDate && new Date(leave.endDate) < new Date(value)) {
-        updated.endDate = ""; // Reset end date if invalid
+        updated.endDate = ""; 
       }
     }
 
@@ -93,7 +93,6 @@ const ApplyLeave = ({ onLogout }) => {
       updated[name] = value;
     }
 
-    // Auto-calculate duration
     if (updated.startDate && updated.endDate) {
       updated.duration = calculateDuration(updated.startDate, updated.endDate);
     } else {
@@ -121,7 +120,6 @@ const ApplyLeave = ({ onLogout }) => {
     try {
       let prescriptionUrl = null;
 
-      // Upload Prescription if needed
       if (leave.leaveType === "SICK" && leave.prescription) {
         const f = new FormData();
         f.append("file", leave.prescription);
@@ -141,7 +139,6 @@ const ApplyLeave = ({ onLogout }) => {
 
       await applyLeave(leavePayload);
 
-      // Success Alert
       await Swal.fire({
         title: "Success!",
         text: "Your leave application has been submitted successfully.",
@@ -159,167 +156,174 @@ const ApplyLeave = ({ onLogout }) => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="d-flex justify-content-center align-items-center vh-100">
-        <Spinner animation="border" variant="warning" />
-      </div>
-    );
-  }
+  // --- RENDER ---
+  // Note: Maine yahan se `if (loading) return ...` hata diya hai
+  // ab loading logic neechay Content area mein hai.
 
   return (
     <div className="d-flex">
+      {/* Sidebar hamesha dikhega */}
       <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar} />
+      
       <div className="flex-grow-1">
+        {/* Navbar hamesha dikhega */}
         <TopNavbar
           toggleSidebar={toggleSidebar}
-          username={employee?.fullName}
-          role={role}
+          username={localStorage.getItem("name")} // Loading text jab tak data na aaye
+          role={localStorage.getItem("role")}
           onLogout={onLogout}
         />
 
         <div className="p-4 container-fluid">
           <PageHeading title="Apply for Leave" />
 
-          <div className="row justify-content-center">
-            <div className="col-lg-8 col-md-10">
-              <CardContainer title="New Leave Request">
-                <Form onSubmit={handleSubmit}>
-
-                  {/* Leave Type */}
-                  <Row className="mb-3">
-                    <Col md={12}>
-                      <Form.Group>
-                        <Form.Label className="fw-semibold">Leave Type <span className="text-danger">*</span></Form.Label>
-                        <Form.Select
-                          name="leaveType"
-                          value={leave.leaveType}
-                          onChange={handleChange}
-                          required
-                          className="py-2"
-                        >
-                          <option value="">-- Select Leave Type --</option>
-                          {leaveTypes.map((type) => (
-                            <option key={type} value={type}>
-                              {type.replaceAll("_", " ")}
-                            </option>
-                          ))}
-                        </Form.Select>
-                      </Form.Group>
-                    </Col>
-                  </Row>
-
-                  {/* Dates */}
-                  <Row className="mb-3">
-                    <Col md={6}>
-                      <Form.Group>
-                        <Form.Label className="fw-semibold">Start Date <span className="text-danger">*</span></Form.Label>
-                        <Form.Control
-                          type="date"
-                          name="startDate"
-                          value={leave.startDate}
-                          onChange={handleChange}
-                          required
-                          min={new Date().toISOString().split("T")[0]} // Prevent past dates
-                          className="py-2"
-                        />
-                      </Form.Group>
-                    </Col>
-
-                    <Col md={6}>
-                      <Form.Group>
-                        <Form.Label className="fw-semibold">End Date <span className="text-danger">*</span></Form.Label>
-                        <Form.Control
-                          type="date"
-                          name="endDate"
-                          value={leave.endDate || ""}
-                          onChange={handleChange}
-                          required
-                          min={leave.startDate} 
-                          disabled={!leave.startDate}
-                          className="py-2"
-                        />
-                      </Form.Group>
-                    </Col>
-                  </Row>
-
-                  {/* Duration Display */}
-                  {leave.duration > 0 && (
-                    <Row className="mb-3">
-                      <Col>
-                         <div className="alert alert-info py-2 px-3 small">
-                            <i className="bi bi-calendar-range me-2"></i>
-                            Total Duration: <strong>{leave.duration} Day{leave.duration > 1 ? "s" : ""}</strong>
-                         </div>
-                      </Col>
-                    </Row>
-                  )}
-
-                  {/* Reason */}
-                  <Row className="mb-3">
-                    <Col md={12}>
-                      <Form.Group>
-                        <Form.Label className="fw-semibold">Reason / Description <span className="text-danger">*</span></Form.Label>
-                        <Form.Control
-                          as="textarea"
-                          rows={4}
-                          name="description"
-                          value={leave.description}
-                          onChange={handleChange}
-                          required
-                          placeholder="Please describe why you need this leave..."
-                          className="py-2"
-                        />
-                      </Form.Group>
-                    </Col>
-                  </Row>
-
-                  {/* Prescription Upload */}
-                  {showPrescription && (
-                    <Row className="mb-4">
-                      <Col md={12}>
-                        <div className="p-3 border rounded bg-light">
-                          <Form.Group>
-                            <Form.Label className="fw-semibold text-danger">
-                            </Form.Label>
-                            <Form.Control
-                              type="file"
-                              name="prescription"
-                              onChange={handleChange}
-                              accept="image/*,application/pdf"
-                            />
-                            <Form.Text className="text-muted">
-                               Allowed formats: JPG, PNG, PDF (Max 2MB)
-                            </Form.Text>
-                          </Form.Group>
-                        </div>
-                      </Col>
-                    </Row>
-                  )}
-
-                  {/* Buttons */}
-                  <div className="d-flex justify-content-end gap-3 mt-4 border-top pt-3">
-                    <AppButton
-                      text="Cancel"
-                      variant="light"
-                      className="border"
-                      onClick={() => navigate("/employee/leave-history")}
-                      disabled={submitting}
-                    />
-                    <AppButton 
-                      text={submitting ? "Submitting..." : "Submit Application"} 
-                      variant="primary" 
-                      type="submit" 
-                      disabled={submitting}
-                      className="px-4"
-                    />
-                  </div>
-
-                </Form>
-              </CardContainer>
+          {/* Sirf Form wala hissa loading state dikhayega */}
+          {loading ? (
+            <div className="d-flex justify-content-center align-items-center" style={{ minHeight: "400px" }}>
+              <Spinner animation="border" variant="warning" />
             </div>
-          </div>
+          ) : (
+            <div className="row justify-content-center">
+              <div className="col-lg-8 col-md-10">
+                <CardContainer title="New Leave Request">
+                  <Form onSubmit={handleSubmit}>
 
+                    {/* Leave Type */}
+                    <Row className="mb-3">
+                      <Col md={12}>
+                        <Form.Group>
+                          <Form.Label className="fw-semibold">Leave Type <span className="text-danger">*</span></Form.Label>
+                          <Form.Select
+                            name="leaveType"
+                            value={leave.leaveType}
+                            onChange={handleChange}
+                            required
+                            className="py-2"
+                          >
+                            <option value="">-- Select Leave Type --</option>
+                            {leaveTypes.map((type) => (
+                              <option key={type} value={type}>
+                                {type.replaceAll("_", " ")}
+                              </option>
+                            ))}
+                          </Form.Select>
+                        </Form.Group>
+                      </Col>
+                    </Row>
+
+                    {/* Dates */}
+                    <Row className="mb-3">
+                      <Col md={6}>
+                        <Form.Group>
+                          <Form.Label className="fw-semibold">Start Date <span className="text-danger">*</span></Form.Label>
+                          <Form.Control
+                            type="date"
+                            name="startDate"
+                            value={leave.startDate}
+                            onChange={handleChange}
+                            required
+                            min={new Date().toISOString().split("T")[0]} 
+                            className="py-2"
+                          />
+                        </Form.Group>
+                      </Col>
+
+                      <Col md={6}>
+                        <Form.Group>
+                          <Form.Label className="fw-semibold">End Date <span className="text-danger">*</span></Form.Label>
+                          <Form.Control
+                            type="date"
+                            name="endDate"
+                            value={leave.endDate || ""}
+                            onChange={handleChange}
+                            required
+                            min={leave.startDate} 
+                            disabled={!leave.startDate}
+                            className="py-2"
+                          />
+                        </Form.Group>
+                      </Col>
+                    </Row>
+
+                    {/* Duration Display */}
+                    {leave.duration > 0 && (
+                      <Row className="mb-3">
+                        <Col>
+                           <div className="alert alert-info py-2 px-3 small">
+                              <i className="bi bi-calendar-range me-2"></i>
+                              Total Duration: <strong>{leave.duration} Day{leave.duration > 1 ? "s" : ""}</strong>
+                           </div>
+                        </Col>
+                      </Row>
+                    )}
+
+                    {/* Reason */}
+                    <Row className="mb-3">
+                      <Col md={12}>
+                        <Form.Group>
+                          <Form.Label className="fw-semibold">Reason / Description <span className="text-danger">*</span></Form.Label>
+                          <Form.Control
+                            as="textarea"
+                            rows={4}
+                            name="description"
+                            value={leave.description}
+                            onChange={handleChange}
+                            required
+                            placeholder="Please describe why you need this leave..."
+                            className="py-2"
+                          />
+                        </Form.Group>
+                      </Col>
+                    </Row>
+
+                    {/* Prescription Upload */}
+                    {showPrescription && (
+                      <Row className="mb-4">
+                        <Col md={12}>
+                          <div className="p-3 border rounded bg-light">
+                            <Form.Group>
+                              <Form.Label className="fw-semibold text-danger">
+                                Upload Prescription (Required for Sick Leave)
+                              </Form.Label>
+                              <Form.Control
+                                type="file"
+                                name="prescription"
+                                onChange={handleChange}
+                                accept="image/*,application/pdf"
+                                required // Assuming it's mandatory for sick leave
+                              />
+                              <Form.Text className="text-muted">
+                                 Allowed formats: JPG, PNG, PDF (Max 2MB)
+                              </Form.Text>
+                            </Form.Group>
+                          </div>
+                        </Col>
+                      </Row>
+                    )}
+
+                    {/* Buttons */}
+                    <div className="d-flex gap-3 mt-4 border-top pt-3">
+                      <AppButton 
+                        text={submitting ? "Submitting..." : "Submit Application"} 
+                        variant="primary" 
+                        type="submit" 
+                        disabled={submitting}
+                        className="px-4"
+                      />
+                       <AppButton
+                        text="Cancel"
+                        variant="light"
+                        className="border"
+                        onClick={() => navigate("/employee/leave-history")}
+                        disabled={submitting}
+                      />
+                    </div>
+
+                  </Form>
+                </CardContainer>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

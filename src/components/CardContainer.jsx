@@ -7,7 +7,7 @@ const CardContainer = ({ title, children, className = "" }) => {
     <Card
       // 1. Added 'h-100' to make card full height in grid columns
       // 2. Added 'mb-3' for bottom spacing (let Row/Col handle horizontal spacing)
-      className={`h-100 mb-3 shadow-sm ${className}`}
+      className={`mb-3 shadow-sm ${className}`}
       style={{
         border: "2px solid #FFA500", // Orange Border
         borderRadius: "25px",
