@@ -104,7 +104,7 @@ const AllEmployees = ({ onLogout }) => {
     initData();
   }, []);
 
-  // --- 2. FILTERING (Updated for Universal Search) ---
+// --- 2. FILTERING (Updated for Universal Search + Alphabetical Order) ---
   useEffect(() => {
     let result = employees;
 
@@ -123,7 +123,7 @@ const AllEmployees = ({ onLogout }) => {
           emp.assignedShift,
           emp.gender,
           emp.active ? "active" : "inactive"
-        ].filter(Boolean).join(" ").toLowerCase(); // Join all valid fields into one string
+        ].filter(Boolean).join(" ").toLowerCase();
 
         return searchableText.includes(term);
       });
@@ -142,11 +142,17 @@ const AllEmployees = ({ onLogout }) => {
       result = result.filter(emp => emp.active === isActive);
     }
 
-    // Sort
+    // ✅ Sort Alphabetically (Admins first, then alphabetical by name)
     result.sort((a, b) => {
-      if (a.role?.toLowerCase() === "admin" && b.role?.toLowerCase() !== "admin") return -1;
-      if (a.role?.toLowerCase() !== "admin" && b.role?.toLowerCase() === "admin") return 1;
-      return a.fullName.localeCompare(b.fullName);
+      const isAdminA = a.role?.toLowerCase() === "admin";
+      const isAdminB = b.role?.toLowerCase() === "admin";
+      
+      // Admins always come first
+      if (isAdminA && !isAdminB) return -1;
+      if (!isAdminA && isAdminB) return 1;
+      
+      // Both admin or both non-admin: sort alphabetically by full name
+      return a.fullName.localeCompare(b.fullName, undefined, { sensitivity: 'base' });
     });
 
     setFiltered(result);
