@@ -4,12 +4,13 @@ import Sidebar from "../../components/Sidebar";
 import TopNavbar from "../../components/Navbar";
 import PageHeading from "../../components/PageHeading";
 import CardContainer from "../../components/CardContainer";
-import { getEmployeeLeavesByManager } from "../../api/leaveApi"; 
-import { FileEarmarkText, Eye, Image as ImageIcon, Gear } from "react-bootstrap-icons";
+// ✅ API Imports updated to include actions
+import { getEmployeeLeavesByManager, approveLeave, rejectLeave, setPendingLeave } from "../../api/leaveApi"; 
+import { FileEarmarkText, Eye, Image as ImageIcon, Gear, CheckCircle, XCircle, Clock } from "react-bootstrap-icons";
 import jwtHelper from "../../utils/jwtHelper";
 import * as XLSX from "xlsx";
 
-// ✅ 1. Define All Available Columns
+// ✅ 1. Added "Actions" to Column Definitions
 const allColumns = [
   { key: "sno", label: "S.No" },
   { key: "employeeName", label: "Employee Name" },
@@ -21,6 +22,7 @@ const allColumns = [
   { key: "description", label: "Reason" },
   { key: "prescriptionImg", label: "Proof / Link" },
   { key: "status", label: "Status" },
+  { key: "actions", label: "Actions" }, // New Column
 ];
 
 const ManagerLeaveRequests = ({ onLogout }) => {
@@ -45,7 +47,7 @@ const ManagerLeaveRequests = ({ onLogout }) => {
 
   // Column Management
   const [showColumnsModal, setShowColumnsModal] = useState(false);
-  const [selectedColumns, setSelectedColumns] = useState(allColumns.map(c => c.key)); // Default Show All
+  const [selectedColumns, setSelectedColumns] = useState(allColumns.map(c => c.key)); 
 
   // View Modals
   const [showImageModal, setShowImageModal] = useState(false);
@@ -59,24 +61,22 @@ const ManagerLeaveRequests = ({ onLogout }) => {
   const formatDate = (dateString) => {
     if (!dateString) return "--";
     const date = new Date(dateString);
-    return date.toLocaleDateString("en-GB"); // DD/MM/YYYY
+    return date.toLocaleDateString("en-GB");
   };
 
   const formatDateTime = (dateString) => {
     if (!dateString) return "--";
     const date = new Date(dateString);
     return date.toLocaleString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true
+      day: "2-digit", month: "short", year: "numeric",
+      hour: "2-digit", minute: "2-digit", hour12: true
     });
   };
 
   const getStatusBadge = (status) => {
-    switch (status) {
+    // Handling case sensitivity just in case
+    const s = status ? status.toUpperCase() : "";
+    switch (s) {
       case "APPROVED": return <Badge bg="success">Approved</Badge>;
       case "REJECTED": return <Badge bg="danger">Rejected</Badge>;
       case "PENDING": return <Badge bg="warning" text="dark">Pending</Badge>;
@@ -126,10 +126,31 @@ const ManagerLeaveRequests = ({ onLogout }) => {
     }
 
     setFilteredLeaves(result);
-    setCurrentPage(1);
-  }, [searchTerm, statusFilter, monthFilter, leaves]);
+    // Reset page if filtered results are fewer than current page view
+    if (currentPage > Math.ceil(result.length / rowsPerPage)) setCurrentPage(1);
+    
+  }, [searchTerm, statusFilter, monthFilter, leaves, rowsPerPage]);
 
-  // --- HANDLERS ---
+  // --- ACTION HANDLERS (New Logic) ---
+  const handleAction = async (id, newStatus) => {
+    // Confirm action
+    if(!window.confirm(`Are you sure you want to mark this as ${newStatus}?`)) return;
+
+    try {
+        if (newStatus === "APPROVED") await approveLeave(id);
+        if (newStatus === "REJECTED") await rejectLeave(id);
+        if (newStatus === "PENDING") await setPendingLeave(id);
+
+        // Optimistic Update: Update the local state immediately
+        const updatedList = leaves.map(l => l.id === id ? { ...l, status: newStatus } : l);
+        setLeaves(updatedList);
+        
+    } catch (err) {
+        console.error(err);
+        alert("Failed to update status. Please try again.");
+    }
+  };
+
   const handleReset = () => {
     setSearchTerm("");
     setStatusFilter("");
@@ -143,7 +164,6 @@ const ManagerLeaveRequests = ({ onLogout }) => {
     if (selectedColumns.includes(key)) {
       setSelectedColumns(selectedColumns.filter(k => k !== key));
     } else {
-      // Maintain original order
       const newSelection = allColumns
         .filter(c => selectedColumns.includes(c.key) || c.key === key)
         .map(c => c.key);
@@ -151,30 +171,31 @@ const ManagerLeaveRequests = ({ onLogout }) => {
     }
   };
 
-  // ✅ IMPROVED EXPORT
   const handleExport = () => {
     const fileName = prompt("Enter file name:", "Team_Leaves");
     if (!fileName) return;
 
-    // 1. Get Headers based on selected columns
-    const headers = selectedColumns.map(k => allColumns.find(c => c.key === k).label);
+    const headers = selectedColumns
+      .filter(col => col !== "actions") // Don't export actions column
+      .map(k => allColumns.find(c => c.key === k).label);
 
-    // 2. Map Data
     const data = filteredLeaves.map((l, idx) => 
-      selectedColumns.map(col => {
-        switch(col) {
-          case "sno": return idx + 1;
-          case "employeeName": return l.employeeName;
-          case "leaveType": return l.leaveType;
-          case "appliedOn": return formatDateTime(l.appliedOn);
-          case "startDate": return formatDate(l.startDate);
-          case "endDate": return formatDate(l.endDate);
-          case "duration": return l.duration;
-          case "description": return l.description;
-          case "status": return l.status;
-          case "prescriptionImg": return l.prescriptionImg || "N/A"; // Exporting URL text
-          default: return "";
-        }
+      selectedColumns
+        .filter(col => col !== "actions")
+        .map(col => {
+          switch(col) {
+            case "sno": return idx + 1;
+            case "employeeName": return l.employeeName;
+            case "leaveType": return l.leaveType;
+            case "appliedOn": return formatDateTime(l.appliedOn);
+            case "startDate": return formatDate(l.startDate);
+            case "endDate": return formatDate(l.endDate);
+            case "duration": return l.duration;
+            case "description": return l.description;
+            case "status": return l.status;
+            case "prescriptionImg": return l.prescriptionImg || "N/A"; 
+            default: return "";
+          }
       })
     );
 
@@ -213,11 +234,27 @@ const ManagerLeaveRequests = ({ onLogout }) => {
           </Button>
         ) : <span className="text-muted small">--</span>;
       case "status": return getStatusBadge(leave.status);
+      
+      // ✅ Added Actions Buttons
+      case "actions":
+        return (
+          <div className="d-flex gap-2 justify-content-center">
+            {leave.status !== "APPROVED" && (
+                <CheckCircle size={18} color="green" style={{cursor: "pointer"}} title="Approve" onClick={() => handleAction(leave.id, "APPROVED")} />
+            )}
+            {leave.status !== "REJECTED" && (
+                <XCircle size={18} color="red" style={{cursor: "pointer"}} title="Reject" onClick={() => handleAction(leave.id, "REJECTED")} />
+            )}
+            {leave.status !== "PENDING" && (
+                <Clock size={18} color="orange" style={{cursor: "pointer"}} title="Mark Pending" onClick={() => handleAction(leave.id, "PENDING")} />
+            )}
+          </div>
+        );
+
       default: return "--";
     }
   };
 
-  // --- PAGINATION ---
   const totalPages = rowsPerPage === "All" ? 1 : Math.ceil(filteredLeaves.length / rowsPerPage);
   const paginatedData = rowsPerPage === "All" ? filteredLeaves : filteredLeaves.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
   const handlePrevious = () => currentPage > 1 && setCurrentPage(currentPage - 1);
@@ -298,7 +335,7 @@ const ManagerLeaveRequests = ({ onLogout }) => {
                       <tr>
                          {selectedColumns.map(colKey => (
                             <th key={colKey} className="p-2" style={{whiteSpace: "nowrap"}}>
-                               {allColumns.find(c => c.key === colKey).label}
+                               {allColumns.find(c => c.key === colKey)?.label}
                             </th>
                          ))}
                       </tr>
@@ -327,7 +364,7 @@ const ManagerLeaveRequests = ({ onLogout }) => {
             )}
           </CardContainer>
 
-          {/* COLUMNS MODAL */}
+          {/* MODALS */}
           <Modal show={showColumnsModal} onHide={() => setShowColumnsModal(false)} centered size="sm" scrollable>
             <Modal.Header closeButton className="py-2"><Modal.Title className="fs-6">Show/Hide Columns</Modal.Title></Modal.Header>
             <Modal.Body>
@@ -341,7 +378,6 @@ const ManagerLeaveRequests = ({ onLogout }) => {
             </Modal.Body>
           </Modal>
 
-          {/* PRESCRIPTION MODAL */}
           <Modal show={showImageModal} onHide={() => setShowImageModal(false)} centered size="lg">
             <Modal.Header closeButton className="py-2"><Modal.Title className="fs-6">Medical Proof</Modal.Title></Modal.Header>
             <Modal.Body className="text-center p-4 bg-light">
@@ -351,7 +387,6 @@ const ManagerLeaveRequests = ({ onLogout }) => {
             </Modal.Body>
           </Modal>
 
-          {/* DESCRIPTION MODAL */}
           <Modal show={showDescModal} onHide={() => setShowDescModal(false)} centered>
             <Modal.Header closeButton className="py-2"><Modal.Title className="fs-6">Leave Reason</Modal.Title></Modal.Header>
             <Modal.Body className="p-4">

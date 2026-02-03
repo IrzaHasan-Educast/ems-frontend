@@ -55,7 +55,7 @@ const TopNavbar = ({ toggleSidebar, username, role, onLogout }) => {
         <Nav className="ms-auto">
           <NavDropdown
             align="end"
-            flip={false}
+            flip={undefined}
             popperConfig={{
               strategy: "fixed",
               modifiers: [
