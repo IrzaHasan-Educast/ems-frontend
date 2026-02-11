@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { Table, Spinner, Form, Row, Col, Button, Modal, Badge, InputGroup } from "react-bootstrap";
-import Sidebar from "../../components/Sidebar";
-import TopNavbar from "../../components/Navbar";
 import PageHeading from "../../components/PageHeading";
 import CardContainer from "../../components/CardContainer";
 import { getAllLeaves, approveLeave, rejectLeave, setPendingLeave } from "../../api/leaveApi";
@@ -24,7 +22,7 @@ const allColumns = [
   { key: "actions", label: "Actions" },
 ];
 
-const AllLeaves = ({ onLogout }) => {
+const AllLeaves = () => {
   // States
   const [leaves, setLeaves] = useState([]);
   const [filtered, setFiltered] = useState([]);
@@ -53,8 +51,6 @@ const AllLeaves = ({ onLogout }) => {
 
   // User & UI
   const [admin, setAdmin] = useState({ name: "", role: "" });
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   // --- INITIAL FETCH ---
   useEffect(() => {
@@ -214,11 +210,7 @@ const AllLeaves = ({ onLogout }) => {
   };
 
   return (
-    <div className="d-flex">
-      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar} />
-      <div className="flex-grow-1" style={{ minWidth: 0 }}>
-        <TopNavbar toggleSidebar={toggleSidebar} username={localStorage.getItem("name")} role={localStorage.getItem("role")} onLogout={onLogout} />
-        
+    <>
         <div className="p-3 container-fluid">
           <PageHeading title="All Leave Requests" />
 
@@ -340,8 +332,7 @@ const AllLeaves = ({ onLogout }) => {
           </Modal>
 
         </div>
-      </div>
-    </div>
+      </>
   );
 };
 

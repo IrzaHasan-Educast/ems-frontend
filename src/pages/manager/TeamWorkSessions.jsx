@@ -1,13 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { Table, Spinner, Form, Row, Col, Button, Modal, Badge } from "react-bootstrap";
-import Sidebar from "../../components/Sidebar"; 
-import TopNavbar from "../../components/Navbar"; 
 import PageHeading from "../../components/PageHeading";
 import CardContainer from "../../components/CardContainer";
 import { getManagerWorkSessionHistory } from "../../api/workSessionApi"; 
 import { FileEarmarkText, Gear, ArrowCounterclockwise } from "react-bootstrap-icons";
 import * as XLSX from "xlsx";
-import jwtHelper from "../../utils/jwtHelper";
 
 const allColumns = [
   { key: "sno", label: "S.No" },
@@ -21,11 +18,10 @@ const allColumns = [
   { key: "status", label: "Status" },
 ];
 
-const TeamWorkSessions = ({ onLogout }) => {
+const TeamWorkSessions = () => {
   const [sessions, setSessions] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // Filters State
   const [searchTerm, setSearchTerm] = useState("");
@@ -40,9 +36,7 @@ const TeamWorkSessions = ({ onLogout }) => {
   // Column Management State
   const [showColumnsModal, setShowColumnsModal] = useState(false);
   const [selectedColumns, setSelectedColumns] = useState(allColumns.map(c => c.key));
-
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
-
+  
   // --- TIME & DATE HELPERS ---
   const formatDateDDMMYYYY = (isoDate) => {
     if (!isoDate) return "--";
@@ -262,21 +256,7 @@ const TeamWorkSessions = ({ onLogout }) => {
   const cellStyle = { padding: "6px 8px", verticalAlign: "middle", fontSize: "0.9rem", whiteSpace: "nowrap" };
 
   return (
-    // ✅ FIX 1: Outer Container Height 100vh and overflow hidden
-    <div className="d-flex" style={{ height: "100vh", overflow: "hidden" }}>
-      
-      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar} />
-
-      {/* ✅ FIX 2: Main Content Container (Flex Column) */}
-      <div className="d-flex flex-column flex-grow-1" style={{ minWidth: 0 }}>
-        
-        <TopNavbar
-          toggleSidebar={toggleSidebar}
-          username={localStorage.getItem("name")}
-          role={localStorage.getItem("role") || "Manager"}
-          onLogout={onLogout}
-        />
-        
+    <>        
         {/* ✅ FIX 3: Content Area Scrolls here (overflow-auto) */}
         <div className="p-3 container-fluid" style={{ overflowY: "auto", flex: 1 }}>
           <PageHeading title="Team Work Sessions" />
@@ -382,8 +362,7 @@ const TeamWorkSessions = ({ onLogout }) => {
           </Modal>
 
         </div>
-      </div>
-    </div>
+      </>
   );
 };
 

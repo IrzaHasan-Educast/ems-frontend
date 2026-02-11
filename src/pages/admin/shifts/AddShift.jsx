@@ -1,26 +1,21 @@
 import React, { useState, useEffect } from "react";
 import { Form, Row, Col } from "react-bootstrap";
-import Sidebar from "../../../components/Sidebar";
-import TopNavbar from "../../../components/Navbar";
 import CardContainer from "../../../components/CardContainer";
 import AppButton from "../../../components/AppButton";
-import PageHeading from "../../../components/PageHeading"; // Added for consistency
 import { addShift } from "../../../api/shiftApi";
 import { useNavigate } from "react-router-dom";
 import { getManagers } from "../../../api/employeeApi";
 
-const AddShift = ({ onLogout }) => {
+const AddShift = () => {
   const [shift, setShift] = useState({
     shiftName: "",
     startsAt: "",
     endsAt: "",
   });
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [managers, setManagers] = useState([]);
   const [selectedManagerId, setSelectedManagerId] = useState("");
   const navigate = useNavigate();
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   // Handle form input change
   const handleChange = (e) => {
@@ -57,17 +52,7 @@ const AddShift = ({ onLogout }) => {
   };
 
   return (
-    <div className="d-flex" style={{ minHeight: "100vh", overflow: "hidden" }}>
-      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar} />
-      
-      <div className="flex-grow-1 d-flex flex-column" style={{ minWidth: 0 }}>
-        <TopNavbar
-          toggleSidebar={toggleSidebar}
-          username={localStorage.getItem("name")}
-          role={localStorage.getItem("role")}
-          onLogout={onLogout}
-        />
-
+    <>
         <div className="p-3 container-fluid overflow-auto">
           <div className="d-flex justify-content-center">
             {/* Responsive Container: Full width on mobile, centered on desktop */}
@@ -150,8 +135,7 @@ const AddShift = ({ onLogout }) => {
             </Col>
           </div>
         </div>
-      </div>
-    </div>
+      </>
   );
 };
 

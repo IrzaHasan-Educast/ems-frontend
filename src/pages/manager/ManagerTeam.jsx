@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { Table, Spinner, Form, Row, Col, Button, InputGroup, Badge, Modal } from "react-bootstrap";
-import Sidebar from "../../components/Sidebar";
-import TopNavbar from "../../components/Navbar";
 import PageHeading from "../../components/PageHeading";
 import CardContainer from "../../components/CardContainer";
 import { getEmployeeDetailsByManager } from "../../api/employeeApi"; 
@@ -24,18 +22,13 @@ const allColumns = [
   { key: "actions", label: "Actions" },
 ];
 
-const ManagerTeam = ({ onLogout }) => {
-  // 1. User & Token
-  const token = localStorage.getItem("token");
-  const role = jwtHelper.getRoleFromToken(token);
-  const userName = localStorage.getItem("name");
+const ManagerTeam = () => {
 
   // 2. States
   const [employees, setEmployees] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-
+  
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
   const [deptFilter, setDeptFilter] = useState("");
@@ -55,7 +48,6 @@ const ManagerTeam = ({ onLogout }) => {
   const [showModal, setShowModal] = useState(false);
   const [selectedEmp, setSelectedEmp] = useState(null);
 
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   // --- HELPER: Date Formatter ---
   const formatDate = (dateString) => {
@@ -208,12 +200,7 @@ const ManagerTeam = ({ onLogout }) => {
   };
 
   return (
-    <div className="d-flex">
-      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar} />
-      
-      <div className="flex-grow-1" style={{ minWidth: 0 }}>
-        <TopNavbar toggleSidebar={toggleSidebar} username={localStorage.getItem("name")} role={localStorage.getItem("role")} onLogout={onLogout} />
-
+    <>
         <div className="p-3 container-fluid">
           <PageHeading title="My Team Details" />
 
@@ -323,8 +310,7 @@ const ManagerTeam = ({ onLogout }) => {
           )}
 
         </div>
-      </div>
-    </div>
+      </>
   );
 };
 

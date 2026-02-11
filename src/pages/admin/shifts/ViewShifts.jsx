@@ -10,8 +10,6 @@ import {
   Badge 
 } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
-import Sidebar from "../../../components/Sidebar";
-import TopNavbar from "../../../components/Navbar";
 import CardContainer from "../../../components/CardContainer";
 import PageHeading from "../../../components/PageHeading";
 import { getAllShifts, deleteShift } from "../../../api/shiftApi";
@@ -48,11 +46,10 @@ const formatTimeAMPM = (timeString) => {
   return `${hour}:${minutes} ${ampm}`;
 };
 
-const ViewShifts = ({ onLogout }) => {
+const ViewShifts = () => {
   const [shifts, setShifts] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [managerFilter, setManagerFilter] = useState("");
@@ -66,7 +63,6 @@ const ViewShifts = ({ onLogout }) => {
   const [showColumnsModal, setShowColumnsModal] = useState(false);
 
   const navigate = useNavigate();
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   const fetchShifts = async () => {
     try {
@@ -270,16 +266,7 @@ const ViewShifts = ({ onLogout }) => {
   };
 
   return (
-    <div className="d-flex">
-      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar} />
-      <div className="flex-grow-1" style={{ minWidth: 0 }}>
-        <TopNavbar
-          toggleSidebar={toggleSidebar}
-          username={localStorage.getItem("name")}
-          role={localStorage.getItem("role")}
-          onLogout={onLogout}
-        />
-
+    <>
         <div className="p-3 container-fluid">
           <PageHeading
             title="All Shifts"
@@ -485,8 +472,7 @@ const ViewShifts = ({ onLogout }) => {
             </Modal.Body>
           </Modal>
         </div>
-      </div>
-    </div>
+      </>
   );
 };
 

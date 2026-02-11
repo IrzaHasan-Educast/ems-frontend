@@ -12,8 +12,6 @@ import {
 } from "recharts";
 
 // Components
-import ManagerSidebar from "../../components/Sidebar";
-import Navbar from "../../components/Navbar";
 import CurrentSessionCard from "../../components/CurrentSessionCard";
 import CardContainer from "../../components/CardContainer";
 
@@ -32,9 +30,8 @@ import {
   parseApiDate,
 } from "../../utils/time";
 
-const ManagerDashboard = ({ onLogout }) => {
+const ManagerDashboard = () => {
   const navigate = useNavigate();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // --- State ---
   const [manager, setManager] = useState({ fullName: "Manager", id: null });
@@ -56,7 +53,6 @@ const ManagerDashboard = ({ onLogout }) => {
   const [pageLoading, setPageLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const COLORS = ["#28a745", "#dc3545"];
 
   // --- Helpers ---
@@ -233,12 +229,7 @@ const ManagerDashboard = ({ onLogout }) => {
   );
 
   return (
-    <div className="d-flex" style={{ height: "100vh", overflow: "hidden" }}>
-      <ManagerSidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar}/>
-      
-      <div className="flex-grow-1 d-flex flex-column bg-light" style={{ minWidth: 0 }}>
-        <Navbar toggleSidebar={toggleSidebar} username={localStorage.getItem("name")} role={localStorage.getItem("role")} onLogout={onLogout}/>
-
+    <>
         <div className="p-3 p-md-4 container-fluid" style={{ overflowY: "auto", flex: 1 }}>
           
           {pageLoading ? (
@@ -451,8 +442,7 @@ const ManagerDashboard = ({ onLogout }) => {
             </>
           )}
         </div>
-      </div>
-    </div>
+      </>
   );
 };
 

@@ -1,17 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { Form, Row, Col } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
-import Sidebar from "../../../components/Sidebar";
-import TopNavbar from "../../../components/Navbar";
 import CardContainer from "../../../components/CardContainer";
 import AppButton from "../../../components/AppButton";
 import { getAllEmployees } from "../../../api/employeeApi";
 import { getAllShifts } from "../../../api/shiftApi";
 import { assignShift } from "../../../api/employeeShiftApi";
 
-const AssignEmployeeShift = ({ onLogout }) => {
+const AssignEmployeeShift = () => {
   const navigate = useNavigate();
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
 
   const [employees, setEmployees] = useState([]);
@@ -22,7 +19,6 @@ const AssignEmployeeShift = ({ onLogout }) => {
     shiftId: "",
   });
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
@@ -51,16 +47,7 @@ const AssignEmployeeShift = ({ onLogout }) => {
   };
 
   return (
-    <div className="d-flex">
-      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar} />
-      <div className="flex-grow-1">
-        <TopNavbar
-          toggleSidebar={toggleSidebar}
-          username={localStorage.getItem("name")}
-          role={localStorage.getItem("role")}
-          onLogout={onLogout}
-        />
-
+    <>
         <div className="p-4 d-flex justify-content-center">
           <div className="w-50">
             <CardContainer title="Assign Shift to Employee">
@@ -115,8 +102,7 @@ const AssignEmployeeShift = ({ onLogout }) => {
             </CardContainer>
           </div>
         </div>
-      </div>
-    </div>
+    </>
   );
 };
 

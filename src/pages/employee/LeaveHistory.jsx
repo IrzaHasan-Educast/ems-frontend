@@ -1,6 +1,4 @@
 import React, { useState, useEffect, useCallback } from "react";
-import Sidebar from "../../components/Sidebar";
-import TopNavbar from "../../components/Navbar";
 import CardContainer from "../../components/CardContainer";
 import PageHeading from "../../components/PageHeading";
 import { Trash, FileEarmarkText, Image as ImageIcon, Search, ArrowClockwise, InfoCircle } from "react-bootstrap-icons";
@@ -8,14 +6,10 @@ import { useNavigate } from "react-router-dom";
 import { Table, Form, Button, InputGroup, FormControl, Badge, Modal, Spinner, Row, Col } from "react-bootstrap";
 import { getCurrentUser } from "../../api/workSessionApi";
 import { getLeavesByEmployee, deleteLeaveById } from "../../api/leaveApi";
-import jwtHelper from "../../utils/jwtHelper";
 
-const LeaveHistory = ({ onLogout }) => {
-  // 1. JWT & User Info
-  const token = localStorage.getItem("token"); // Kept for consistency if needed
+const LeaveHistory = () => {
   
   // UI States
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [modalDescription, setModalDescription] = useState("");
@@ -36,7 +30,6 @@ const LeaveHistory = ({ onLogout }) => {
   const [selectedImage, setSelectedImage] = useState(null);
   
   const navigate = useNavigate();
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
    // --- HELPERS ---
   const formatDate = (dateStr) => {
@@ -186,17 +179,7 @@ const LeaveHistory = ({ onLogout }) => {
   const uniqueMonths = [...new Set(leaves.map((lv) => lv.monthName))];
 
   return (
-    <div className="d-flex" style={{ minHeight: "100vh", overflow: "hidden" }}>
-      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar} />
-
-      <div className="flex-grow-1 d-flex flex-column" style={{ minWidth: 0 }}>
-        <TopNavbar 
-            toggleSidebar={toggleSidebar}
-            username={localStorage.getItem("name")}
-            role={localStorage.getItem("role")}
-            onLogout={onLogout}
-        />
-
+    <>
         <div className="p-3 container-fluid flex-grow-1 overflow-auto">
           <PageHeading
             title="My Leave History"
@@ -374,8 +357,7 @@ const LeaveHistory = ({ onLogout }) => {
           </Modal>
 
         </div>
-      </div>
-    </div>
+      </>
   );
 };
 

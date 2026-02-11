@@ -1,20 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Table, Form, Button, InputGroup, FormControl, Spinner, Badge, Row, Col } from "react-bootstrap";
-import Sidebar from "../../components/Sidebar";
-import TopNavbar from "../../components/Navbar"; 
+
 import CardContainer from "../../components/CardContainer";
 import PageHeading from "../../components/PageHeading";
-import { FileEarmarkText } from "react-bootstrap-icons";
 import { getCurrentUser, getWorkSessions } from "../../api/workSessionApi";
-import jwtHelper from "../../utils/jwtHelper";
 
-const WorkSessionHistory = ({ onLogout }) => {
-  // 1. JWT & User
-  const token = localStorage.getItem("token");
-  const role = jwtHelper.getRoleFromToken(token);
-  
+const WorkSessionHistory = () => {  
   // 2. States
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [employee, setEmployee] = useState(null);
   const [history, setHistory] = useState([]);
   const [filtered, setFiltered] = useState([]);
@@ -29,7 +21,6 @@ const WorkSessionHistory = ({ onLogout }) => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   // --- HELPERS ---
   const formatTimeAMPM = (date) => {
@@ -193,12 +184,7 @@ const WorkSessionHistory = ({ onLogout }) => {
   const uniqueStatus = [...new Set(history.map((h) => h.status))];
 
   return (
-    <div className="d-flex">
-      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar} />
-
-      <div className="flex-grow-1" style={{ minWidth: 0 }}>
-        <TopNavbar toggleSidebar={toggleSidebar} username={localStorage.getItem("name")} role={localStorage.getItem("role")} onLogout={onLogout} />
-
+    <>
         <div className="p-3 container-fluid">
           <PageHeading title="Work Session History" />
 
@@ -294,8 +280,7 @@ const WorkSessionHistory = ({ onLogout }) => {
           </CardContainer>
 
         </div>
-      </div>
-    </div>
+      </>
   );
 };
 

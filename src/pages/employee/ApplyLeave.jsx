@@ -2,9 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Form, Row, Col, Spinner } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2"; 
-
-import Sidebar from "../../components/Sidebar";
-import TopNavbar from "../../components/Navbar"; 
+ 
 import CardContainer from "../../components/CardContainer";
 import PageHeading from "../../components/PageHeading"; 
 import AppButton from "../../components/AppButton"; 
@@ -13,7 +11,7 @@ import { getCurrentUser } from "../../api/workSessionApi";
 import { applyLeave, getLeaveTypes, uploadPrescription } from "../../api/leaveApi";
 import jwtHelper from "../../utils/jwtHelper";
 
-const ApplyLeave = ({ onLogout }) => {
+const ApplyLeave = () => {
   // Token & User
   const token = localStorage.getItem("token");
   const role = jwtHelper.getRoleFromToken(token);
@@ -31,13 +29,11 @@ const ApplyLeave = ({ onLogout }) => {
   // UI States
   const [employee, setEmployee] = useState(null);
   const [leaveTypes, setLeaveTypes] = useState([]);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showPrescription, setShowPrescription] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false); 
 
   const navigate = useNavigate();
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   // --- INIT ---
   useEffect(() => {
@@ -161,19 +157,7 @@ const ApplyLeave = ({ onLogout }) => {
   // ab loading logic neechay Content area mein hai.
 
   return (
-    <div className="d-flex">
-      {/* Sidebar hamesha dikhega */}
-      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar} />
-      
-      <div className="flex-grow-1">
-        {/* Navbar hamesha dikhega */}
-        <TopNavbar
-          toggleSidebar={toggleSidebar}
-          username={localStorage.getItem("name")} // Loading text jab tak data na aaye
-          role={localStorage.getItem("role")}
-          onLogout={onLogout}
-        />
-
+      <>
         <div className="p-4 container-fluid">
           <PageHeading title="Apply for Leave" />
 
@@ -325,8 +309,7 @@ const ApplyLeave = ({ onLogout }) => {
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </>
   );
 };
 

@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Form, Row, Col, InputGroup, Button } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
-import Sidebar from "../../components/Sidebar";
-import TopNavbar from "../../components/Navbar";
 import CardContainer from "../../components/CardContainer";
 import AppButton from "../../components/AppButton";
 import { getCurrentUser } from "../../api/userApi";
@@ -20,7 +18,7 @@ import {
 
 import { Eye, EyeSlash } from "react-bootstrap-icons"; // icon
 
-const AddEmployee = ({ onLogout }) => {
+const AddEmployee = () => {
   const [employee, setEmployee] = useState({
     fullName: "",
     email: "",
@@ -41,13 +39,11 @@ const AddEmployee = ({ onLogout }) => {
   const initialRole = jwtHelper.getRoleFromToken(token);
   const [errors, setErrors] = useState({});
   const [roles, setRoles] = useState([]);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showPassword, setShowPassword] = useState(false); // toggle state
   const [admin, setAdmin] = useState({ name: "", role: initialRole });
   const [shifts, setShifts] = useState([]); // ✅ shifts list
 
   const navigate = useNavigate();
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   useEffect(() => {
     getRoles()
@@ -144,17 +140,9 @@ useEffect(() => {
 
 
   return (
-    <div className="d-flex">
-      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar} />
-      <div className="flex-grow-1">
-      <TopNavbar 
-        toggleSidebar={toggleSidebar}
-        username={localStorage.getItem("name")}
-        role={localStorage.getItem("role")}
-        onLogout={onLogout}
-      />
-        <div className="p-4 d-flex justify-content-center">
-          <div className="w-75">
+    <>
+        <div className="d-flex justify-content-center">
+          <div>
             <CardContainer title="Add Employee">
               <Form onSubmit={handleSubmit}>
                 {/* Full Name + Email */}
@@ -351,8 +339,7 @@ useEffect(() => {
             </CardContainer>
           </div>
         </div>
-      </div>
-    </div>
+      </>
   );
 };
 

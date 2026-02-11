@@ -5,8 +5,6 @@ import * as XLSX from "xlsx";
 import { FileEarmarkText, Gear, ArrowCounterclockwise, Eye, Clock, Person, Calendar3 } from "react-bootstrap-icons";
 
 // Components
-import Sidebar from "../../../components/Sidebar";
-import TopNavbar from "../../../components/Navbar";
 import CardContainer from "../../../components/CardContainer";
 import PageHeading from "../../../components/PageHeading";
 import ViewEmployeeModal from "../../../components/ViewEmployeeModal"; // ✅ Import Employee Modal
@@ -39,12 +37,11 @@ const allColumns = [
   { key: "actions", label: "Actions" },
 ];
 
-const ViewEmployeeShifts = ({ onLogout }) => {
+const ViewEmployeeShifts = () => {
   const defaultVisible = ["sno", "empName", "actions"];
 
   const navigate = useNavigate();
   const location = useLocation();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // Data States
   const [data, setData] = useState([]);
@@ -72,8 +69,6 @@ const ViewEmployeeShifts = ({ onLogout }) => {
   // Get shift ID from navigation state
   const filterShiftId = location.state?.filterShiftId;
   const filterShiftName = location.state?.filterShiftName;
-
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   // --- 1. FETCH SHIFT DETAILS ---
   const fetchShiftDetails = useCallback(async () => {
@@ -250,17 +245,7 @@ const ViewEmployeeShifts = ({ onLogout }) => {
   };
 
   return (
-    <div className="d-flex">
-      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar}/>
-      
-      <div className="flex-grow-1" style={{ minWidth: 0 }}>
-        <TopNavbar
-          toggleSidebar={toggleSidebar}
-          username={localStorage.getItem("name")}
-          role={localStorage.getItem("role")}
-          onLogout={onLogout}
-        />
-
+    <>
         <div className="p-3 container-fluid">
           <PageHeading 
              title={filterShiftName ? `Shift: ${filterShiftName}` : "Employee Shift Assignments"} 
@@ -466,8 +451,7 @@ const ViewEmployeeShifts = ({ onLogout }) => {
           )}
 
         </div>
-      </div>
-    </div>
+      </>
   );
 };
 

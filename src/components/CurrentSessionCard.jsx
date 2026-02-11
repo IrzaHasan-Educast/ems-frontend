@@ -69,7 +69,7 @@ const CurrentSessionCard = ({
   };
 
   const formatDuration = (hoursDecimal) => {
-    const totalMinutes = Math.round(hoursDecimal * 60);
+    const totalMinutes = Math.floor(hoursDecimal * 60);
     const hrs = Math.floor(totalMinutes / 60);
     const mins = totalMinutes % 60;
     if (hrs === 0) return `${mins}m`;
@@ -197,7 +197,7 @@ const CurrentSessionCard = ({
         ) : (
           <>
             {/* Break Button */}
-            <Col xs={12}>
+            <Col xs={12} md={6}>
               <Button
                 variant={isOnBreak ? "primary" : "warning"}
                 size="lg"
@@ -221,7 +221,7 @@ const CurrentSessionCard = ({
             </Col>
 
             {/* Clock Out Button */}
-            <Col xs={12}>
+            <Col xs={12} md={6}>
               <Button
                 variant="outline-danger"
                 size="lg"

@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { Table, Spinner, Form, Row, Col, Button, Modal, Badge, InputGroup } from "react-bootstrap";
-import Sidebar from "../../components/Sidebar";
-import TopNavbar from "../../components/Navbar";
 import PageHeading from "../../components/PageHeading";
 import CardContainer from "../../components/CardContainer";
 // ✅ API Imports updated to include actions
@@ -25,7 +23,7 @@ const allColumns = [
   { key: "actions", label: "Actions" }, // New Column
 ];
 
-const ManagerLeaveRequests = ({ onLogout }) => {
+const ManagerLeaveRequests = () => {
   // 1. User & Token
   const token = localStorage.getItem("token");
   const role = jwtHelper.getRoleFromToken(token);
@@ -34,7 +32,6 @@ const ManagerLeaveRequests = ({ onLogout }) => {
   const [leaves, setLeaves] = useState([]);
   const [filteredLeaves, setFilteredLeaves] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -55,7 +52,6 @@ const ManagerLeaveRequests = ({ onLogout }) => {
   const [showDescModal, setShowDescModal] = useState(false);
   const [selectedDesc, setSelectedDesc] = useState("");
 
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   // --- HELPERS ---
   const formatDate = (dateString) => {
@@ -262,17 +258,7 @@ const ManagerLeaveRequests = ({ onLogout }) => {
 
 
   return (
-    <div className="d-flex">
-      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar} />
-      
-      <div className="flex-grow-1" style={{ minWidth: 0 }}>
-        <TopNavbar 
-          toggleSidebar={toggleSidebar} 
-          username={localStorage.getItem("name")} 
-          role={localStorage.getItem("role")} 
-          onLogout={onLogout} 
-        />
-
+    <>
         <div className="p-3 container-fluid">
           <PageHeading title="Team Leave Requests" />
 
@@ -395,8 +381,7 @@ const ManagerLeaveRequests = ({ onLogout }) => {
           </Modal>
 
         </div>
-      </div>
-    </div>
+      </>
   );
 };
 

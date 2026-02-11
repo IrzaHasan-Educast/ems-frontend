@@ -15,8 +15,6 @@ import {
   CartesianGrid
 } from "recharts";
 
-import Sidebar from "../../components/Sidebar";
-import Navbar from "../../components/Navbar";
 import CardContainer from "../../components/CardContainer";
 
 import { getAllEmployees } from "../../api/employeeApi";
@@ -26,9 +24,8 @@ import { getAllLeaves } from "../../api/leaveApi"; // ✅ Imported Leave API
 import { getCurrentUser } from "../../api/userApi";
 import { formatPakistanDateLabel } from "../../utils/time";
 
-const AdminDashboard = ({ onLogout }) => {
+const AdminDashboard = () => {
   const navigate = useNavigate();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // --- State ---
   const [adminUser, setAdminUser] = useState({ name: "Admin", role: "ADMIN" });
@@ -46,7 +43,6 @@ const AdminDashboard = ({ onLogout }) => {
   const [roleDistribution, setRoleDistribution] = useState([]);
   const [pageLoading, setPageLoading] = useState(true);
 
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   
   // --- Fetch Logic ---
   const fetchDashboardData = useCallback(async () => {
@@ -142,16 +138,7 @@ const AdminDashboard = ({ onLogout }) => {
   );
 
   return (
-    // ✅ LAYOUT FIX: Main container fixed height, hidden overflow
-    <div className="d-flex" style={{ height: "100vh", overflow: "hidden" }}>
-      
-      {/* Sidebar stays as is (it should handle its own width) */}
-      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar}/>
-      
-      {/* ✅ LAYOUT FIX: Content area allows vertical scrolling */}
-      <div className="flex-grow-1 bg-light d-flex flex-column" style={{ overflowY: "auto" }}>
-        <Navbar toggleSidebar={toggleSidebar} username={localStorage.getItem("name")} role={localStorage.getItem("role")} onLogout={onLogout} />
-
+    <>
         <div className="container-fluid p-4">
           {pageLoading ? (
              <div className="d-flex justify-content-center align-items-center" style={{height: "60vh"}}>
@@ -292,8 +279,7 @@ const AdminDashboard = ({ onLogout }) => {
             </>
           )}
         </div>
-      </div>
-    </div>
+      </>
   );
 };
 

@@ -1,19 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { Form, Row, Col } from "react-bootstrap";
 import { useNavigate, useParams } from "react-router-dom";
-import Sidebar from "../../../components/Sidebar";
-import TopNavbar from "../../../components/Navbar";
 import CardContainer from "../../../components/CardContainer";
 import AppButton from "../../../components/AppButton";
 import { getShiftById, updateShift } from "../../../api/shiftApi";
 import { getManagers } from "../../../api/employeeApi";
 
-const EditShift = ({ onLogout }) => {
+const EditShift = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   const [shift, setShift] = useState({
     shiftName: "",
@@ -72,16 +68,7 @@ const EditShift = ({ onLogout }) => {
   };
 
   return (
-    <div className="d-flex">
-      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar}/>
-      <div className="flex-grow-1" style={{ minWidth: 0 }}>
-        <TopNavbar
-          toggleSidebar={toggleSidebar}
-          username={localStorage.getItem("name")}
-          role={localStorage.getItem("role")}
-          onLogout={onLogout}
-        />
-
+    <>
         <div className="container-fluid p-3 p-md-4">
           <Row className="justify-content-center">
             {/* Responsive Width: Full on mobile, centered & smaller on desktop */}
@@ -165,8 +152,7 @@ const EditShift = ({ onLogout }) => {
             </Col>
           </Row>
         </div>
-      </div>
-    </div>
+      </>
   );
 };
 

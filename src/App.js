@@ -6,6 +6,9 @@ import { Spinner } from "react-bootstrap";
 // Images
 import Logo from "./assets/images/Educast-Logo.png"; 
 
+// Layout Component
+import Layout from "./components/Layout";
+
 // Components
 import LoginForm from "./components/LoginForm";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -46,7 +49,6 @@ function App() {
   // 🔥 AUTH CHECK WITH DELAY (SPLASH SCREEN)
   // ------------------------------------------------
   useEffect(() => {
-    // Artificial Delay of 2 Seconds (2000ms)
     const timer = setTimeout(() => {
         const token = localStorage.getItem("token");
 
@@ -58,10 +60,10 @@ function App() {
             setUserRole(null);
         }
         
-        setIsLoading(false); // Stop loading after 2 seconds
+        setIsLoading(false);
     }, 2000);
 
-    return () => clearTimeout(timer); // Cleanup
+    return () => clearTimeout(timer);
   }, []);
 
   // ------------------------------------------------
@@ -86,7 +88,7 @@ function App() {
   };
 
   // ------------------------------------------------
-  // ✨ IMPROVED LOADING SCREEN
+  // ✨ LOADING SCREEN
   // ------------------------------------------------
   if (isLoading) {
     return (
@@ -95,7 +97,6 @@ function App() {
         style={{ backgroundColor: "#f8f9fa" }}
       >
         <div className="text-center">
-            {/* Logo Animation */}
             <div className="mb-4">
                 <img 
                     src={Logo} 
@@ -109,7 +110,6 @@ function App() {
                 <span style={{ color: "#055993" }}>Cast</span>
             </h2>
 
-            {/* Bootstrap Spinners */}
             <div className="d-flex justify-content-center gap-2 mt-2">
                 <Spinner animation="grow" variant="warning" size="sm" style={{animationDuration: "1s"}} />
                 <Spinner animation="grow" variant="primary" size="sm" style={{animationDuration: "1.2s"}} />
@@ -123,13 +123,13 @@ function App() {
   }
 
   // ------------------------------------------------
-  // 🔥 ROUTES
+  // 🔥 ROUTES WITH LAYOUT
   // ------------------------------------------------
   return (
     <Router>
       <Routes>
 
-        {/* LOGIN */}
+        {/* LOGIN - No Layout */}
         <Route
           path="/login"
           element={
@@ -141,12 +141,25 @@ function App() {
           }
         />
 
-        {/* ADMIN ROUTES */}
+        {/* ========== ADMIN ROUTES ========== */}
         <Route
           path="/admin"
           element={
             <ProtectedRoute allowedRoles={["ADMIN"]}>
-              <AdminDashboard onLogout={handleLogout} />
+              <Layout onLogout={handleLogout}>
+                <AdminDashboard />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN", "HR"]}>
+              <Layout onLogout={handleLogout}>
+                <AdminDashboard />
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -154,8 +167,10 @@ function App() {
         <Route
           path="/admin/employees"
           element={
-            <ProtectedRoute allowedRoles={["ADMIN","HR"]}>
-              <AllEmployees onLogout={handleLogout}/>
+            <ProtectedRoute allowedRoles={["ADMIN", "HR"]}>
+              <Layout onLogout={handleLogout}>
+                <AllEmployees />
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -163,8 +178,10 @@ function App() {
         <Route
           path="/admin/employees/add"
           element={
-            <ProtectedRoute allowedRoles={["ADMIN","HR"]}>
-              <AddEmployee onLogout={handleLogout}/>
+            <ProtectedRoute allowedRoles={["ADMIN", "HR"]}>
+              <Layout onLogout={handleLogout}>
+                <AddEmployee />
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -173,41 +190,64 @@ function App() {
           path="/admin/employees/edit/:id"
           element={
             <ProtectedRoute allowedRoles={["ADMIN", "HR"]}>
-              <EditEmployee onLogout={handleLogout}/>
+              <Layout onLogout={handleLogout}>
+                <EditEmployee />
+              </Layout>
             </ProtectedRoute>
           }
         />
 
-        <Route path="/admin/shifts" element={
-          <ProtectedRoute allowedRoles={["ADMIN", "HR"]}>
-              <ViewShifts onLogout={handleLogout}/>
-            </ProtectedRoute>
-            } />
-        <Route path="/admin/shifts/add" element={
-          <ProtectedRoute allowedRoles={["ADMIN", "HR"]}>
-              <AddShift onLogout={handleLogout}/>
-            </ProtectedRoute>} />
-        <Route path="/admin/shifts/edit/:id" element={
-          <ProtectedRoute allowedRoles={["ADMIN", "HR"]}>
-              <EditShift onLogout={handleLogout}/>
-            </ProtectedRoute>
-          } />
-
-        {/* ===== EMPLOYEE ↔ SHIFT ===== */}
         <Route
-            path="/admin/employee-shifts/assign"
-            element={
+          path="/admin/shifts"
+          element={
             <ProtectedRoute allowedRoles={["ADMIN", "HR"]}>
-              <ViewEmployeeShifts onLogout={handleLogout} />
+              <Layout onLogout={handleLogout}>
+                <ViewShifts />
+              </Layout>
             </ProtectedRoute>
-            }
+          }
+        />
+
+        <Route
+          path="/admin/shifts/add"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN", "HR"]}>
+              <Layout onLogout={handleLogout}>
+                <AddShift />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/shifts/edit/:id"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN", "HR"]}>
+              <Layout onLogout={handleLogout}>
+                <EditShift />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/employee-shifts/assign"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN", "HR"]}>
+              <Layout onLogout={handleLogout}>
+                <ViewEmployeeShifts />
+              </Layout>
+            </ProtectedRoute>
+          }
         />
 
         <Route
           path="/admin/work-sessions"
           element={
             <ProtectedRoute allowedRoles={["ADMIN", "HR"]}>
-              <WorkSessions onLogout={handleLogout} />
+              <Layout onLogout={handleLogout}>
+                <WorkSessions />
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -216,7 +256,9 @@ function App() {
           path="/admin/attendance"
           element={
             <ProtectedRoute allowedRoles={["ADMIN", "HR"]}>
-              <Attendance onLogout={handleLogout} />
+              <Layout onLogout={handleLogout}>
+                <Attendance />
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -225,58 +267,111 @@ function App() {
           path="/admin/leaves"
           element={
             <ProtectedRoute allowedRoles={["ADMIN", "HR"]}>
-              <AllLeaves onLogout={handleLogout} />
+              <Layout onLogout={handleLogout}>
+                <AllLeaves />
+              </Layout>
             </ProtectedRoute>
           }
         />
 
-        {/* HR ROUTES */}
+        {/* ========== HR ROUTES ========== */}
         <Route
           path="/hr"
           element={
             <ProtectedRoute allowedRoles={["HR"]}>
-              <HrDashboard onLogout={handleLogout} />
+              <Layout onLogout={handleLogout}>
+                <HrDashboard />
+              </Layout>
             </ProtectedRoute>
           }
-        /> 
+        />
 
-        {/* MANAGER ROUTES */}
+        {/* ========== MANAGER ROUTES ========== */}
         <Route
           path="/manager"
           element={
             <ProtectedRoute allowedRoles={["MANAGER"]}>
-              <ManagerDashboard onLogout={handleLogout} />
+              <Layout onLogout={handleLogout}>
+                <ManagerDashboard />
+              </Layout>
             </ProtectedRoute>
           }
         />
 
-        <Route path="/manager/team" element={<ProtectedRoute allowedRoles={["MANAGER"]}><ManagerTeam onLogout={handleLogout} /></ProtectedRoute>} />
-        <Route path="/manager/team-sessions" element={
-          <ProtectedRoute allowedRoles={["MANAGER"]}><TeamWorkSessions onLogout={handleLogout} /></ProtectedRoute>} />
-        <Route path="/manager/team-attendance" element={<ProtectedRoute allowedRoles={["MANAGER"]}><TeamAttendance onLogout={handleLogout} /></ProtectedRoute>} />
+        <Route
+          path="/manager/team"
+          element={
+            <ProtectedRoute allowedRoles={["MANAGER"]}>
+              <Layout onLogout={handleLogout}>
+                <ManagerTeam />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/manager/team-sessions"
+          element={
+            <ProtectedRoute allowedRoles={["MANAGER"]}>
+              <Layout onLogout={handleLogout}>
+                <TeamWorkSessions />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/manager/team-attendance"
+          element={
+            <ProtectedRoute allowedRoles={["MANAGER"]}>
+              <Layout onLogout={handleLogout}>
+                <TeamAttendance />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
         <Route
           path="/manager/team-leave"
           element={
-            <ProtectedRoute allowedRoles={["MANAGER"]}><ManagerLeaveRequests onLogout={handleLogout} />
+            <ProtectedRoute allowedRoles={["MANAGER"]}>
+              <Layout onLogout={handleLogout}>
+                <ManagerLeaveRequests />
+              </Layout>
             </ProtectedRoute>
           }
         />
 
-        {/* EMPLOYEE ROUTES */}
+        {/* ========== EMPLOYEE ROUTES ========== */}
         <Route
           path="/employee"
           element={
             <ProtectedRoute allowedRoles={["EMPLOYEE"]}>
-              <EmployeeDashboard onLogout={handleLogout} />
+              <Layout onLogout={handleLogout}>
+                <EmployeeDashboard />
+              </Layout>
             </ProtectedRoute>
           }
         />
+{/* 
+        <Route
+          path="/employee/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["EMPLOYEE"]}>
+              <Layout onLogout={handleLogout}>
+                <EmployeeDashboard />
+              </Layout>
+            </ProtectedRoute>
+          }
+        /> */}
 
         <Route
           path="/employee/my-profile"
           element={
-            <ProtectedRoute allowedRoles={["EMPLOYEE","ADMIN","HR","MANAGER"]}>
-              <EmployeeProfile onLogout={handleLogout} />
+            <ProtectedRoute allowedRoles={["EMPLOYEE", "ADMIN", "HR", "MANAGER"]}>
+              <Layout onLogout={handleLogout}>
+                <EmployeeProfile />
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -285,35 +380,46 @@ function App() {
           path="/employee/work-history"
           element={
             <ProtectedRoute allowedRoles={["EMPLOYEE", "MANAGER"]}>
-              <WorkSessionHistory onLogout={handleLogout}/>
+              <Layout onLogout={handleLogout}>
+                <WorkSessionHistory />
+              </Layout>
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/employee/attendance-history"
           element={
             <ProtectedRoute allowedRoles={["EMPLOYEE", "MANAGER"]}>
-              <AttendanceHistory onLogout={handleLogout}/>
+              <Layout onLogout={handleLogout}>
+                <AttendanceHistory />
+              </Layout>
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/employee/leave-history"
           element={
             <ProtectedRoute allowedRoles={["EMPLOYEE", "MANAGER"]}>
-              <LeaveHistory onLogout={handleLogout}/>
+              <Layout onLogout={handleLogout}>
+                <LeaveHistory />
+              </Layout>
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/employee/leave/apply"
           element={
             <ProtectedRoute allowedRoles={["EMPLOYEE", "MANAGER"]}>
-              <ApplyLeave onLogout={handleLogout}/>
+              <Layout onLogout={handleLogout}>
+                <ApplyLeave />
+              </Layout>
             </ProtectedRoute>
           }
         />
-        
+
         {/* DEFAULT */}
         <Route
           path="*"

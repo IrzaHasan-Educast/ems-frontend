@@ -1,8 +1,6 @@
 // src/pages/admin/Attendance.jsx
 import React, { useEffect, useState } from "react";
 import { Table, Spinner, Form, Row, Col, Button, Modal, Badge } from "react-bootstrap";
-import Sidebar from "../../components/Sidebar";
-import TopNavbar from "../../components/Navbar";
 import PageHeading from "../../components/PageHeading";
 import CardContainer from "../../components/CardContainer";
 import { getAllAttendance } from "../../api/attendanceApi";
@@ -21,7 +19,7 @@ const allColumns = [
   { key: "assignedShift", label: "Shift" },
 ];
 
-const Attendance = ({ onLogout }) => {
+const Attendance = () => {
   const token = localStorage.getItem("token");
   const initialRole = jwtHelper.getRoleFromToken(token);
   
@@ -42,12 +40,9 @@ const Attendance = ({ onLogout }) => {
   // UI
   const [showColumnsModal, setShowColumnsModal] = useState(false);
   const [selectedColumns, setSelectedColumns] = useState(allColumns.map(c => c.key));
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // Calculated Dates for Header
   const [todayWindowStr, setTodayWindowStr] = useState("");
-
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   // --- HELPERS ---
   const formatDate = (dateStr) => {
@@ -234,17 +229,7 @@ const Attendance = ({ onLogout }) => {
 
   return (
     // Responsive Layout: Full Height & Hidden Overflow for Main
-    <div className="d-flex" style={{ height: "100vh", overflow: "hidden" }}>
-      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar}/>
-      
-      <div className="d-flex flex-column flex-grow-1" style={{ minWidth: 0 }}>
-        <TopNavbar 
-          toggleSidebar={toggleSidebar}
-          username={localStorage.getItem("name")}
-          role={localStorage.getItem("role")}
-          onLogout={onLogout}
-        />
-        
+    <>        
         {/* Scrollable Content Area */}
         <div className="p-3 container-fluid" style={{ overflowY: "auto", flex: 1 }}>
           <PageHeading title="Attendance Records" />
@@ -366,8 +351,7 @@ const Attendance = ({ onLogout }) => {
           </Modal>
 
         </div>
-      </div>
-    </div>
+      </>
   );
 };
 

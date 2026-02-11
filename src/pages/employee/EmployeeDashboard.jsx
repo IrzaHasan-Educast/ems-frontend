@@ -4,8 +4,6 @@ import { Row, Col, Card, Button, Spinner, Badge } from "react-bootstrap";
 import Swal from "sweetalert2";
 
 // Components
-import Sidebar from "../../components/Sidebar";
-import TopNavbar from "../../components/Navbar";
 import CurrentSessionCard from "../../components/CurrentSessionCard";
 import CardContainer from "../../components/CardContainer";
 
@@ -22,9 +20,8 @@ import {
   formatPakistanDateLabel,
 } from "../../utils/time";
 
-const EmployeeDashboard = ({ onLogout }) => {
+const EmployeeDashboard = () => {
   const navigate = useNavigate();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // Data States
   const [employee, setEmployee] = useState(null);
@@ -35,8 +32,6 @@ const EmployeeDashboard = ({ onLogout }) => {
   // Loading States
   const [pageLoading, setPageLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
-
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   // --- Helper: Parse ISO Duration ---
   const parseDurationString = (durationStr) => {
@@ -226,16 +221,7 @@ const EmployeeDashboard = ({ onLogout }) => {
   );
 
   return (
-    <div className="d-flex">
-      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar} />
-      <div className="flex-grow-1 bg-light d-flex flex-column" style={{ minHeight: "100vh" }}>
-        <TopNavbar 
-          toggleSidebar={toggleSidebar} 
-          username={localStorage.getItem("name")} 
-          role={localStorage.getItem("role")} 
-          onLogout={onLogout}
-        />
-
+    <>
         <div className="container-fluid p-4">
           
           {pageLoading ? (
@@ -411,8 +397,7 @@ const EmployeeDashboard = ({ onLogout }) => {
             </>
           )}
         </div>
-      </div>
-    </div>
+      </>
   );
 };
 

@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { Table, Spinner, Form, Row, Col, Button, Modal, Badge, InputGroup } from "react-bootstrap";
-import Sidebar from "../../components/Sidebar";
-import TopNavbar from "../../components/Navbar";
 import PageHeading from "../../components/PageHeading";
 import CardContainer from "../../components/CardContainer";
 import { getAllWorkSessions } from "../../api/workSessionApi";
@@ -33,14 +31,13 @@ const normalizeShift = (shiftName) => {
   return shiftName.replace(/\s*\(.*?\)\s*/g, "").trim(); 
 };
 
-const WorkSessions = ({ onLogout }) => {
+const WorkSessions = () => {
   const token = localStorage.getItem("token");
   const initialRole = jwtHelper.getRoleFromToken(token);
   
   const [sessions, setSessions] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [admin, setAdmin] = useState({ name: "", role: initialRole });
 
   // Filters
@@ -55,7 +52,6 @@ const WorkSessions = ({ onLogout }) => {
   const [showColumnsModal, setShowColumnsModal] = useState(false);
   const [selectedColumns, setSelectedColumns] = useState(defaultVisibleColumns);
 
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   const formatShortDate = (val) => {
      const d = parseApiDate(val);
@@ -277,11 +273,7 @@ const WorkSessions = ({ onLogout }) => {
   };
 
   return (
-    <div className="d-flex">
-      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar} />
-      <div className="flex-grow-1" style={{ minWidth: 0 }}>
-        <TopNavbar toggleSidebar={toggleSidebar} username={localStorage.getItem("name")} role={localStorage.getItem("role")} onLogout={onLogout} />
-        
+    <>
         <div className="p-3 container-fluid">
           <PageHeading title="All Work Sessions" />
 
@@ -392,8 +384,7 @@ const WorkSessions = ({ onLogout }) => {
           </Modal>
 
         </div>
-      </div>
-    </div>
+      </>
   );
 };
 

@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Table, Spinner, Button, Form, Row, Col, Modal, Badge } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
-import Sidebar from "../../components/Sidebar";
-import TopNavbar from "../../components/Navbar";
 import { PencilSquare, Eye, FileEarmarkText, Gear } from "react-bootstrap-icons";
 import PageHeading from "../../components/PageHeading";
 import CardContainer from "../../components/CardContainer";
@@ -33,7 +31,7 @@ const normalizeShift = (shiftName) => {
   return shiftName.replace(/\s*\(.*?\)\s*/g, "").trim(); 
 };
 
-const AllEmployees = ({ onLogout }) => {
+const AllEmployees = () => {
   // Default visible columns
   const defaultVisible = ["sno", "fullName", "department", "assignedShift", "role", "designation", "active", "actions"];
 
@@ -48,7 +46,6 @@ const AllEmployees = ({ onLogout }) => {
   const [admin, setAdmin] = useState({ name: "", role: "" });
 
   // UI States
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   
@@ -66,7 +63,6 @@ const AllEmployees = ({ onLogout }) => {
   const [currentPage, setCurrentPage] = useState(1);
 
   const navigate = useNavigate();
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   // --- 1. INITIAL FETCH ---
   useEffect(() => {
@@ -252,15 +248,7 @@ const AllEmployees = ({ onLogout }) => {
   };
 
   return (
-    <div className="d-flex">
-      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar}/>
-      <div className="flex-grow-1" style={{ minWidth: 0 }}>
-        <TopNavbar 
-          toggleSidebar={toggleSidebar}
-          username={localStorage.getItem("name")}
-          role={localStorage.getItem("role")}
-          onLogout={onLogout}
-        />        
+    <>     
         <div className="p-3 container-fluid">
           <PageHeading title="All Employees" buttonText="Add Employee" onButtonClick={() => navigate("/admin/employees/add")} />
 
@@ -356,8 +344,7 @@ const AllEmployees = ({ onLogout }) => {
 
           {selectedEmployee && <ViewEmployeeModal show={showModal} handleClose={() => setShowModal(false)} employee={selectedEmployee} />}
         </div>
-      </div>
-    </div>
+      </>
   );
 };
 

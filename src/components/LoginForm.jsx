@@ -59,7 +59,7 @@ const LoginForm = ({ setUserRole }) => {
           </div>
 
           <div className="login-card p-4 shadow border col-10 col-sm-8 col-md-6 col-lg-5">
-            <h2 className="text-center mb-1" style={{ color: "#f58a29", fontWeight: "700" }}>Educast</h2>
+            <h2 className="text-center mb-1" style={{ color: "#f58a29", fontWeight: "700" }}>EduCast</h2>
             <h5 className="text-center mb-4" style={{ color: "#000" }}>Dashboard Login</h5>
 
             <form onSubmit={handleSubmit}>

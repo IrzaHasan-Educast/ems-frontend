@@ -1,14 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { Table, Spinner, Form, Row, Col, Button, Modal, Badge } from "react-bootstrap";
-import Sidebar from "../../components/Sidebar";
-import TopNavbar from "../../components/Navbar";
 import PageHeading from "../../components/PageHeading";
 import CardContainer from "../../components/CardContainer";
 import { getManagerAttendanceHistory } from "../../api/attendanceApi"; 
 import { getMyShift } from "../../api/shiftApi"; 
 import { FileEarmarkText, Gear, ArrowCounterclockwise } from "react-bootstrap-icons";
 import * as XLSX from "xlsx";
-import jwtHelper from "../../utils/jwtHelper";
 
 const allColumns = [
   { key: "sno", label: "S.No" },
@@ -19,12 +16,11 @@ const allColumns = [
   { key: "assignedShift", label: "Shift" },
 ];
 
-const TeamAttendance = ({ onLogout }) => {
+const TeamAttendance = () => {
   // States
   const [records, setRecords] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // Calculated Window State
   const [shiftWindow, setShiftWindow] = useState({ start: null, end: null, label: "Loading..." });
@@ -42,7 +38,6 @@ const TeamAttendance = ({ onLogout }) => {
   const [showColumnsModal, setShowColumnsModal] = useState(false);
   const [selectedColumns, setSelectedColumns] = useState(allColumns.map(c => c.key));
 
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   // --- 1. DATA FETCHING & LOGIC ---
   useEffect(() => {
@@ -244,16 +239,7 @@ const TeamAttendance = ({ onLogout }) => {
   };
 
   return (
-    <div className="d-flex" style={{ height: "100vh", overflow: "hidden" }}>
-      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar}/>
-      
-      <div className="flex-grow-1 d-flex flex-column" style={{ minWidth: 0 }}>
-        <TopNavbar
-          toggleSidebar={toggleSidebar}
-          username={localStorage.getItem("name")}
-          role={localStorage.getItem("role") || "Manager"}
-          onLogout={onLogout}
-        />
+      <>
         <div className="p-3 container-fluid" style={{ overflowY: "auto", flex: 1 }}>
           <PageHeading title="Team Attendance" />
 
@@ -393,8 +379,7 @@ const TeamAttendance = ({ onLogout }) => {
           </Modal>
 
         </div>
-      </div>
-    </div>
+      </>
   );
 };
 

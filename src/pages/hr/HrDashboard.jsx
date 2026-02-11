@@ -15,8 +15,7 @@ import {
 } from "recharts";
 
 // Components
-import Sidebar from "../../components/Sidebar";
-import Navbar from "../../components/Navbar";
+
 import CardContainer from "../../components/CardContainer";
 
 // APIs
@@ -28,9 +27,8 @@ import { getCurrentUser } from "../../api/userApi";
 // Utils
 import { formatPakistanDateLabel } from "../../utils/time";
 
-const HRDashboard = ({ onLogout }) => {
+const HRDashboard = () => {
   const navigate = useNavigate();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // --- State ---
   const [hrUser, setHrUser] = useState({ name: "HR", role: "HR" });
@@ -49,7 +47,6 @@ const HRDashboard = ({ onLogout }) => {
   const [recentLeaves, setRecentLeaves] = useState([]);
   const [pageLoading, setPageLoading] = useState(true);
 
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const COLORS = ["#28a745", "#dc3545", "#ffc107", "#17a2b8"]; 
 
   // --- Fetch Logic ---
@@ -155,11 +152,7 @@ const HRDashboard = ({ onLogout }) => {
   );
 
   return (
-    <div className="d-flex">
-      <Sidebar isOpen={isSidebarOpen} onLogout={onLogout} toggleSidebar={toggleSidebar}/>
-      <div className="flex-grow-1 bg-light d-flex flex-column" style={{ minHeight: "100vh" }}>
-        <Navbar toggleSidebar={toggleSidebar} username={hrUser.name} role={hrUser.role} onLogout={onLogout}/>
-
+    <>
         <div className="container-fluid p-4">
           {pageLoading ? (
              <div className="d-flex justify-content-center align-items-center" style={{height: "60vh"}}>
@@ -294,8 +287,7 @@ const HRDashboard = ({ onLogout }) => {
             </>
           )}
         </div>
-      </div>
-    </div>
+      </>
   );
 };
 
